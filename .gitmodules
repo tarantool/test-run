@@ -1,0 +1,6 @@
+[submodule "lib/msgpack-python"]
+	path = lib/msgpack-python
+	url = https://github.com/msgpack/msgpack-python.git
+[submodule "lib/tarantool-python"]
+	path = lib/tarantool-python
+	url = https://github.com/tarantool/tarantool-python.git
