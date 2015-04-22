@@ -135,7 +135,14 @@ class Options:
 
 
 def setenv():
-    os.putenv("TARANTOOL_SRC_DIR", os.path.abspath('../tarantool/'))
+    """Find where is tarantool dir by check_file"""
+    check_file = 'src/fiber.h'
+    path = os.path.abspath('../')
+    while path != '/':
+        if os.path.isfile('%s/%s' % (path, check_file)):
+            os.putenv('TARANTOOL_SRC_DIR', path)
+            break
+        path = os.path.abspath(os.path.join(path, '../'))
 
 #######################################################################
 # Program body
