@@ -1,4 +1,6 @@
-## Test Suite
+# Tarantool Functional testing framework
+
+### Test Suite
 Bunch of tests, that lay down in the subfolder (recursively) with `suite.ini` file. `suite.ini` is basic ini-file, that consists of one section `default`, and a number of fields:
 * `core`
 * `description` - Test Suite description
@@ -14,12 +16,12 @@ Field `core` must be one of:
 * `app` - Another functional Test-Suite
 * `unit` - Unit-Testing Test Suite
 
-## Test
+### Test
 Each test consists of files `*.test(.lua|.py)?`, `*.result`, and may have skip condition file `*.skipcond`.
 On first run (without `.result`) `.result` is generated from output.  
 Each run, in the beggining, `.skipcond` file is executed. In the local env there's object `self`, that's `Test` object. If test must be skipped - you must put `self.skip = 1` in this file. Next, `.test(.lua|.py)?` is executed and file `.reject` is created, then `.reject` is compared with `.result`. If something differs, then 15 last string of this diff file are printed and `.reject` file is saving in the folder, where `.result` file is. If not, then `.reject` is deleted.
 
-### Python
+#### Python
 Files: `<name>.test.py`, `<name>.result` and `<name>.skipcond`(optionaly).
 Environment:
 * `sql` - `BoxConnection` class. Convert our subclass of SQL into IProto query and then decode it. Print into `.result` in YAML. Examples:
@@ -97,7 +99,7 @@ box.info.lsn
 ...
 ```
 
-### Lua
+#### Lua
 Files: `<name>.test.lua`, `<name>.result` and `<name>.skipcond`(optionaly).
 Tests interact only with `AdminConnection`. Supports some preprocessor functions (eg `delimiter`)
 
@@ -172,7 +174,7 @@ test
 ...
 ```
 
-#### Preprocessor description
+##### Preprocessor description
 prefix `--#` means that this line must processed to preprocessor
 
 __Base directives:__
