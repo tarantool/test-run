@@ -135,6 +135,8 @@ class TestState(object):
                 temp.need_init   = True if opts['need_init'] == 'True' else False
             if 'script' in opts:
                 temp.script = opts['script'][1:-1]
+	    if 'lua_libs' in opts:
+		temp.lua_libs = opts['lua_libs'][1:-1].split(' ')
             temp.rpl_master = None
             if 'rpl_master' in opts:
                 temp.rpl_master = self.servers[opts['rpl_master']]
