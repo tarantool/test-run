@@ -101,7 +101,7 @@ class TestSuite:
                 if (test_name in self.ini["disabled"]
                     or not self.server.debug and test_name in self.ini["release_disabled"]
                     or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
-                    or not self.args.long and test_name in self.ini["long_run"]):
+                    or not self.args.long and test_name in self.ini.get("long_run", [])):
                     color_stdout("[ disabled ]\n", schema='t_name')
                 else:
                     test.run(self.server)
