@@ -10,6 +10,7 @@ Bunch of tests, that lay down in the subfolder (recursively) with `suite.ini` fi
     * `release_disabled` - tests that must be skipped when Tarantool has been builded with `Release`
     * `valgrind_disabled` - tests that must be skipped when Valgrind is enabled
 * `lua_libs` - paths for lua files, that should be copied into the folder, where server is started (delimited with the space, e.g. `lua_libs=lua/1.lua lua/2.lua`)
+* `long_run` - mark tests as long, enabled only with `--long` option (delimited with the space, e.g. `long_run=t1.test.lua t2.test.lua`)
 
 Field `core` must be one of:
 * `tarantool` - Test-Suite for Functional Testing
