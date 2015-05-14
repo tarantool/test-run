@@ -98,10 +98,10 @@ class TestSuite:
                 # for better diagnostics in case of a long-running test
 
                 test_name = os.path.basename(test.name)
-
                 if (test_name in self.ini["disabled"]
                     or not self.server.debug and test_name in self.ini["release_disabled"]
-                    or self.args.valgrind and test_name in self.ini["valgrind_disabled"]):
+                    or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
+                    or not self.args.long and test_name in self.ini["long_run"]):
                     color_stdout("[ disabled ]\n", schema='t_name')
                 else:
                     test.run(self.server)

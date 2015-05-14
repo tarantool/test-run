@@ -120,6 +120,12 @@ class Options:
                 dest = "vardir",
                 default = "var",
                 help = """Path to data directory. Default: var.""")
+        parser.add_argument(
+               "--long",
+               dest="long",
+               default=False,
+               action='store_true',
+               help="""Enable long run tests""")
 
         self.args = parser.parse_args()
         self.check()
