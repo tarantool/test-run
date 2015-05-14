@@ -18,7 +18,11 @@ color_stdout = Colorer()
 class FilteredStream:
     """Helper class to filter .result file output"""
     def __init__(self, filename):
-        self.stream = open(filename, "w+")
+        #
+        # always open the output stream in line-buffered mode, 
+        # to see partial results of a failed test
+        #
+        self.stream = open(filename, "w+", 1)
         self.filters = []
 
     def write(self, fragment):
