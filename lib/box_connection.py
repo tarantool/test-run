@@ -28,11 +28,12 @@ import socket
 import struct
 import warnings
 
-import sql
 from tarantool_connection import TarantoolConnection
 
 from tarantool import Connection as tnt_connection
 from tarantool import Schema
+
+SEPARATOR = '\n'
 
 class BoxConnection(TarantoolConnection):
     def __init__(self, host, port):
@@ -59,31 +60,35 @@ class BoxConnection(TarantoolConnection):
         self.py_con.schema = Schema(schemadict)
 
     def check_connection(self):
-        rc = self.py_con._sys_recv(self.py_con._socket.fileno(), '  ', 1, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+        rc = self.py_con._sys_recv(
+            self.py_con._socket.fileno(), '  ', 1,
+            socket.MSG_DONTWAIT | socket.MSG_PEEK
+        )
         if ctypes.get_errno() == errno.EAGAIN:
             ctypes.set_errno(0)
             return True
         return False
 
+    def execute_no_reconnect(self, command, silent=True):
+        if not command:
+            return
+        if not silent:
+            print command
+        cmd = command.replace(SEPARATOR, ' ') + SEPARATOR
+        response = self.py_con.call(cmd)
+        result = str(response)
+        if not silent:
+            print response
+        return response
+
     def execute(self, command, silent=True):
         return self.execute_no_reconnect(command, silent)
 
-    def execute_no_reconnect(self, command, silent=True):
-        statement = sql.parse("sql", command)
-        if statement == None:
-            return "You have an error in your SQL syntax\n"
-        statement.sort = self.sort
-
-        if not silent:
-            print command
-
-        response = None
-        request = statement.pack(self.py_con)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            response = self.py_con._send_request(request)
-
-        if not silent:
-            print statement.unpack(response)
-
-        return statement.unpack(response)
+    def call(self, command, *args):
+        if not command:
+            return
+        print 'call ', command, args
+        response = self.py_con.call(command, *args)
+        result = str(response)
+        print result
+        return result

@@ -305,18 +305,18 @@ class TarantoolServer(Server):
         self.admin = AdminConnection('localhost', port)
 
     @property
-    def _sql(self):
-        if not hasattr(self, 'sql'): self.sql = None
-        return self.sql
-    @_sql.setter
-    def _sql(self, port):
+    def _remote(self):
+        if not hasattr(self, 'remote'): self.remote = None
+        return self.remote
+    @_remote.setter
+    def _remote(self, port):
         try:
             port = int(port)
         except ValueError as e:
             raise ValueError("Bad port number: '%s'" % port)
-        if hasattr(self, 'sql'):
-            del self.sql
-        self.sql = BoxConnection('localhost', port)
+        if hasattr(self, 'remote'):
+            del self.remote
+        self.remote = BoxConnection('localhost', port)
 
     @property
     def log_des(self):
@@ -407,7 +407,7 @@ class TarantoolServer(Server):
 
     def install(self, silent=True):
         if self._start_against_running:
-            self._sql = self._start_against_running
+            self._remote = self._start_against_running
             self._admin = int(self._start_against_running) + 1
             return
 
@@ -431,7 +431,7 @@ class TarantoolServer(Server):
             self._admin = os.path.join(self.vardir, "socket-admin")
         else:
             self._admin = find_port(port)
-        self._sql = find_port(port + 1)
+        self._remote = find_port(port + 1)
 
     def deploy(self, silent=True, wait=True):
         self.install(silent)
@@ -463,11 +463,11 @@ class TarantoolServer(Server):
             color_stdout(self.version() + "\n", schema='version')
 
         check_port(self.admin.port)
-
-        os.putenv("LISTEN", self.sql.uri)
+        os.putenv("LISTEN", self.remote.uri)
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:
-            os.putenv("MASTER", self.rpl_master.sql.uri)
+            os.putenv("MASTER", self.rpl_master.remote.uri)
+
         args = self.prepare_args()
         self.logfile_pos = self.logfile
         self.process = subprocess.Popen(args,
