@@ -31,7 +31,7 @@ class TestState(object):
         self.curcon = [self.connections['default']]
         nmsp = Namespace()
         setattr(nmsp, 'admin', default_server.admin.uri)
-        setattr(nmsp, 'listen', default_server.remote.uri)
+        setattr(nmsp, 'listen', default_server.iproto.uri)
         setattr(self.environ, 'default', nmsp)
 
     def parse_preprocessor(self, string):
@@ -146,9 +146,9 @@ class TestState(object):
             self.servers[sname].deploy(silent=True)
             nmsp = Namespace()
             setattr(nmsp, 'admin', temp.admin.port)
-            setattr(nmsp, 'listen', temp.remote.port)
+            setattr(nmsp, 'listen', temp.iproto.port)
             if temp.rpl_master:
-                setattr(nmsp, 'master', temp.rpl_master.remote.port)
+                setattr(nmsp, 'master', temp.rpl_master.iproto.port)
             setattr(self.environ, sname, nmsp)
         elif ctype == 'start':
             if sname not in self.servers:
