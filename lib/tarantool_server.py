@@ -373,7 +373,7 @@ class TarantoolServer(Server):
             sys.argv[0]), "..", ".."))
         self.re_vardir_cleanup += [
             "*.snap", "*.xlog", "*.inprogress",
-            "*.sup", "*.lua", "*.pid"]
+            "*.sup", "*.lua", "*.pid", "[0-9]*/"]
         self.name = "default"
         self.conf = {}
         self.status = None

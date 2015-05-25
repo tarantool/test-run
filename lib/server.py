@@ -82,7 +82,10 @@ class Server(object):
             return
         for re in self.re_vardir_cleanup:
             for f in glob.glob(os.path.join(self.vardir, re)):
-                os.remove(f)
+                if os.path.isdir(f):
+                    shutil.rmtree(f)
+                else:
+                    os.remove(f)
 
     def install(self, binary=None, vardir=None, mem=None, silent=True):
         pass
