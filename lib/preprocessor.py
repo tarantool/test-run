@@ -173,6 +173,8 @@ class TestState(object):
             self.servers[sname].cleanup()
             if sname != 'default':
                 delattr(self.environ, sname)
+            else:
+                self.servers[sname].install(silent=True)
         else:
             raise LuaPreprocessorException('Unknown command for server: '+repr(ctype))
 
