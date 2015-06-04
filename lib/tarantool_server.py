@@ -410,7 +410,6 @@ class TarantoolServer(Server):
             self._iproto = self._start_against_running
             self._admin = int(self._start_against_running) + 1
             return
-
         if not silent:
             color_stdout('Installing the server ...\n', schema='serv_text')
             color_stdout('    Found executable at ', schema='serv_text')
@@ -456,6 +455,13 @@ class TarantoolServer(Server):
             if not silent:
                 color_stdout('The server is already started.\n', schema='lerror')
             return
+
+        args = self.prepare_args()
+        instance_name = os.path.basename(args[0]).split('.')[0]
+        self.name = instance_name
+        self.pidfile = '%s.pid' % instance_name
+        self.logfile = '%s.log' % instance_name
+
         if not silent:
             color_stdout("Starting the server ...\n", schema='serv_text')
             color_stdout("Starting ", schema='serv_text')
@@ -467,10 +473,11 @@ class TarantoolServer(Server):
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:
             os.putenv("MASTER", self.rpl_master.iproto.uri)
-
-        args = self.prepare_args()
         self.logfile_pos = self.logfile
-        self.process = subprocess.Popen(args,
+
+        # redirect strout from tarantoolctl and tarantool
+        ctl_args = ['tarantoolctl', 'start', os.path.basename(args[0])]
+        self.process = subprocess.Popen(ctl_args,
                 cwd = self.vardir,
                 stdout=self.log_des,
                 stderr=self.log_des)
@@ -480,6 +487,12 @@ class TarantoolServer(Server):
 
     def wait_stop(self):
         self.process.wait()
+
+    def cleanup(self, full=False):
+        try:
+            shutil.rmtree(os.path.join(self.vardir, self.name))
+        except OSError:
+            pass
 
     def stop(self, silent=True):
         if self._start_against_running:

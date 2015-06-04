@@ -140,7 +140,7 @@ class TestState(object):
             temp.rpl_master = None
             if 'rpl_master' in opts:
                 temp.rpl_master = self.servers[opts['rpl_master']]
-            temp.vardir = os.path.join(self.suite_ini['vardir'], sname)
+            temp.vardir = self.suite_ini['vardir']
             temp.name = sname
             self.servers[sname] = temp
             self.servers[sname].deploy(silent=True)
