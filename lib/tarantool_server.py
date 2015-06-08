@@ -226,7 +226,8 @@ class TarantoolServer(Server):
         "bin":     "tarantool",
         "logfile": "tarantool.log",
         "pidfile": "tarantool.pid",
-        "name":    "default"
+        "name":    "default",
+        "ctl":     "tarantoolctl",
     }
 #----------------------------------PROPERTIES----------------------------------#
     @property
@@ -399,9 +400,16 @@ class TarantoolServer(Server):
             color_stdout(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
             exe = os.path.join(_dir, cls.default_tarantool["bin"])
-            if os.access(exe, os.X_OK):
+            ctl_dir = _dir
+            # check local tarantoolctl source
+            if _dir == builddir:
+                ctl_dir = '../extra/dist'
+
+            ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
+            if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
                 cls.binary = os.path.abspath(exe)
                 os.environ["PATH"] = os.path.abspath(_dir) + ":" + os.environ["PATH"]
+                cls.ctl_path = os.path.abspath(ctl)
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
@@ -446,7 +454,7 @@ class TarantoolServer(Server):
                 shutil.copy(source, self.vardir)
 
     def prepare_args(self):
-        return shlex.split(self.script_dst if self.script else self.binary)
+        return [self.ctl_path, 'start', os.path.basename(self.script)]
 
     def start(self, silent=True, wait = True):
         if self._start_against_running:
@@ -457,7 +465,7 @@ class TarantoolServer(Server):
             return
 
         args = self.prepare_args()
-        instance_name = os.path.basename(args[0]).split('.')[0]
+        instance_name = os.path.basename(args[2]).split('.')[0]
         self.name = instance_name
         self.pidfile = '%s.pid' % instance_name
         self.logfile = '%s.log' % instance_name
@@ -476,8 +484,7 @@ class TarantoolServer(Server):
         self.logfile_pos = self.logfile
 
         # redirect strout from tarantoolctl and tarantool
-        ctl_args = ['tarantoolctl', 'start', os.path.basename(args[0])]
-        self.process = subprocess.Popen(ctl_args,
+        self.process = subprocess.Popen(args,
                 cwd = self.vardir,
                 stdout=self.log_des,
                 stderr=self.log_des)
