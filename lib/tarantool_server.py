@@ -216,7 +216,7 @@ class GdbMixin(Mixin):
         color_stdout('To attach, use `screen -r tarantool-gdb`\n', schema='info')
         return shlex.split("screen -dmS {0} gdb {1} -ex \
                 \'b main\' -ex \'run {2} >> {3} 2>> {3}\'".format(
-            self.default_gdb['name'],
+            self.default_gdb['name'], self.binary,
             ' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
             self.logfile)
         )
@@ -456,6 +456,7 @@ class TarantoolServer(Server):
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
                 shutil.copy(source, self.vardir)
+        shutil.copy('.tarantoolctl', self.vardir)
 
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
@@ -469,7 +470,7 @@ class TarantoolServer(Server):
             return
 
         args = self.prepare_args()
-        instance_name = os.path.basename(args[2]).split('.')[0]
+        instance_name = os.path.basename(self.script).split('.')[0]
         self.name = instance_name
         self.pidfile = '%s.pid' % instance_name
         self.logfile = '%s.log' % instance_name
@@ -488,6 +489,7 @@ class TarantoolServer(Server):
         self.logfile_pos = self.logfile
 
         # redirect strout from tarantoolctl and tarantool
+        os.putenv("TEST_WORKDIR", self.vardir)
         self.process = subprocess.Popen(args,
                 cwd = self.vardir,
                 stdout=self.log_des,
