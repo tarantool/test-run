@@ -193,9 +193,11 @@ class ValgrindMixin(Mixin):
             raise OSError('`valgrind` executables not found in PATH')
         return  shlex.split("valgrind --log-file={log} --suppressions={sup} \
                 --gen-suppressions=all --leak-check=full \
-                --read-var-info=yes --quiet {bin}".format(log = self.valgrind_log,
-                                                        sup = self.valgrind_sup,
-                                                        bin = self.script_dst if self.script else self.binary))
+                --read-var-info=yes --quiet {bin}".format(
+            log = self.valgrind_log,
+            sup = self.valgrind_sup,
+            bin = ' '.join([self.ctl_path, 'start', os.path.basename(self.script)])
+        ))
 
     def wait_stop(self):
         return self.process.wait()
@@ -213,9 +215,11 @@ class GdbMixin(Mixin):
         color_stdout('You started the server in gdb mode.\n', schema='info')
         color_stdout('To attach, use `screen -r tarantool-gdb`\n', schema='info')
         return shlex.split("screen -dmS {0} gdb {1} -ex \
-                \'b main\' -ex \'run {2} >> {3} 2>> {3}\'".format(self.default_gdb['name'],
-                                                       self.binary, self.script_dst if self.script else '',
-                                                       self.logfile))
+                \'b main\' -ex \'run {2} >> {3} 2>> {3}\'".format(
+            self.default_gdb['name'],
+            ' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
+            self.logfile)
+        )
 
     def wait_stop(self):
         self.kill_old_server()
