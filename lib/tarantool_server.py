@@ -410,6 +410,9 @@ class TarantoolServer(Server):
                 ctl_dir = '../extra/dist'
 
             ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
+            if not os.access(ctl, os.X_OK):
+                ctl = os.path.join(ctl_dir, '../extra/dist', cls.default_tarantool['ctl'])
+            print ctl, exe
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
                 cls.binary = os.path.abspath(exe)
                 os.environ["PATH"] = os.path.abspath(_dir) + ":" + os.environ["PATH"]
@@ -455,7 +458,12 @@ class TarantoolServer(Server):
         if self.lua_libs:
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
-                shutil.copy(source, self.vardir)
+                try:
+                    shutil.copy(source, self.vardir)
+                except IOError as e:
+                    if (e.errno == errno.ENOENT):
+                        continue
+                    raise
         shutil.copy('.tarantoolctl', self.vardir)
 
     def prepare_args(self):

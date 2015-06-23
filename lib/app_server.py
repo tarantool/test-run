@@ -2,17 +2,20 @@ import os
 import re
 import sys
 import glob
-import traceback
+import errno
 import shutil
+import traceback
+
 from subprocess import Popen, PIPE
 
 from lib.server import Server
 from lib.tarantool_server import Test
 
+
 class AppTest(Test):
     def execute(self, server):
-        execs = []
-        proc = Popen([os.path.join(os.getcwd(), self.name)], stdout=PIPE, cwd=server.vardir)
+        execs = [os.path.join(os.getcwd(), self.name)]
+        proc = Popen(execs, stdout=PIPE, cwd=server.vardir)
         sys.stdout.write(proc.communicate()[0])
 
 class AppServer(Server):
@@ -44,7 +47,12 @@ class AppServer(Server):
         if self.lua_libs:
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
-                shutil.copy(source, self.vardir)
+                try:
+                    shutil.copy(source, self.vardir)
+                except IOError as e:
+                    if (e.errno == errno.ENOENT):
+                        continue
+                    raise
 
     @classmethod
     def find_exe(cls, builddir):
