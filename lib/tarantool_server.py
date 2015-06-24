@@ -298,6 +298,7 @@ class TarantoolServer(Server):
                 delattr(self, '_script')
             return
         self._script = os.path.abspath(val)
+        self.name = os.path.basename(self._script).split('.')[0]
 
     @property
     def _admin(self):
@@ -412,7 +413,6 @@ class TarantoolServer(Server):
             ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
             if not os.access(ctl, os.X_OK):
                 ctl = os.path.join(ctl_dir, '../extra/dist', cls.default_tarantool['ctl'])
-            print ctl, exe
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
                 cls.binary = os.path.abspath(exe)
                 os.environ["PATH"] = os.path.abspath(_dir) + ":" + os.environ["PATH"]
@@ -478,10 +478,8 @@ class TarantoolServer(Server):
             return
 
         args = self.prepare_args()
-        instance_name = os.path.basename(self.script).split('.')[0]
-        self.name = instance_name
-        self.pidfile = '%s.pid' % instance_name
-        self.logfile = '%s.log' % instance_name
+        self.pidfile = '%s.pid' % self.name
+        self.logfile = '%s.log' % self.name
 
         if not silent:
             color_stdout("Starting the server ...\n", schema='serv_text')
