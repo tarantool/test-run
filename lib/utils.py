@@ -1,6 +1,7 @@
 import os
 import sys
 import collections
+import socket
 
 
 from lib.colorer import Colorer
@@ -37,5 +38,26 @@ def print_tail_n(filename, num_lines):
         for line in tail_n:
             color_stdout(line, schema='tail')
 
+
+def check_port(port, rais=True):
+    try:
+        if isinstance(port, (int, long)):
+            sock = socket.create_connection(("localhost", port))
+        else:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect(port)
+
+    except socket.error:
+        return True
+    if rais:
+        raise RuntimeError("The server is already running on port {0}".format(port))
+    return False
+
+def find_port(port):
+    while port < 65536:
+        if check_port(port, False):
+            return port
+        port += 1
+    return find_port(34000)
 
 

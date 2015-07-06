@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 
 from lib.server import Server
 from lib.tarantool_server import Test
+from lib.utils import find_port
 
 
 class AppTest(Test):
@@ -53,6 +54,7 @@ class AppServer(Server):
                     if (e.errno == errno.ENOENT):
                         continue
                     raise
+        os.putenv("LISTEN", str(find_port(34000)))
 
     @classmethod
     def find_exe(cls, builddir):
