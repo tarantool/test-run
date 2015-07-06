@@ -131,6 +131,7 @@ class TestState(object):
             if sname in self.servers:
                 raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
             temp = self.create_server()
+            temp.name = sname
             if 'need_init' in opts:
                 temp.need_init   = True if opts['need_init'] == 'True' else False
             if 'script' in opts:
@@ -141,7 +142,6 @@ class TestState(object):
             if 'rpl_master' in opts:
                 temp.rpl_master = self.servers[opts['rpl_master']]
             temp.vardir = self.suite_ini['vardir']
-            temp.name = sname
             self.servers[sname] = temp
             self.servers[sname].deploy(silent=True)
             nmsp = Namespace()
