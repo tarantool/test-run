@@ -64,8 +64,8 @@ class TarantoolConnection(object):
             Make use of this property and detect whether or not the socket is
             dead. Reconnect a dead socket, do nothing if the socket is good."""
         try:
-            if not self.is_connected or \
-                    self.socket.recv(0, socket.MSG_DONTWAIT) == '':
+            if not self.is_connected or self.socket.recv(
+                    1, socket.MSG_DONTWAIT | socket.MSG_PEEK) == '':
                 self.reconnect()
         except socket.error as e:
             if e.errno == errno.EAGAIN:
