@@ -141,9 +141,12 @@ class TestState(object):
             temp.rpl_master = None
             if 'rpl_master' in opts:
                 temp.rpl_master = self.servers[opts['rpl_master']]
+            kwargs = {}
+            if 'wait_load' in opts:
+                kwargs['wait_load'] = opts['wait_load'] not in ('0', 'False')
             temp.vardir = self.suite_ini['vardir']
             self.servers[sname] = temp
-            self.servers[sname].deploy(silent=True)
+            self.servers[sname].deploy(silent=True, **kwargs)
             nmsp = Namespace()
             setattr(nmsp, 'admin', temp.admin.port)
             setattr(nmsp, 'listen', temp.iproto.port)

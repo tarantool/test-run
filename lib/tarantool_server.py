@@ -428,9 +428,9 @@ class TarantoolServer(Server):
             self._admin = find_port(port)
         self._iproto = find_port(port + 1)
 
-    def deploy(self, silent=True, wait=True):
+    def deploy(self, silent=True, **kwargs):
         self.install(silent)
-        self.start(silent=silent, wait=wait)
+        self.start(silent=silent, **kwargs)
 
     def copy_files(self):
         if self.script:
@@ -450,7 +450,7 @@ class TarantoolServer(Server):
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
 
-    def start(self, silent=True, wait = True):
+    def start(self, silent=True, **kwargs):
         if self._start_against_running:
             return
         if self.status == 'started':
@@ -481,8 +481,10 @@ class TarantoolServer(Server):
                 cwd = self.vardir,
                 stdout=self.log_des,
                 stderr=self.log_des)
+        wait = kwargs.get('wait', True)
+        wait_load = kwargs.get('wait_load', True)
         if wait:
-            self.wait_until_started()
+            self.wait_until_started(wait_load)
         self.status = 'started'
 
     def wait_stop(self):
@@ -527,7 +529,7 @@ class TarantoolServer(Server):
         self.wait_until_stopped(pid)
         return True
 
-    def wait_until_started(self):
+    def wait_until_started(self, wait_load=True):
         """ Wait until server is started.
 
         Server consists of two parts:
@@ -535,12 +537,16 @@ class TarantoolServer(Server):
         2) wait until server tells us his status
 
         """
-        msg = 'entering the event loop|will retry binding'
-        self.logfile_pos.seek_wait(
-            msg, self.process if not self.gdb else None)
+        if wait_load:
+            msg = 'entering the event loop|will retry binding'
+            self.logfile_pos.seek_wait(
+                msg, self.process if not self.gdb else None)
         while True:
             try:
                 temp = AdminConnection('localhost', self.admin.port)
+                if not wait_load:
+                    ans = yaml.load(temp.execute("2 + 2"))
+                    return True
                 ans = yaml.load(temp.execute('box.info.status'))[0]
                 if ans in ('running', 'hot_standby', 'orphan'):
                     return True
