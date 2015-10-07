@@ -24,6 +24,7 @@ class FilteredStream:
         #
         self.stream = open(filename, "w+", 1)
         self.filters = []
+        self.inspector = None
 
     def write(self, fragment):
         """Apply all filters, then write result to the undelrying stream.
@@ -165,6 +166,10 @@ class Test:
                 where = ": there were warnings in valgrind.log"
 
             if not self.args.is_force:
+                # gh-1026
+                # stop and cleanup tarantool instance for incorrect tests
+                server.stop()
+                server.cleanup()
                 raise RuntimeError("Failed to run test " + self.name + where)
 
     def print_diagnostics(self, logfile, message):

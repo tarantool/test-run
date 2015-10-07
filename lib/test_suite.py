@@ -14,12 +14,13 @@ from lib.tarantool_server import TarantoolServer
 from lib.server import Server
 from lib.colorer import Colorer
 from lib.utils import check_valgrind_log, print_tail_n
-
+from lib.inspector import TarantoolInspector
 color_stdout = Colorer()
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+
 
 class TestSuite:
     """Each test suite contains a number of related tests files,
@@ -93,7 +94,18 @@ class TestSuite:
         color_stdout(shortsep, "\n", schema='separator')
         failed_tests = []
         try:
+            # create inspectpor daemon for cluster tests
+            inspector = TarantoolInspector(
+                'localhost', self.server.inspector_port
+            )
+            inspector.start()
+
             for test in self.tests:
+                self.server.stop()
+                self.server.cls = test.__class__
+                self.server.deploy()
+
+                test.inspector = inspector
                 color_stdout(test.name.ljust(48), schema='t_name')
                 # for better diagnostics in case of a long-running test
 
@@ -112,6 +124,7 @@ class TestSuite:
             # don't delete core files or state of the data dir
             # in case of exception, which is raised when the
             # server crashes
+            inspector.stop()
             self.server.cleanup()
         except (KeyboardInterrupt) as e:
             color_stdout("\n%s\n" % shortsep, schema='separator')

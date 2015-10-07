@@ -8,7 +8,7 @@ import shlex
 import daemon
 import shutil
 import signal
-import socket
+from gevent import socket
 import subprocess
 import ConfigParser
 
@@ -45,6 +45,7 @@ class Server(object):
     program operates with only one server, but in future we may add
     replication slaves. The server is started once at the beginning
     of each suite, and stopped at the end."""
+    DEFAULT_INSPECTOR = 8080
 
     @property
     def vardir(self):
@@ -56,7 +57,6 @@ class Server(object):
         if path == None:
             return
         self._vardir = os.path.abspath(path)
-
 
     def __new__(cls, ini=None):
         if ini == None or 'core' not in ini or ini['core'] is None:
@@ -72,6 +72,9 @@ class Server(object):
         self.ini = ini
         self.re_vardir_cleanup = ['*.core.*', 'core']
         self.vardir = ini['vardir']
+        self.inspector_port = int(ini.get(
+            'inspector_port', self.DEFAULT_INSPECTOR
+        ))
 
     def prepare_args(self):
         return []

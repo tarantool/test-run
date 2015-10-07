@@ -3,11 +3,12 @@ import os
 import sys
 import shlex
 import shutil
-import socket
+from gevent import socket
+import yaml
 
 from collections import deque
 
-from lib.admin_connection import AdminConnection
+from lib.admin_connection import AdminAsyncConnection
 
 class Namespace(object):
     pass
@@ -24,15 +25,18 @@ class TestState(object):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
+        self.operation = False
         self.create_server = create_server
-        self.servers =      { 'default': default_server }
-        self.connections =  { 'default': default_server.admin }
-        # curcon is an array since we may have many connections
-        self.curcon = [self.connections['default']]
-        nmsp = Namespace()
-        setattr(nmsp, 'admin', default_server.admin.uri)
-        setattr(nmsp, 'listen', default_server.iproto.uri)
-        setattr(self.environ, 'default', nmsp)
+        self.servers = { 'default': default_server }
+        self.connections = {}
+        if default_server is not None:
+            self.connections =  { 'default': default_server.admin }
+            # curcon is an array since we may have many connections
+            self.curcon = [self.connections['default']]
+            nmsp = Namespace()
+            setattr(nmsp, 'admin', default_server.admin.uri)
+            setattr(nmsp, 'listen', default_server.iproto.uri)
+            setattr(self.environ, 'default', nmsp)
 
     def parse_preprocessor(self, string):
         token_store = deque()
@@ -49,6 +53,19 @@ class TestState(object):
             if not value:
                 raise LuaPreprocessorException("Wrong token for setopt: expected option value")
             return self.options(option, value)
+        elif token == 'eval':
+            name = lexer.get_token()
+            expr = lexer.get_token()
+
+            # token format: eval <server name> "<expr>"
+            return self.lua_eval(name, expr[1:-1])
+        elif token == 'wait_lsn':
+            waiter = lexer.get_token()
+            master = lexer.get_token()
+            return self.wait_lsn(waiter, master)
+        elif token == 'switch':
+            server = lexer.get_token()
+            return self.switch(server)
         token_store.append(token)
         token = lexer.get_token()
         if token == 'server':
@@ -126,60 +143,108 @@ class TestState(object):
         else:
             raise LuaPreprocessorException("Wrong option: "+repr(key))
 
-    def server(self, ctype, sname, opts):
-        if ctype == 'create':
-            if sname in self.servers:
-                raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
-            temp = self.create_server()
-            temp.name = sname
-            if 'need_init' in opts:
-                temp.need_init   = True if opts['need_init'] == 'True' else False
-            if 'script' in opts:
-                temp.script = opts['script'][1:-1]
-	    if 'lua_libs' in opts:
-		temp.lua_libs = opts['lua_libs'][1:-1].split(' ')
-            temp.rpl_master = None
-            if 'rpl_master' in opts:
-                temp.rpl_master = self.servers[opts['rpl_master']]
-            kwargs = {}
-            if 'wait_load' in opts:
-                kwargs['wait_load'] = opts['wait_load'] not in ('0', 'False')
-            temp.vardir = self.suite_ini['vardir']
-            self.servers[sname] = temp
-            self.servers[sname].deploy(silent=True, **kwargs)
-            nmsp = Namespace()
-            setattr(nmsp, 'admin', temp.admin.port)
-            setattr(nmsp, 'listen', temp.iproto.port)
-            if temp.rpl_master:
-                setattr(nmsp, 'master', temp.rpl_master.iproto.port)
-            setattr(self.environ, sname, nmsp)
-        elif ctype == 'start':
-            if sname not in self.servers:
-                raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
-            self.servers[sname].start(silent=True)
-            self.connections[sname] = self.servers[sname].admin
-            try:
-                self.connections[sname]('return true', silent=True)
-            except socket.error as e:
-                LuaPreprocessorException('Can\'t start server '+repr(sname))
-        elif ctype == 'stop':
-            if sname not in self.servers:
-                raise LuaPreprocessorException('Can\'t stop nonexistent server '+repr(sname))
-            self.connections[sname].disconnect()
-            self.connections.pop(sname)
-            self.servers[sname].stop()
-        elif ctype == 'deploy':
-            self.servers[sname].deploy()
-        elif ctype == 'cleanup':
-            if sname not in self.servers:
-                raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
-            self.servers[sname].cleanup()
-            if sname != 'default':
-                delattr(self.environ, sname)
-            else:
-                self.servers[sname].install(silent=True)
+    def server_start(self, ctype, sname, opts):
+        if sname not in self.servers:
+            raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
+        self.servers[sname].start(silent=True)
+        self.connections[sname] = self.servers[sname].admin
+        try:
+            self.connections[sname]('return true', silent=True)
+        except socket.error as e:
+            LuaPreprocessorException('Can\'t start server '+repr(sname))
+
+    def server_stop(self, ctype, sname, opts):
+        if sname not in self.servers:
+            raise LuaPreprocessorException('Can\'t stop nonexistent server '+repr(sname))
+        self.connections[sname].disconnect()
+        self.connections.pop(sname)
+        self.servers[sname].stop()
+
+    def server_create(self, ctype, sname, opts):
+        if sname in self.servers:
+            raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
+        temp = self.create_server()
+        temp.name = sname
+        if 'need_init' in opts:
+            temp.need_init   = True if opts['need_init'] == 'True' else False
+        if 'script' in opts:
+            temp.script = opts['script'][1:-1]
+        if 'lua_libs' in opts:
+            temp.lua_libs = opts['lua_libs'][1:-1].split(' ')
+        temp.rpl_master = None
+        if 'rpl_master' in opts:
+            temp.rpl_master = self.servers[opts['rpl_master']]
+        temp.vardir = self.suite_ini['vardir']
+        temp.inspector_port = int(self.suite_ini.get(
+            'inspector_port', temp.DEFAULT_INSPECTOR
+        ))
+        self.servers[sname] = temp
+        self.servers[sname].deploy(silent=True)
+        nmsp = Namespace()
+        setattr(nmsp, 'admin', temp.admin.port)
+        setattr(nmsp, 'listen', temp.iproto.port)
+        if temp.rpl_master:
+            setattr(nmsp, 'master', temp.rpl_master.iproto.port)
+        setattr(self.environ, sname, nmsp)
+
+    def server_deploy(self, ctype, sname, opts):
+        self.servers[sname].deploy()
+
+    def server_cleanup(self, ctype, sname, opts):
+        if sname not in self.servers:
+            raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
+        self.servers[sname].cleanup()
+        if sname != 'default':
+            delattr(self.environ, sname)
         else:
-            raise LuaPreprocessorException('Unknown command for server: '+repr(ctype))
+            self.servers[sname].install(silent=True)
+
+    def switch(self, server):
+        self.lua_eval(server, "env=require('test_run')", silent=True)
+        self.lua_eval(
+            server, "test_run=env.new()", silent=True
+        )
+        return self.connection('set', [server, ], None)
+
+    def server_restart(self, ctype, sname, opts):
+        # self restart from lua with proxy
+        if 'proxy' not in self.servers:
+            self.server_create(
+                'create', 'proxy', {'script': '"box/proxy.lua"'}
+            )
+        self.server_start('start', 'proxy', {})
+        self.switch('proxy')
+
+        # restart real server and switch back
+        self.server_stop(ctype, sname, opts)
+        if 'cleanup' in opts:
+            self.server_cleanup(ctype, sname, opts)
+            self.server_deploy(ctype, sname, opts)
+        self.server_start(ctype, sname, opts)
+        self.switch(sname)
+
+        # remove proxy
+        self.server_stop('stop', 'proxy', {})
+
+    def server(self, ctype, sname, opts):
+        attr = 'server_%s' % ctype
+        if hasattr(self, attr):
+            getattr(self, attr)(ctype, sname, opts)
+        else:
+            raise LuaPreprocessorException(
+                'Unknown command for server: %s' % ctype
+            )
+
+    def wait_lsn(self, waiter, master):
+        if waiter not in self.servers:
+            raise LuaPreprocessorException('Can\'t start nonexistent server %s' % repr(waiter))
+        if master not in self.servers:
+            raise LuaPreprocessorException('Can\'t start nonexistent server %s' % repr(master))
+        replica = self.servers[waiter]
+        wait_for = self.servers[master]
+        master_id = wait_for.get_param('server')['id']
+        lsn = wait_for.get_lsn(master_id)
+        replica.wait_lsn(master_id, lsn)
 
     def connection(self, ctype, cnames, sname):
         # we always get a list of connections as input here
@@ -189,7 +254,7 @@ class TestState(object):
                 raise LuaPreprocessorException('Can\'t create connection to nonexistent server '+repr(sname))
             if cname in self.connections:
                 raise LuaPreprocessorException('Connection {0} already exists'.format(repr(cname)))
-            self.connections[cname] = AdminConnection('localhost', self.servers[sname].admin.port)
+            self.connections[cname] = AdminAsyncConnection('localhost', self.servers[sname].admin.port)
             self.connections[cname].connect()
         elif ctype == 'drop':
             if cname not in self.connections:
@@ -214,8 +279,20 @@ class TestState(object):
         else:
             raise LuaPreprocessorException("Wrong command for filters: " + repr(ctype))
 
+    def lua_eval(self, name, expr, silent=True):
+        self.servers[name].admin.reconnect()
+        result = self.servers[name].admin(
+            '%s%s' % (expr, self.delimiter), silent=silent
+        )
+        result = yaml.load(result)
+        if not result:
+            result = []
+        return {'result': result}
+
+
     def variable(self, ctype, ref, ret):
         if ctype == 'set':
+            self.curcon[0].reconnect()
             self.curcon[0](ref+'='+str(eval(ret[1:-1], {}, self.environ.__dict__)), silent=True)
         else:
             raise LuaPreprocessorException("Wrong command for variables: " + repr(ctype))

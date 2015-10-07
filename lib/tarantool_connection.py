@@ -21,13 +21,68 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+from gevent import socket as gsocket
 import socket
+from geventconnpool import ConnectionPool
+import ctypes
 import sys
 import errno
 import re
+import gevent
+from contextlib import contextmanager
+
+class TarantoolPool(ConnectionPool):
+    def __init__(self, host, port, *args, **kwargs):
+        self.host = host
+        self.port = port
+        return super(TarantoolPool, self).__init__(*args, **kwargs)
+
+    def _new_connection(self):
+        result = None
+        if self.host == 'unix/' or re.search(r'^/', str(self.port)):
+            result = gsocket.socket(gsocket.AF_UNIX, gsocket.SOCK_STREAM)
+            result.connect(self.port)
+        else:
+            result = gsocket.create_connection((self.host, self.port))
+            result.setsockopt(gsocket.SOL_TCP, gsocket.TCP_NODELAY, 1)
+        return result
+
+    def _addOne(self):
+        stime = 0.1
+        while True:
+            try:
+                c = self._new_connection()
+            except gsocket.error:
+                c = None
+            if c:
+                break
+            gevent.sleep(stime)
+            if stime < 400:
+                stime *= 2
+        self.conn.append(c)
+        self.lock.release()
+
+    @contextmanager
+    def get(self):
+        self.lock.acquire()
+        try:
+            c = self.conn.pop()
+            yield c
+        except self.exc_classes:
+            gevent.spawn_later(1, self._addOne)
+            raise
+        except:
+            self.conn.append(c)
+            self.lock.release()
+            raise
+        else:
+            self.conn.append(c)
+            self.lock.release()
+
+    def close_all(self):
+        self.conn.clear()
 
 class TarantoolConnection(object):
-
     @property
     def uri(self):
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
@@ -89,3 +144,33 @@ class TarantoolConnection(object):
 
     def __call__(self, command, silent=False, simple=False):
         return self.execute(command, silent)
+
+class TarantoolAsyncConnection(TarantoolConnection):
+    pool = TarantoolPool
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.connections = None
+        self.is_connected = False
+        libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
+        self._sys_recv = libc.recv
+
+    @property
+    def socket(self):
+        with self.connections.get() as c:
+            result = c
+        return result
+
+    def connect(self):
+        self.connections = self.pool(self.host, self.port, 3)
+        self.is_connected = True
+
+    def disconnect(self):
+        if self.is_connected:
+            self.connections.close_all()
+            self.is_connected = False
+
+    def execute(self, command, silent=True):
+        return self.execute_no_reconnect(command, silent)
+

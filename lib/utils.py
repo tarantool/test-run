@@ -1,7 +1,7 @@
 import os
 import sys
 import collections
-import socket
+from gevent import socket
 
 
 from lib.colorer import Colorer

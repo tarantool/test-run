@@ -10,13 +10,15 @@ import daemon
 import random
 import shutil
 import signal
-import socket
+from gevent import socket
 import difflib
 import filecmp
 import traceback
 import subprocess
 import collections
 import os.path
+import gevent
+import threading
 
 try:
     from cStringIO import StringIO
@@ -27,7 +29,7 @@ from lib.test import Test
 from lib.server import Server
 from lib.preprocessor import TestState
 from lib.box_connection import BoxConnection
-from lib.admin_connection import AdminConnection
+from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
 from lib.utils import check_port
 
@@ -47,10 +49,8 @@ class FuncTest(Test):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
 
-
 class LuaTest(FuncTest):
-    def execute(self, server):
-        ts = TestState(self.suite_ini, server, TarantoolServer)
+    def exec_loop(self, ts):
         cmd = None
 
         def send_command(command):
@@ -60,6 +60,7 @@ class LuaTest(FuncTest):
             return result
 
         for line in open(self.name, 'r'):
+            # context switch for inspector after each line
             if not cmd:
                 cmd = StringIO()
             if line.find('--#') == 0:
@@ -83,14 +84,26 @@ class LuaTest(FuncTest):
                     sys.stdout.write(result.replace("\r\n", "\n"))
                     cmd.close()
                     cmd = None
+            # join inspector handler
+            self.inspector.sem.wait()
         # stop any servers created by the test, except the default one
         ts.cleanup()
+
+    def execute(self, server):
+        ts = TestState(self.suite_ini, server, TarantoolServer)
+        self.inspector.set_parser(ts)
+        lua = gevent.Greenlet.spawn(self.exec_loop, ts)
+        lua.join()
 
 
 class PythonTest(FuncTest):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
 
+CON_SWITCH = {
+    LuaTest: AdminAsyncConnection,
+    PythonTest: AdminConnection
+}
 
 class TarantoolLog(object):
     def __init__(self, path):
@@ -218,6 +231,7 @@ class TarantoolServer(Server):
     @property
     def debug(self):
         return self.test_debug()
+
     @property
     def name(self):
         if not hasattr(self, '_name') or not self._name:
@@ -289,7 +303,9 @@ class TarantoolServer(Server):
     def _admin(self, port):
         if hasattr(self, 'admin'):
             del self.admin
-        self.admin = AdminConnection('localhost', port)
+        if not hasattr(self, 'cls'):
+            self.cls = LuaTest
+        self.admin = CON_SWITCH[self.cls]('localhost', port)
 
     @property
     def _iproto(self):
@@ -446,6 +462,7 @@ class TarantoolServer(Server):
                         continue
                     raise
         shutil.copy('.tarantoolctl', self.vardir)
+        shutil.copy('../test-run/test_run.lua', self.vardir)
 
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
@@ -471,6 +488,7 @@ class TarantoolServer(Server):
         check_port(self.admin.port)
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
+        os.putenv("INSPECTOR", str(self.inspector_port))
         if self.rpl_master:
             os.putenv("MASTER", self.rpl_master.iproto.uri)
         self.logfile_pos = self.logfile
@@ -485,6 +503,10 @@ class TarantoolServer(Server):
         wait_load = kwargs.get('wait_load', True)
         if wait:
             self.wait_until_started(wait_load)
+
+        port = self.admin.port
+        self.admin.disconnect()
+        self.admin = CON_SWITCH[self.cls]('localhost', port)
         self.status = 'started'
 
     def wait_stop(self):

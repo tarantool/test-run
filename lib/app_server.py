@@ -6,18 +6,27 @@ import errno
 import shutil
 import traceback
 
-from subprocess import Popen, PIPE
+from gevent.subprocess import Popen, PIPE
 
 from lib.server import Server
-from lib.tarantool_server import Test
+from lib.tarantool_server import Test, TarantoolServer
+from lib.preprocessor import TestState
 from lib.utils import find_port
+import gevent
+import threading
 
+def run_server(execs, cwd):
+    proc = Popen(execs, stdout=PIPE, cwd=cwd)
+    sys.stdout.write(proc.communicate()[0])
 
 class AppTest(Test):
     def execute(self, server):
+        ts = TestState(self.suite_ini, None, TarantoolServer)
+        self.inspector.set_parser(ts)
+
         execs = [os.path.join(os.getcwd(), self.name)]
-        proc = Popen(execs, stdout=PIPE, cwd=server.vardir)
-        sys.stdout.write(proc.communicate()[0])
+        tarantool = gevent.Greenlet.spawn(run_server, execs, server.vardir)
+        tarantool.join()
 
 class AppServer(Server):
     """A dummy server implementation for application server tests"""
@@ -55,6 +64,8 @@ class AppServer(Server):
                         continue
                     raise
         os.putenv("LISTEN", str(find_port(34000)))
+        os.putenv("INSPECTOR", str(self.inspector_port))
+        shutil.copy('../test-run/test_run.lua', self.vardir)
 
     @classmethod
     def find_exe(cls, builddir):

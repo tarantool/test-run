@@ -21,35 +21,37 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-import socket
 import yaml
 import sys
 import re
-from tarantool_connection import TarantoolConnection
+from tarantool_connection import TarantoolConnection, TarantoolPool, TarantoolAsyncConnection
+from gevent import socket as gsocket
+import gevent
 
 ADMIN_SEPARATOR = '\n'
 
-class AdminConnection(TarantoolConnection):
-    def execute_no_reconnect(self, command, silent):
-        if not command:
-            return
-        if not silent:
-            sys.stdout.write(command + ADMIN_SEPARATOR)
-        cmd = command.replace('\n', ' ') + ADMIN_SEPARATOR
-        self.socket.sendall(cmd)
+class AdminPool(TarantoolPool):
+    def _new_connection(self):
+        s = super(AdminPool, self)._new_connection()
+        handshake = s.recv(128)
+        if not re.search(r'^Tarantool.*console.*', str(handshake)):
+            raise RuntimeError('Broken tarantool console handshake')
+        return s
+
+class ExecMixIn(object):
+    def cmd(self, socket, cmd, silent):
+        socket.sendall(cmd)
 
         bufsiz = 4096
         res = ""
-
         while True:
-            buf = self.socket.recv(bufsiz)
+            buf = socket.recv(bufsiz)
             if not buf:
                 break
             res = res + buf
             if (res.rfind("\n...\n") >= 0 or res.rfind("\r\n...\r\n") >= 0):
                 break
 
-        # validate yaml by parsing it
         try:
             yaml.load(res)
         finally:
@@ -57,8 +59,40 @@ class AdminConnection(TarantoolConnection):
                 sys.stdout.write(res.replace("\r\n", "\n"))
         return res
 
+class AdminConnection(TarantoolConnection, ExecMixIn):
+    def execute_no_reconnect(self, command, silent):
+        if not command:
+            return
+        if not silent:
+            sys.stdout.write(command + ADMIN_SEPARATOR)
+        cmd = command.replace('\n', ' ') + ADMIN_SEPARATOR
+        return self.cmd(self.socket, cmd, silent)
+
     def connect(self):
         super(AdminConnection, self).connect()
         handshake = self.socket.recv(128)
         if not re.search(r'^Tarantool.*console.*', str(handshake)):
             raise RuntimeError('Broken tarantool console handshake')
+
+class AdminAsyncConnection(TarantoolAsyncConnection, ExecMixIn):
+    pool = AdminPool
+
+    def execute_no_reconnect(self, command, silent):
+        if not command:
+            return
+        if not silent:
+            sys.stdout.write(command + ADMIN_SEPARATOR)
+        cmd = command.replace('\n', ' ') + ADMIN_SEPARATOR
+
+        result = None
+        with self.connections.get() as sock:
+            result = self.cmd(sock, cmd, silent)
+        return result
+
+    def execute(self, command, silent=True):
+        if not self.is_connected:
+            self.connect()
+        try:
+            return self.execute_no_reconnect(command, silent)
+        except Exception, e:
+            return None
