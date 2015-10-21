@@ -94,7 +94,9 @@ class TestSuite:
         failed_tests = []
         try:
             for test in self.tests:
-                color_stdout(test.name.ljust(48), schema='t_name')
+                color_stdout(os.path.join(self.ini['suite'],
+                                          os.path.basename(test.name)).ljust(48),
+                             schema='t_name')
                 # for better diagnostics in case of a long-running test
 
                 test_name = os.path.basename(test.name)

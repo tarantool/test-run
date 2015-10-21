@@ -24,7 +24,7 @@ class UnittestServer(Server):
         if _ini is None:
             _ini = {}
         ini = {
-            'vardir': None
+            'vardir': None,
         }; ini.update(_ini)
         Server.__init__(self, ini)
         self.vardir = ini['vardir']
@@ -48,8 +48,13 @@ class UnittestServer(Server):
                     answer.append(test)
             return answer
 
-        test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini) for k in sorted(glob.glob(os.path.join(suite_path, "*.test" )))]
-        test_suite.tests = sum(map((lambda x: patterned(x, test_suite.args.tests)), test_suite.tests), [])
+        test_suite.ini['suite'] = suite_path
+        tests = glob.glob(os.path.join(suite_path, "*.test" ))
+
+        if not tests:
+            tests = glob.glob(os.path.join(self.builddir, 'test', suite_path, '*.test'))
+        test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini) for k in sorted(tests)]
+        test_suite.tests = sum([patterned(x, test_suite.args.tests) for x in test_suite.tests], [])
 
     def print_log(self, lines):
         pass
