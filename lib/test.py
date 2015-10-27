@@ -19,7 +19,7 @@ class FilteredStream:
     """Helper class to filter .result file output"""
     def __init__(self, filename):
         #
-        # always open the output stream in line-buffered mode, 
+        # always open the output stream in line-buffered mode,
         # to see partial results of a failed test
         #
         self.stream = open(filename, "w+", 1)
@@ -67,19 +67,21 @@ class Test:
     If file <test_name>.skipcond is exists it will be executed before
     test and if it sets self.skip to True value the test will be skipped.
     """
+    rg = re.compile('\.test.*')
 
     def __init__(self, name, args, suite_ini):
         """Initialize test properties: path to test file, path to
         temporary result file, path to the client program, test status."""
-        rg = re.compile('.test.*')
         self.name = name
         self.args = args
         self.suite_ini = suite_ini
-        self.result = rg.sub('.result', name)
-        self.skip_cond = rg.sub('.skipcond', name)
+        self.result = os.path.join(suite_ini['suite'],
+                os.path.basename(self.rg.sub('.result', name)))
+        self.skip_cond = os.path.join(suite_ini['suite'],
+                os.path.basename(self.rg.sub('.skipcond', name)))
         self.tmp_result = os.path.join(self.args.vardir,
                                        os.path.basename(self.result))
-        self.reject = rg.sub('.reject', name)
+        self.reject = self.rg.sub('.reject', name)
         self.is_executed = False
         self.is_executed_ok = None
         self.is_equal_result = None
@@ -197,5 +199,3 @@ class Test:
                                             reject_time)
 
                 color_stdout.writeout_unidiff(diff)
-
-

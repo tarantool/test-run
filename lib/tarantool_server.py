@@ -623,6 +623,7 @@ class TarantoolServer(Server):
         return False
 
     def find_tests(self, test_suite, suite_path):
+        test_suite.ini['suite'] = suite_path
         tests  = [PythonTest(k, test_suite.args, test_suite.ini) \
                 for k in sorted(glob.glob(os.path.join(suite_path, "*.test.py" )))]
         tests += [LuaTest(k, test_suite.args, test_suite.ini)    \
