@@ -23,7 +23,7 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 from gevent import socket as gsocket
 import socket
-from geventconnpool import ConnectionPool
+from connpool import ConnectionPool
 import ctypes
 import sys
 import errno
