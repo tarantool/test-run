@@ -106,17 +106,19 @@ Tests interact only with `AdminConnection`. Supports some preprocessor functions
 
 **Delimiter example:**
 ```
+env = require('test_run')
+test_run = env.new()
 box.schema.space.create('temp')
 t1 = box.space.temp
 t1:create_index('primary', { type = 'hash', parts = {1, 'num'}, unique = true})
 t1:insert{0, 1, 'hello'}
---# setopt delimiter ';'
+test_run:cmd("setopt delimiter ';'")
 function test()
     return {1,2,3}
 end;
 test(
 );
---# setopt delimiter ''
+test_run:cmd("setopt delimiter ''");
 test(
 );
 test
@@ -125,6 +127,8 @@ test
 
 **Delimiter result:**
 ```
+env = require('test_run')
+test_run = env.new()
 box.schema.space.create('temp')
 ---
 - index: []
@@ -147,7 +151,7 @@ t1:insert{0, 1, 'hello'}
 ---
 - [0, 1, 'hello']
 ...
---# setopt delimiter ';' -- !!COMMENTARY - delimiter is changed to ';\n'
+test_run:cmd("setopt delimiter ';'")
 function test()
     return {1,2,3}
 end;
@@ -160,7 +164,7 @@ test(
   - 2
   - 3
 ...
---# setopt delimiter '' -- !!COMMENTARY - delimiter is changed back - to '\n'
+test_run:cmd("setopt delimiter ''");
 test(
 ---
 - error: '[string "test( "]:1: unexpected symbol near ''<eof>'''
@@ -175,30 +179,60 @@ test
 ...
 ```
 
-##### Preprocessor description
-prefix `--#` means that this line must processed to preprocessor
+##### Interaction with the test environment
+In lua test you can use `test_run` module to interact with the test environement
+```lua
+env = require('test_run')
+test_run = env.new()
+test_run:cmd("<command>")
+```
 
 __Base directives:__
-* `--# setopt delimiter '<delimiter>'` - Sets delimiter to <delimiter>\n
+* `setopt delimiter '<delimiter>'` - Sets delimiter to <delimiter>\n
 
 __Server directives:__
-* `--# create server <name> with ...` - Create server with name <name>, where `...` may be:
+* `create server <name> with ...` - Create server with name <name>, where `...` may be:
     * `script = '<path>'` - script to start
     * `rpl_master = <server>` - replication master server name
-* `--# start server <name>` - Run server <name>
-* `--# stop server <name> ` - Stop server <name> 
-* `--# cleanup server <name> ` - Cleanup (basically after server has been stopped)
+* `start server <name>` - Run server <name>
+* `stop server <name> ` - Stop server <name> 
+* `cleanup server <name> ` - Cleanup (basically after server has been stopped)
+*  `restart server <name>` - Restart server <name>(you can restart yourself from lua!)
 
-__Connection directives:__
-* `--# create connection <name-con> to <name-serv>` - create connection named <name-con> to <name-serv> server
-* `--# drop connection <name>` - Turn connection <name> off and delete it
-* `--# set connection <name>` - Set connection <name> to be main, for next commands
+__Connection switch:__
+* `switch <name>` - Switch connection to server <name> and add test run into global scope
+
+__Connection directives(low level):__
+* `create connection <name-con> to <name-serv>` - create connection named <name-con> to <name-serv> server
+* `drop connection <name>` - Turn connection <name> off and delete it
+* `set connection <name>` - Set connection <name> to be main, for next commands
 
 __Filter directives:__
-* `--# push filter '<regexp_from>' to '<regexp_to>'` - e,g, `--# push filter 'listen: .*' to 'listen: <uri>'`
+* `push filter '<regexp_from>' to '<regexp_to>'` - e,g, `push filter 'listen: .*' to 'listen: <uri>'`
 
 __Set variables:__
-* `--# set variables '<variable_name>' to '<where>'` - execute `<variable_name> = *<where>` where *<where> is value of where. Where must be
+* `set variables '<variable_name>' to '<where>'` - execute `<variable_name> = *<where>` where *<where> is value of where. Where must be
     * `<server_name>.admin` - admin port of this server
     * `<server_name>.master` - listen port of master of this replica
     * `<server_name>.listen` - listen port of this server
+
+__Dev ops features:__
+
+You can power on any tarantool replicas in a loop
+```lua
+test_run:cmd('setopt delimiter ";"')
+function join(inspector, n)
+    for i=1,n do
+        local rid = tostring(i)
+        os.execute('mkdir -p tmp')
+        os.execute('cp ../replication/replica.lua ./tmp/replica'..rid..'.lua')
+        os.execute('chmod +x ./tmp/replica'..rid..'.lua')
+        inspector:cmd("create server replica"..rid.." with rpl_master=default, script='./var/tmp/replica"..rid..".lua'")
+        inspector:cmd("start server replica"..rid)
+    end
+end;
+test_run:cmd('setopt delimiter ""');
+
+-- create 30 replicas for current tarantool
+join(test_run, 30)
+```
