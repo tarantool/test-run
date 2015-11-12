@@ -84,6 +84,8 @@ class TestSuite:
         if not self.tests:
             # noting to test, exit
             return []
+        # fixme: remove this string if we fix all legacy tests
+        self.server.cls = self.tests[0].__class__
         self.server.deploy(silent=False)
 
         longsep = '='*70
@@ -101,10 +103,6 @@ class TestSuite:
             inspector.start()
 
             for test in self.tests:
-                self.server.stop()
-                self.server.cls = test.__class__
-                self.server.deploy()
-
                 test.inspector = inspector
                 color_stdout(os.path.join(
                     self.ini['suite'], os.path.basename(test.name)).ljust(48),

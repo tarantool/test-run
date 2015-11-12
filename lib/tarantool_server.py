@@ -63,15 +63,7 @@ class LuaTest(FuncTest):
             # context switch for inspector after each line
             if not cmd:
                 cmd = StringIO()
-            if line.find('--#') == 0:
-                rescom = cmd.getvalue().replace('\n\n', '\n')
-                if rescom:
-                    sys.stdout.write(cmd.getvalue())
-                    result = send_command(rescom)
-                    sys.stdout.write(result.replace("\r\n", "\n"))
-                sys.stdout.write(line)
-                ts(line)
-            elif line.find('--') == 0:
+            if line.find('--') == 0:
                 sys.stdout.write(line)
             else:
                 if line.strip() or cmd.getvalue():
