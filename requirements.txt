@@ -1,5 +1,6 @@
-python-daemon==1.5.5
+python-daemon>=1.5.5
 PyYAML==3.10
 argparse==1.1
 msgpack-python==0.4.6
 gevent==1.1b5
+six>=1.8.0
