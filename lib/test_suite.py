@@ -138,7 +138,7 @@ class TestSuite:
                 )
                 # for better diagnostics in case of a long-running test
 
-                conf = 'none'
+                conf = ''
                 if test.run_params:
                     conf = test.conf_name
                 color_stdout("%s" % conf.ljust(16), schema='test_var')
