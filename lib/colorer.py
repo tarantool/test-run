@@ -47,6 +47,7 @@ class SchemaAscetic(CSchema):
         'test_skip': {'fgcolor': 'grey'},
         'test_disa': {'fgcolor': 'grey'},
         'error':     {'fgcolor': 'red'},
+        'test_var':  {'fgcolor': 'yellow'},
     }
 
 class SchemaPretty(CSchema):
@@ -70,7 +71,8 @@ class SchemaPretty(CSchema):
         'serv_text': {'fgcolor': 'lmagenta'},
         'version':   {'fgcolor': 'yellow', 'bold':True},
         'tr_text':   {'fgcolor': 'green'},
-        'log':       {'fgcolor': 'grey'}
+        'log':       {'fgcolor': 'grey'},
+        'test_var':  {'fgcolor': 'yellow'},
     }
 
 class Colorer(object):

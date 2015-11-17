@@ -54,6 +54,15 @@ local function switch(self, node)
     return self:cmd('set connection ' .. node)
 end
 
+local function get_cfg(self, name)
+    if self.run_conf == nil then
+        self.run_conf = json.decode(
+            self:cmd('config ' .. name)
+        )
+    end
+    return self.run_conf[name]
+end
+
 local function new(host, port)
     local inspector = {}
 
@@ -76,6 +85,7 @@ local function new(host, port)
     inspector.get_lsn = get_lsn
     inspector.wait_lsn = wait_lsn
     inspector.switch = switch
+    inspector.get_cfg = get_cfg
     return inspector
 end
 

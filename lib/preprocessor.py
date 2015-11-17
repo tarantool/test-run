@@ -21,7 +21,7 @@ class LuaPreprocessorException(Exception):
         return "lua preprocessor error: " + repr(self.value)
 
 class TestState(object):
-    def __init__(self, suite_ini, default_server, create_server):
+    def __init__(self, suite_ini, default_server, create_server, params = {}):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
@@ -29,6 +29,7 @@ class TestState(object):
         self.create_server = create_server
         self.servers = { 'default': default_server }
         self.connections = {}
+        self.run_params = params
         if default_server is not None:
             self.connections =  { 'default': default_server.admin }
             # curcon is an array since we may have many connections
@@ -66,6 +67,9 @@ class TestState(object):
         elif token == 'switch':
             server = lexer.get_token()
             return self.switch(server)
+        elif token == 'config':
+            var_name = lexer.get_token()
+            return self.run_params
         token_store.append(token)
         token = lexer.get_token()
         if token == 'server':

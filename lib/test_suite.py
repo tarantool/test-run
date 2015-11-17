@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import json
 import shutil
 import difflib
 import threading
@@ -33,6 +34,30 @@ class TestSuite:
     server for this suite, the client program to execute individual
     tests and other suite properties. The server is started once per
     suite."""
+    def get_multirun_conf(self, suite_path):
+        conf_name = self.ini.get('config', None)
+        if conf_name is None:
+            return None
+
+        path = os.path.join(suite_path, conf_name)
+        result = None
+        with open(path) as cfg:
+            try:
+                result = json.load(cfg)
+            except ValueError:
+                raise RuntimeError('Ivalid multirun json')
+        return result
+
+    def get_multirun_params(self, test_path):
+        test = test_path.split('/')[-1]
+        if self.multi_run is None:
+            return
+        result = self.multi_run.get(test, None)
+        if result is not None:
+            return result
+        result = self.multi_run.get('*', None)
+        return result
+
 
     def __init__(self, suite_path, args):
         """Initialize a test suite: check that it exists and contains
@@ -52,6 +77,8 @@ class TestSuite:
         config.read(os.path.join(suite_path, "suite.ini"))
         self.ini.update(dict(config.items("default")))
         self.ini.update(self.args.__dict__)
+        self.multi_run = self.get_multirun_conf(suite_path)
+
         if self.args.stress is None and self.ini['core'] == 'stress':
             return
 
@@ -88,10 +115,11 @@ class TestSuite:
         self.server.cls = self.tests[0].__class__
         self.server.deploy(silent=False)
 
-        longsep = '='*70
-        shortsep = '-'*60
+        longsep = '='*80
+        shortsep = '-'*75
         color_stdout(longsep, "\n", schema='separator')
         color_stdout("TEST".ljust(48), schema='t_name')
+        color_stdout("PARAMS\t\t", schema='test_var')
         color_stdout("RESULT\n", schema='test_pass')
         color_stdout(shortsep, "\n", schema='separator')
         failed_tests = []
@@ -110,6 +138,10 @@ class TestSuite:
                 )
                 # for better diagnostics in case of a long-running test
 
+                conf = 'none'
+                if test.run_params:
+                    conf = test.conf_name
+                color_stdout("%s" % conf.ljust(16), schema='test_var')
                 test_name = os.path.basename(test.name)
                 if (test_name in self.ini["disabled"]
                     or not self.server.debug and test_name in self.ini["release_disabled"]

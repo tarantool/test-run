@@ -127,6 +127,13 @@ class Options:
                action='store_true',
                help="""Enable long run tests""")
 
+        parser.add_argument(
+                "--conf",
+                dest="conf",
+                default=None,
+                help="""Force set test configuration mode"""
+        )
+
         self.args = parser.parse_args()
         self.check()
 

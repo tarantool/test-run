@@ -82,7 +82,10 @@ class LuaTest(FuncTest):
         ts.cleanup()
 
     def execute(self, server):
-        ts = TestState(self.suite_ini, server, TarantoolServer)
+        ts = TestState(
+            self.suite_ini, server, TarantoolServer,
+            self.run_params
+        )
         self.inspector.set_parser(ts)
         lua = gevent.Greenlet.spawn(self.exec_loop, ts)
         lua.join()
@@ -616,10 +619,22 @@ class TarantoolServer(Server):
 
     def find_tests(self, test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
-        tests  = [PythonTest(k, test_suite.args, test_suite.ini) \
-                for k in sorted(glob.glob(os.path.join(suite_path, "*.test.py" )))]
-        tests += [LuaTest(k, test_suite.args, test_suite.ini)    \
-                for k in sorted(glob.glob(os.path.join(suite_path, "*.test.lua")))]
+        get_tests = lambda x: sorted(glob.glob(os.path.join(suite_path, x)))
+        tests  = [PythonTest(k, test_suite.args, test_suite.ini)
+            for k in get_tests("*.test.py")
+        ]
+        for k in get_tests("*.test.lua"):
+            runs = test_suite.get_multirun_params(k)
+            is_correct = lambda x: test_suite.args.conf is None or \
+                test_suite.args.conf == x
+            if runs:
+                tests.extend([LuaTest(
+                    k, test_suite.args,
+                    test_suite.ini, runs[r], r
+                ) for r in runs.keys() if is_correct(r)])
+            else:
+                tests.append(LuaTest(k, test_suite.args, test_suite.ini))
+
         test_suite.tests = []
         # don't sort, command line arguments must be run in
         # the specified order

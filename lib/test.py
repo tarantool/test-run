@@ -69,7 +69,7 @@ class Test:
     """
     rg = re.compile('\.test.*')
 
-    def __init__(self, name, args, suite_ini):
+    def __init__(self, name, args, suite_ini, params={}, conf_name=None):
         """Initialize test properties: path to test file, path to
         temporary result file, path to the client program, test status."""
         self.name = name
@@ -87,6 +87,8 @@ class Test:
         self.is_equal_result = None
         self.is_valgrind_clean = True
         self.is_terminated = False
+        self.run_params = params
+        self.conf_name = conf_name
 
     def passed(self):
         """Return true if this test was run successfully."""
