@@ -11,6 +11,7 @@ Bunch of tests, that lay down in the subfolder (recursively) with `suite.ini` fi
     * `valgrind_disabled` - tests that must be skipped when Valgrind is enabled
 * `lua_libs` - paths for lua files, that should be copied into the folder, where server is started (delimited with the space, e.g. `lua_libs=lua/1.lua lua/2.lua`)
 * `long_run` - mark tests as long, enabled only with `--long` option (delimited with the space, e.g. `long_run=t1.test.lua t2.test.lua`)
+* `config` - test configuration file name
 
 Field `core` must be one of:
 * `tarantool` - Test-Suite for Functional Testing
@@ -21,6 +22,27 @@ Field `core` must be one of:
 Each test consists of files `*.test(.lua|.py)?`, `*.result`, and may have skip condition file `*.skipcond`.
 On first run (without `.result`) `.result` is generated from output.  
 Each run, in the beggining, `.skipcond` file is executed. In the local env there's object `self`, that's `Test` object. If test must be skipped - you must put `self.skip = 1` in this file. Next, `.test(.lua|.py)?` is executed and file `.reject` is created, then `.reject` is compared with `.result`. If something differs, then 15 last string of this diff file are printed and `.reject` file is saving in the folder, where `.result` file is. If not, then `.reject` is deleted.
+
+### Test configuration
+Test configuration file contains config for multiple run. For each test section system runs separated test and compares result with common `.result` file. For example we need to run one test for different db engines("*" means default configuration):
+```json
+{
+    "my.test.lua": {
+        "first": {"a": 1, "b": 2}, 
+        "second": {"a": 1, "b": 3}
+    },
+    "*": {
+        "memtx": {"engine": "memtx"}, 
+        "sophia": {"engine": "sophia"}
+    }
+}
+```
+In test case we can get configuration from inspector:
+```lua
+engine = test_run:get_cfg('engine')
+-- first run engine is 'memtx'
+-- second run engine is 'sophia'
+```
 
 #### Python
 Files: `<name>.test.py`, `<name>.result` and `<name>.skipcond`(optionaly).
