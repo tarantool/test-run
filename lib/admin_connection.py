@@ -30,10 +30,19 @@ import gevent
 
 ADMIN_SEPARATOR = '\n'
 
+def get_handshake(sock, length=128):
+    """
+    Correct way to get tarantool handshake
+    """
+    result = ""
+    while len(result) != length:
+        result = "%s%s" % (result, sock.recv(length-len(result)))
+    return result
+
 class AdminPool(TarantoolPool):
     def _new_connection(self):
         s = super(AdminPool, self)._new_connection()
-        handshake = s.recv(128)
+        handshake = get_handshake(s)
         if not re.search(r'^Tarantool.*console.*', str(handshake)):
             raise RuntimeError('Broken tarantool console handshake')
         return s
@@ -70,7 +79,7 @@ class AdminConnection(TarantoolConnection, ExecMixIn):
 
     def connect(self):
         super(AdminConnection, self).connect()
-        handshake = self.socket.recv(128)
+        handshake = get_handshake(self.socket)
         if not re.search(r'^Tarantool.*console.*', str(handshake)):
             raise RuntimeError('Broken tarantool console handshake')
 
