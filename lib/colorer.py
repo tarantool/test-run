@@ -132,7 +132,14 @@ class Colorer(object):
     def __init__(self):
         self.stdout = sys.stdout
         self.is_term = self.stdout.isatty()
-        self.colors = int(os.popen('tput colors').read()) if self.is_term else None
+        self.colors = None
+        if self.is_term:
+            try:
+                p = os.popen('tput colors 2>/dev/null')
+                self.colors = int(p.read())
+            except: pass
+            finally:
+                p.close()
         schema = os.getenv('TT_SCHEMA', 'ascetic')
         if schema == 'ascetic':
             self.schema = SchemaAscetic()
