@@ -1,7 +1,9 @@
-socket = require('socket')
-json = require('json')
-log = require('log')
-fiber = require('fiber')
+local socket = require('socket')
+local json = require('json')
+local log = require('log')
+local fiber = require('fiber')
+local fio = require('fio')
+local errno = require('errno')
 
 local function request(self, msg)
     local sock = socket.tcp_connect(self.host, self.port)
@@ -63,6 +65,34 @@ local function get_cfg(self, name)
     return self.run_conf[name]
 end
 
+local function grep_log(self, node, what, bytes)
+    local filename = self:eval(node, "box.cfg.logger").result[1]
+    local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
+    if file == nil then
+        local err = errno.strerror()
+        error("Failed to open log file: "..filename..' : '..err)
+    end
+    io.flush() -- attempt to flush stdout == log fd
+    local bytes = bytes or 2048
+    if file:seek(-bytes, 'SEEK_END') == nil then
+        local err = errno.strerror()
+        file:close()
+        error("Failed to seek log file: "..filename..' : '..err)
+    end
+    while true do
+        local line = file:read(bytes)
+        if line == nil then
+            local err = errno.strerror()
+            file:close()
+            error("Failed to read log file: "..filename..' : '..err)
+        elseif line ~= '' then
+            file:close()
+            return string.match(line, what)
+        end
+        fiber.sleep(0)
+    end
+end
+
 local function new(host, port)
     local inspector = {}
 
@@ -86,6 +116,7 @@ local function new(host, port)
     inspector.wait_lsn = wait_lsn
     inspector.switch = switch
     inspector.get_cfg = get_cfg
+    inspector.grep_log = grep_log
     return inspector
 end
 
