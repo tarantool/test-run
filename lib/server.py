@@ -45,7 +45,7 @@ class Server(object):
     program operates with only one server, but in future we may add
     replication slaves. The server is started once at the beginning
     of each suite, and stopped at the end."""
-    DEFAULT_INSPECTOR = 8080
+    DEFAULT_INSPECTOR = 0
 
     @property
     def vardir(self):

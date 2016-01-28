@@ -483,7 +483,6 @@ class TarantoolServer(Server):
         check_port(self.admin.port)
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
-        os.putenv("INSPECTOR", str(self.inspector_port))
         if self.rpl_master:
             os.putenv("MASTER", self.rpl_master.iproto.uri)
         self.logfile_pos = self.logfile

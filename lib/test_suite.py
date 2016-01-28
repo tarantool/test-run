@@ -113,6 +113,11 @@ class TestSuite:
             return []
         # fixme: remove this string if we fix all legacy tests
         self.server.cls = self.tests[0].__class__
+        # create inspectpor daemon for cluster tests
+        inspector = TarantoolInspector(
+            'localhost', self.server.inspector_port
+        )
+        inspector.start()
         self.server.deploy(silent=False)
 
         longsep = '='*80
@@ -124,12 +129,6 @@ class TestSuite:
         color_stdout(shortsep, "\n", schema='separator')
         failed_tests = []
         try:
-            # create inspectpor daemon for cluster tests
-            inspector = TarantoolInspector(
-                'localhost', self.server.inspector_port
-            )
-            inspector.start()
-
             for test in self.tests:
                 test.inspector = inspector
                 color_stdout(os.path.join(

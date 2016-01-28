@@ -1,6 +1,7 @@
 import gevent
 import shlex
 import json
+import os
 
 from gevent.server import StreamServer
 from gevent.lock import Semaphore
@@ -15,8 +16,15 @@ class TarantoolInspector(StreamServer):
     """
 
     def __init__(self, host, port):
+        super(TarantoolInspector, self).__init__((host, port))
         self.parser = None
-        StreamServer.__init__(self, (host, port))
+
+    def start(self):
+        super(TarantoolInspector, self).start()
+        os.environ['INSPECTOR'] = str(self.server_port)
+
+    def stop(self):
+        del os.environ['INSPECTOR']
 
     def set_parser(self, parser):
         self.parser = parser

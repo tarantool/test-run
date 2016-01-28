@@ -104,6 +104,9 @@ local function new(host, port)
 
     if port == nil then
         inspector.port = tonumber(os.getenv('INSPECTOR'))
+	if inspector.port == nil then
+	    error('Inspector not started')
+	end
     else
         inspector.port = port
     end

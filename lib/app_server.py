@@ -64,7 +64,6 @@ class AppServer(Server):
                         continue
                     raise
         os.putenv("LISTEN", str(find_port(34000)))
-        os.putenv("INSPECTOR", str(self.inspector_port))
         shutil.copy('../test-run/test_run.lua', self.vardir)
 
     @classmethod
