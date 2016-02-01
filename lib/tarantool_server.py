@@ -400,7 +400,7 @@ class TarantoolServer(Server):
             ctl_dir = _dir
             # check local tarantoolctl source
             if _dir == builddir:
-                ctl_dir = '../extra/dist'
+                ctl_dir = os.path.join(_dir, '../extra/dist')
 
             ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
             if not os.access(ctl, os.X_OK):
@@ -421,6 +421,8 @@ class TarantoolServer(Server):
             color_stdout('Installing the server ...\n', schema='serv_text')
             color_stdout('    Found executable at ', schema='serv_text')
             color_stdout(self.binary + '\n', schema='path')
+            color_stdout('    Found tarantoolctl at  ', schema='serv_text')
+            color_stdout(self.ctl_path + '\n', schema='path')
             color_stdout('    Creating and populating working directory in ', schema='serv_text')
             color_stdout(self.vardir + ' ...\n', schema='path')
         if not os.path.exists(self.vardir):
