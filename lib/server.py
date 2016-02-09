@@ -5,7 +5,6 @@ import glob
 import stat
 import time
 import shlex
-import daemon
 import shutil
 import signal
 from gevent import socket

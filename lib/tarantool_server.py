@@ -6,7 +6,6 @@ import time
 import yaml
 import errno
 import shlex
-import daemon
 import random
 import shutil
 import signal
