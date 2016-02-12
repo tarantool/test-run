@@ -183,7 +183,20 @@ class TestState(object):
             'inspector_port', temp.DEFAULT_INSPECTOR
         ))
         self.servers[sname] = temp
-        self.servers[sname].deploy(silent=True)
+        if 'workdir' not in opts:
+            self.servers[sname].deploy(silent=True)
+        else:
+            copy_from = opts['workdir']
+            copy_to = self.servers[sname].name
+            self.servers[sname].install(silent=True)
+            os.system('rm -rf %s/%s' % (
+                self.servers[sname].vardir, copy_to
+            ))
+            os.system('cp -r %s %s/%s' % (
+                copy_from,
+                self.servers[sname].vardir,
+                copy_to
+            ))
         nmsp = Namespace()
         setattr(nmsp, 'admin', temp.admin.port)
         setattr(nmsp, 'listen', temp.iproto.port)
