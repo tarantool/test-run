@@ -45,8 +45,13 @@ def find_in_path(name):
 
 
 class FuncTest(Test):
+    SEGFAULT_TAG = 'Segmentation fault'
+
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
+
+    def crash_detect(self, server):
+        server.crash_detect()
 
 class LuaTest(FuncTest):
     def exec_loop(self, ts):
@@ -56,6 +61,9 @@ class LuaTest(FuncTest):
             result = ts.curcon[0](command, silent=True)
             for conn in ts.curcon[1:]:
                 conn(command, silent=True)
+            # gh-24 fix
+            if result is None:
+                result = '[Lost current connection]\n'
             return result
 
         for line in open(self.name, 'r'):
@@ -93,6 +101,7 @@ class LuaTest(FuncTest):
 class PythonTest(FuncTest):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
+        self.crash_detect(server)
 
 CON_SWITCH = {
     LuaTest: AdminAsyncConnection,
@@ -382,6 +391,7 @@ class TarantoolServer(Server):
         self.valgrind = ini['valgrind']
         self.use_unix_sockets = ini['use_unix_sockets']
         self._start_against_running = ini['tarantool_port']
+        self.crash_detector = None
 
     def __del__(self):
         self.stop()
@@ -494,6 +504,9 @@ class TarantoolServer(Server):
                 cwd = self.vardir,
                 stdout=self.log_des,
                 stderr=self.log_des)
+
+        # gh-19 crash detection
+        self.crash_detector = gevent.Greenlet.spawn(self.crash_detect)
         wait = kwargs.get('wait', True)
         wait_load = kwargs.get('wait_load', True)
         if wait:
@@ -503,6 +516,29 @@ class TarantoolServer(Server):
         self.admin.disconnect()
         self.admin = CON_SWITCH[self.cls]('localhost', port)
         self.status = 'started'
+
+    def crash_detect(self):
+        while self.process.returncode is None:
+            self.process.poll()
+            if self.process.returncode is None:
+                gevent.sleep(0.1)
+                continue
+            if self.process.returncode in [0, signal.SIGKILL]:
+                continue
+
+            sys.stdout.write('[Instance "%s" crash detected]\n' % self.name)
+            sys.stdout.write('[Signal=%d]\n' % abs(self.process.returncode))
+            if not os.path.exists(self.logfile):
+                continue
+            with open(self.logfile, 'r') as log:
+                lines = log.readlines()
+                bt = []
+                for line in reversed(lines):
+                    if line[0] != '#':
+                        break
+                    bt.insert(0, line)
+                for trace in bt:
+                    sys.stdout.write(trace)
 
     def wait_stop(self):
         self.process.wait()
@@ -522,8 +558,12 @@ class TarantoolServer(Server):
             return
         if not silent:
             color_stdout('Stopping the server ...\n', schema='serv_text')
-        self.process.terminate()
-        self.wait_stop()
+        # kill only if process is alive
+        if self.process.returncode is None:
+            self.process.terminate()
+            self.crash_detector.join()
+            self.wait_stop()
+
         self.status = None
         if re.search(r'^/', str(self._admin.port)):
             if os.path.exists(self._admin.port):
