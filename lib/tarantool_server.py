@@ -18,6 +18,7 @@ import collections
 import os.path
 import gevent
 import threading
+import gc
 
 try:
     from cStringIO import StringIO
@@ -32,6 +33,8 @@ from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
 from lib.utils import check_port
 
+from greenlet import greenlet, GreenletExit
+
 from lib.colorer import Colorer
 color_stdout = Colorer()
 
@@ -43,12 +46,22 @@ def find_in_path(name):
             return exe
     return ''
 
+def save_join(green_obj, timeout=None):
+    """
+    Gevent join wrapper for
+    test-run stop-on-crash feature
+    """
+    try:
+        green_obj.join(timeout=timeout)
+    except GreenletExit as e:
+        pass
 
 class FuncTest(Test):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
 
 class LuaTest(FuncTest):
+    TIMEOUT = 60 * 10
     def exec_loop(self, ts):
         cmd = None
 
@@ -56,6 +69,9 @@ class LuaTest(FuncTest):
             result = ts.curcon[0](command, silent=True)
             for conn in ts.curcon[1:]:
                 conn(command, silent=True)
+            # gh-24 fix
+            if result is None:
+                result = '[Lost current connection]\n'
             return result
 
         for line in open(self.name, 'r'):
@@ -87,12 +103,25 @@ class LuaTest(FuncTest):
         )
         self.inspector.set_parser(ts)
         lua = gevent.Greenlet.spawn(self.exec_loop, ts)
-        lua.join()
+        save_join(lua, timeout=self.TIMEOUT)
 
+        # join all crash detectors before stream swap
+        check_list = ts.servers.values() + [server, ]
+        for server in check_list:
+            if server.crash_detector is None:
+                continue
+            server.process.poll()
+            # skip working instances
+            if server.process.returncode is None:
+                continue
+            save_join(server.crash_detector)
 
 class PythonTest(FuncTest):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
+        # crash dectection support for legacy tests
+        if os.path.exists(server.logfile):
+            server.crash_grep()
 
 CON_SWITCH = {
     LuaTest: AdminAsyncConnection,
@@ -382,6 +411,10 @@ class TarantoolServer(Server):
         self.valgrind = ini['valgrind']
         self.use_unix_sockets = ini['use_unix_sockets']
         self._start_against_running = ini['tarantool_port']
+        self.crash_detector = None
+        # use this option with inspector
+        # to enable crashes in test
+        self.crash_enabled = False
 
     def __del__(self):
         self.stop()
@@ -494,6 +527,9 @@ class TarantoolServer(Server):
                 cwd = self.vardir,
                 stdout=self.log_des,
                 stderr=self.log_des)
+
+        # gh-19 crash detection
+        self.crash_detector = gevent.Greenlet.spawn(self.crash_detect)
         wait = kwargs.get('wait', True)
         wait_load = kwargs.get('wait_load', True)
         if wait:
@@ -503,6 +539,39 @@ class TarantoolServer(Server):
         self.admin.disconnect()
         self.admin = CON_SWITCH[self.cls]('localhost', port)
         self.status = 'started'
+
+    def crash_detect(self):
+        while self.process.returncode is None:
+            self.process.poll()
+            if self.process.returncode is None:
+                gevent.sleep(0.1)
+                continue
+        if self.process.returncode in [0, signal.SIGKILL]:
+            return
+        if not os.path.exists(self.logfile):
+            return
+        self.crash_grep()
+
+    def crash_grep(self):
+        bt = []
+        with open(self.logfile, 'r') as log:
+            lines = log.readlines()
+            for line in reversed(lines):
+                if line[0] != '#':
+                    break
+                bt.insert(0, line)
+        if not len(bt):
+            return
+
+        sys.stdout.write('[Instance "%s" crash detected]\n' % self.name)
+        sys.stdout.write('[Signal=%d]\n' % abs(self.process.returncode))
+        for trace in bt:
+            sys.stdout.write(trace)
+
+        if not self.crash_enabled:
+            gevent.killall([
+                obj for obj in gc.get_objects() if isinstance(obj, greenlet)
+            ])
 
     def wait_stop(self):
         self.process.wait()
@@ -522,8 +591,13 @@ class TarantoolServer(Server):
             return
         if not silent:
             color_stdout('Stopping the server ...\n', schema='serv_text')
-        self.process.terminate()
-        self.wait_stop()
+        # kill only if process is alive
+        if self.process.returncode is None:
+            self.process.terminate()
+            if self.crash_detector is not None:
+                save_join(self.crash_detector)
+            self.wait_stop()
+
         self.status = None
         if re.search(r'^/', str(self._admin.port)):
             if os.path.exists(self._admin.port):
