@@ -557,9 +557,9 @@ class TarantoolServer(Server):
         with open(self.logfile, 'r') as log:
             lines = log.readlines()
             for line in reversed(lines):
-                if line[0] != '#':
+                if line.startswith('Segmentation fault'):
+                    bt.insert(0, line)
                     break
-                bt.insert(0, line)
         if not len(bt):
             return
 

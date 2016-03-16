@@ -30,20 +30,27 @@ import gevent
 
 ADMIN_SEPARATOR = '\n'
 
-def get_handshake(sock, length=128):
+def get_handshake(sock, length=128, max_try=100):
     """
     Correct way to get tarantool handshake
     """
     result = ""
-    while len(result) != length:
+    i = 0
+    while len(result) != length and i < max_try:
         result = "%s%s" % (result, sock.recv(length-len(result)))
+        # max_try counter for tarantool/gh-1362
+        i += 1
     return result
 
 class AdminPool(TarantoolPool):
     def _new_connection(self):
         s = super(AdminPool, self)._new_connection()
         handshake = get_handshake(s)
-        if not re.search(r'^Tarantool.*console.*', str(handshake)):
+        if handshake and not re.search(r'^Tarantool.*console.*', str(handshake)):
+            # tarantool/gh-1163
+            # 1. raise only if handshake is not full
+            # 2. be silent on crashes or if it's server.stop() operation
+            print 'Handshake error {\n', handshake, '\n}'
             raise RuntimeError('Broken tarantool console handshake')
         return s
 
