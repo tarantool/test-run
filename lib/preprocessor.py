@@ -3,6 +3,7 @@ import os
 import sys
 import shlex
 import shutil
+from ast import literal_eval
 from gevent import socket
 import yaml
 
@@ -169,6 +170,8 @@ class TestState(object):
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
+        for flag in ['wait', 'wait_load']:
+            opts[flag] = bool(literal_eval(opts.get(flag, '1')))
         if 'need_init' in opts:
             temp.need_init   = True if opts['need_init'] == 'True' else False
         if 'script' in opts:
@@ -184,7 +187,7 @@ class TestState(object):
         ))
         self.servers[sname] = temp
         if 'workdir' not in opts:
-            self.servers[sname].deploy(silent=True)
+            self.servers[sname].deploy(silent=True, **opts)
         else:
             copy_from = opts['workdir']
             copy_to = self.servers[sname].name
