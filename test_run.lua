@@ -29,7 +29,6 @@ local function get_param(self, node, param)
         cmd = cmd .. '.' .. param
     end
     cmd = cmd .. '"'
-    log.info(node ..' ' .. request(self, cmd))
     return request(self, cmd)
 end
 
@@ -45,6 +44,73 @@ local function wait_lsn(self, waiter, master)
     while self:get_lsn(waiter, sid) < lsn do
         fiber.sleep(0.001)
     end
+end
+
+local function get_server_id(self, node)
+    return tonumber(self:get_param(node, "server")[1].id)
+end
+
+local function get_vclock(self, node)
+    return self:get_param(node, 'vclock')[1]
+end
+
+local function wait_vclock(self, node, vclock)
+    local strvclock = yaml.encode(vclock)
+    while yaml.encode(self:get_vclock(node)) ~= strvclock do
+        log.info("wait vclock: %s %s", strvclock, yaml.encode(self:get_vclock(node)))
+        fiber.sleep(0.001)
+    end
+end
+
+local function create_cluster(self, servers)
+    -- TODO: use the name of test suite instead of 'replication/'
+    for _, name in ipairs(servers) do
+        self:cmd("create server "..name..
+                 "  with script='replication/"..name..".lua', "..
+                 "       wait_load=False, wait=False")
+        self:cmd("start server "..name)
+    end
+end
+
+local function drop_cluster(self, servers)
+    for _, name in ipairs(self) do
+        self:cmd("stop server "..name)
+        self:cmd("cleanup server "..name)
+    end
+end
+
+local function wait_fullmesh(self, servers)
+    log.info("starting full mesh")
+    for _, server in ipairs(servers) do
+        -- wait bootstrap to finish
+        log.info("%s: waiting bootstrap", server)
+        local server_id
+        while true do
+            server_id = self:get_server_id(server)
+            if server_id > 0 then
+                log.info("%s: bootstrapped", server)
+                break
+            end
+            local info = self:eval(server, "box.info")
+            fiber.sleep(0.01)
+        end
+        -- wait all for full mesh
+        for _, server2 in ipairs(servers) do
+            if server ~= server2 then
+                log.info("%s -> %s: waiting for connection", server2, server)
+                while true do
+                    local info = self:eval(server2,
+                        "box.info.replication["..server_id.."]")[1]
+                    if info ~= nil and info.status == 'follow' then
+                        log.info("%s -> %s: connected", server2, server)
+                        break
+                    end
+                    fiber.sleep(0.01)
+                end
+            end
+        end
+    end
+    log.info("full mesh connected")
 end
 
 local function switch(self, node)
@@ -111,9 +177,15 @@ local function new(host, port)
     inspector.cmd = request
     inspector.eval = tnt_eval
     inspector.get_param = get_param
+    inspector.get_server_id = get_server_id
     inspector.get_lsn = get_lsn
     inspector.wait_lsn = wait_lsn
+    inspector.get_vclock = get_vclock
+    inspector.wait_vclock = wait_vclock
     inspector.switch = switch
+    inspector.create_cluster = create_cluster
+    inspector.drop_cluster = drop_cluster
+    inspector.wait_fullmesh = wait_fullmesh
     inspector.get_cfg = get_cfg
     inspector.grep_log = grep_log
     return inspector
