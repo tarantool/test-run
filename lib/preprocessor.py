@@ -215,7 +215,8 @@ class TestState(object):
             raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
         self.servers[sname].cleanup()
         if sname != 'default':
-            delattr(self.environ, sname)
+            if hasattr(self.environ, sname):
+                delattr(self.environ, sname)
         else:
             self.servers[sname].install(silent=True)
 
@@ -307,7 +308,7 @@ class TestState(object):
         result = yaml.load(result)
         if not result:
             result = []
-        return {'result': result}
+        return result
 
 
     def variable(self, ctype, ref, ret):

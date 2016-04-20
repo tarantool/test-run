@@ -1,6 +1,6 @@
 import gevent
 import shlex
-import json
+import yaml
 import os
 
 from gevent.server import StreamServer
@@ -57,14 +57,16 @@ class TarantoolInspector(StreamServer):
             try:
                 result = self.parser.parse_preprocessor(line)
             except Exception, e:
-                result = str(e)
-            if not result:
-                result = 'OK'
-            elif type(result) == dict:
-                result = json.dumps(result)
-            else:
-                result = str(result)
-            socket.sendall('%s\n' % result)
+                print('error', e)
+                import traceback
+                traceback.print_exc()
+                result = { "error": repr(e) }
+            if result == None:
+                result = True
+            result = yaml.dump(result)
+            if not result.endswith('...\n'):
+                result = result + '...\n'
+            socket.sendall(result)
 
         self.sem.release()
 

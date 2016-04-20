@@ -1,5 +1,5 @@
 local socket = require('socket')
-local json = require('json')
+local yaml = require('yaml')
 local log = require('log')
 local fiber = require('fiber')
 local fio = require('fio')
@@ -10,19 +10,17 @@ local function request(self, msg)
     local data = msg .. '\n'
     sock:send(data)
 
-    local result = sock:read('\n')
-    result = string.gsub(result, '\n', '')
+    local result = sock:read('\n...\n')
     sock:close()
-    if result == 'OK' then
-        return true
+    result = yaml.decode(result)
+    if type(result) == 'table' and result.error ~= nil then
+        error(result.error)
     end
-    return tostring(result)
+    return result
 end
 
 local function tnt_eval(self, node, expr)
-    return json.decode(
-        request(self, 'eval ' .. node .. ' "' .. expr .. '"')
-    )
+    return request(self, 'eval ' .. node .. ' "' .. expr .. '"')
 end
 
 local function get_param(self, node, param)
@@ -32,7 +30,7 @@ local function get_param(self, node, param)
     end
     cmd = cmd .. '"'
     log.info(node ..' ' .. request(self, cmd))
-    return json.decode(request(self, cmd))['result']
+    return request(self, cmd)
 end
 
 local function get_lsn(self, node, sid)
@@ -58,15 +56,13 @@ end
 
 local function get_cfg(self, name)
     if self.run_conf == nil then
-        self.run_conf = json.decode(
-            self:cmd('config ' .. name)
-        )
+        self.run_conf = self:cmd('config ' .. name)
     end
     return self.run_conf[name]
 end
 
 local function grep_log(self, node, what, bytes)
-    local filename = self:eval(node, "box.cfg.logger").result[1]
+    local filename = self:eval(node, "box.cfg.logger")[1]
     local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
     if file == nil then
         local err = errno.strerror()
