@@ -54,10 +54,22 @@ local function get_vclock(self, node)
     return self:get_param(node, 'vclock')[1]
 end
 
-local function wait_vclock(self, node, vclock)
-    local strvclock = yaml.encode(vclock)
-    while yaml.encode(self:get_vclock(node)) ~= strvclock do
-        log.info("wait vclock: %s %s", strvclock, yaml.encode(self:get_vclock(node)))
+local function wait_vclock(self, node, to_vclock)
+    while true do
+        local vclock = self:get_vclock(node)
+        local ok = true
+        for server_id, to_lsn in pairs(to_vclock) do
+            local lsn = vclock[server_id]
+            if lsn < to_lsn then
+                ok = false
+                break
+            end
+        end
+        if ok then
+            return
+        end
+        log.info("wait vclock: %s to %s", yaml.encode(vclock),
+                 yaml.encode(to_vclock))
         fiber.sleep(0.001)
     end
 end
