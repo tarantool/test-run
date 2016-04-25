@@ -125,6 +125,26 @@ local function wait_fullmesh(self, servers)
     log.info("full mesh connected")
 end
 
+local function get_cluster_vclock(self, servers)
+    local vclock = {}
+    for _, name in pairs(servers) do
+        for server_id, lsn in pairs(self:get_vclock(name)) do
+            local prev_lsn = vclock[server_id]
+            if prev_lsn == nil or prev_lsn < lsn then
+                vclock[server_id] = lsn
+            end
+        end
+    end
+    return setmetatable(vclock, { __serialize = 'map' })
+end
+
+local function wait_cluster_vclock(self, servers, vclock)
+    for _, name in pairs(servers) do
+        self:wait_vclock(name, vclock)
+    end
+    return vclock
+end
+
 local function switch(self, node)
     -- switch to other node and enable test_run
     self:eval(node, "env=require('test_run')")
@@ -198,6 +218,8 @@ local function new(host, port)
     inspector.create_cluster = create_cluster
     inspector.drop_cluster = drop_cluster
     inspector.wait_fullmesh = wait_fullmesh
+    inspector.get_cluster_vclock = get_cluster_vclock
+    inspector.wait_cluster_vclock = wait_cluster_vclock
     inspector.get_cfg = get_cfg
     inspector.grep_log = grep_log
     return inspector
