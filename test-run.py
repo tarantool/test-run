@@ -183,7 +183,7 @@ def main():
         color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
         suite_names = options.args.suites
         if suite_names == []:
-            for root, dirs, names in os.walk(os.getcwd()):
+            for root, dirs, names in os.walk(os.getcwd(), followlinks=True):
                 if "suite.ini" in names:
                     suite_names.append(os.path.basename(root))
 
