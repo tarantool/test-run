@@ -563,15 +563,20 @@ class TarantoolServer(Server):
         if not len(bt):
             return
 
-        sys.stdout.write('[Instance "%s" crash detected]\n' % self.name)
-        sys.stdout.write('[ReturnCode=%s]\n' % repr(self.process.returncode))
+        sys.stderr.write('[Instance "%s" crash detected]\n' % self.name)
+        sys.stderr.write('[ReturnCode=%s]\n' % repr(self.process.returncode))
+        sys.stderr.flush()
         for trace in bt:
-            sys.stdout.write(trace)
+            sys.stderr.write(trace)
+        sys.stderr.flush()
 
-        if not self.crash_enabled:
-            gevent.killall([
-                obj for obj in gc.get_objects() if isinstance(obj, greenlet)
-            ])
+        try:
+            if not self.crash_enabled:
+                gevent.killall([
+                    obj for obj in gc.get_objects() if isinstance(obj, greenlet)
+                ])
+        except greenlet.GreenletExit:
+            pass # ignore
 
     def wait_stop(self):
         self.process.wait()
