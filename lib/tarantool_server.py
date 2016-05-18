@@ -564,7 +564,7 @@ class TarantoolServer(Server):
             return
 
         sys.stdout.write('[Instance "%s" crash detected]\n' % self.name)
-        sys.stdout.write('[Signal=%d]\n' % abs(self.process.returncode))
+        sys.stdout.write('[ReturnCode=%s]\n' % repr(self.process.returncode))
         for trace in bt:
             sys.stdout.write(trace)
 
