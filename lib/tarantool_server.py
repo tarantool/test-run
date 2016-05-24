@@ -560,6 +560,8 @@ class TarantoolServer(Server):
                 if line.startswith('Segmentation fault'):
                     bt.insert(0, line)
                     break
+                if 'Starting instance' in line:
+                    break
         if not len(bt):
             return
 
