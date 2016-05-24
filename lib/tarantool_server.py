@@ -613,13 +613,10 @@ class TarantoolServer(Server):
             sys.stderr.write(trace)
         sys.stderr.flush()
 
-        try:
-            if not self.crash_enabled:
-                gevent.killall([
-                    obj for obj in gc.get_objects() if isinstance(obj, greenlet)
-                ])
-        except greenlet.GreenletExit:
-            pass # ignore
+        if not self.crash_enabled:
+            gevent.killall([
+                obj for obj in gc.get_objects() if isinstance(obj, greenlet) and obj != gevent.getcurrent()
+            ])
 
     def wait_stop(self):
         self.process.wait()
