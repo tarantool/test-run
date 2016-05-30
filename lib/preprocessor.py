@@ -220,6 +220,15 @@ class TestState(object):
         else:
             self.servers[sname].install(silent=True)
 
+    def server_delete(self, ctype, sname, opts):
+        if sname not in self.servers:
+            raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
+        self.servers[sname].cleanup()
+        if sname != 'default':
+            if hasattr(self.environ, sname):
+                delattr(self.environ, sname)
+            del self.servers[sname]
+
     def switch(self, server):
         self.lua_eval(server, "env=require('test_run')", silent=True)
         self.lua_eval(
