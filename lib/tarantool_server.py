@@ -209,7 +209,7 @@ class ValgrindMixin(Mixin):
         if not find_in_path('valgrind'):
             raise OSError('`valgrind` executables not found in PATH')
         return  shlex.split("valgrind --log-file={log} --suppressions={sup} \
-                --gen-suppressions=all --leak-check=full \
+                --gen-suppressions=all --trace-children=yes --leak-check=full \
                 --read-var-info=yes --quiet {bin}".format(
             log = self.valgrind_log,
             sup = self.valgrind_sup,
