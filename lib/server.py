@@ -11,34 +11,6 @@ from gevent import socket
 import subprocess
 import ConfigParser
 
-def check_port(port):
-    """Check if the port we're connecting to is available"""
-    try:
-        sock = socket.create_connection(("localhost", port))
-    except socket.error as e:
-        return
-    raise RuntimeError("The server is already running on port {0}".format(port))
-
-def prepare_gdb(binary, args):
-    """Prepare server startup arguments to run under gdb."""
-    args = shlex.split('screen -dmS tnt-gdb gdb %s -ex \'b main\' -ex run' % binary) + args
-    return args
-
-def prepare_valgrind(args, valgrind_log, valgrind_sup):
-    "Prepare server startup arguments to run under valgrind."
-    args = [ "valgrind", "--log-file={0}".format(valgrind_log),
-             "--suppressions={0}".format(valgrind_sup),
-             "--gen-suppressions=all", "--show-reachable=yes", "--leak-check=full",
-             "--read-var-info=yes", "--quiet" ] + args
-    return args
-
-def check_tmpfs_exists():
-    return os.uname()[0] in 'Linux' and os.path.isdir("/dev/shm")
-
-def create_tmpfs_vardir(vardir):
-    os.makedirs(os.path.join("/dev/shm", vardir))
-    os.symlink(os.path.join("/dev/shm", vardir), vardir)
-
 class Server(object):
     """Server represents a single server instance. Normally, the
     program operates with only one server, but in future we may add
