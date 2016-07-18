@@ -25,6 +25,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+from itertools import product
 from lib.test import Test
 from lib.server import Server
 from lib.preprocessor import TestState
@@ -219,28 +220,56 @@ class ValgrindMixin(Mixin):
     def wait_stop(self):
         return self.process.wait()
 
-class GdbMixin(Mixin):
-    default_gdb = {
-        "name": "tarantool-gdb"
+class DebugMixin(Mixin):
+    debugger_args = {
+        "name": None,
+        "debugger": None,
+        "sh_string": None
     }
 
     def prepare_args(self):
+        debugger = self.debugger_args['debugger']
+        screen_name = self.debugger_args['name']
+        sh_string = self.debugger_args['sh_string']
+
         if not find_in_path('screen'):
             raise OSError('`screen` executables not found in PATH')
-        if not find_in_path('gdb'):
-            raise OSError('`gdb` executables not found in PATH')
-        color_stdout('You started the server in gdb mode.\n', schema='info')
-        color_stdout('To attach, use `screen -r tarantool-gdb`\n', schema='info')
-        return shlex.split("screen -dmS {0} gdb {1} -ex \
-                \'b main\' -ex \'run {2} >> {3} 2>> {3}\'".format(
-            self.default_gdb['name'], self.binary,
+        if not find_in_path(debugger):
+            raise OSError('`%s` executables not found in PATH' % debugger)
+        color_stdout('You started the server in %s mode.\n' % debugger,
+            schema='info')
+        color_stdout('To attach, use `screen -r %s `\n' % screen_name,
+            schema='info')
+        return shlex.split(sh_string.format(
+            self.debugger_args['name'], self.binary,
             ' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
-            self.logfile)
+            self.logfile, debugger)
         )
 
     def wait_stop(self):
         self.kill_old_server()
         self.process.wait()
+
+class GdbMixin(DebugMixin):
+    debugger_args = {
+        "name": "tarantool",
+        "debugger": "gdb",
+        "sh_string": """screen -dmS {0} {4} {1}
+                        -ex 'b main' -ex 'run {2} >> {3} 2>> {3}' """
+    }
+
+
+class LLdbMixin(DebugMixin):
+    debugger_args = {
+        "name": "tarantool",
+        "debugger": "lldb",
+        "sh_string": """screen -dmS {0} {4} -f {1}
+                        -o 'b main'
+                        -o 'settings set target.run-args {2}'
+                        -o 'process launch -o {3} -e {3}' """
+        }
+
+
 
 class TarantoolServer(Server):
     default_tarantool = {
@@ -370,12 +399,21 @@ class TarantoolServer(Server):
     def __new__(cls, ini=None):
         if ini is None:
             ini = {'core': 'tarantool'}
-        if ('valgrind' in ini and ini['valgrind']) and ('gdb' in ini and ini['gdb']):
-            raise OSError('Can\'t run under valgrind and gdb simultaniously')
+
+        conflict_options = ('valgrind', 'gdb', 'lldb')
+        for op1, op2 in product(conflict_options, repeat=2):
+            if op1 != op2 and \
+                    (op1 in ini and ini[op1]) and \
+                    (op2 in ini and ini[op2]):
+                format_str = 'Can\'t run under {} and {} simultaniously'
+                raise OSError(format_str.format(op1, op2))
+
         if 'valgrind' in ini and ini['valgrind']:
             cls = type('ValgrindTarantooServer', (ValgrindMixin, TarantoolServer), {})
         elif 'gdb' in ini and ini['gdb']:
             cls = type('GdbTarantoolServer', (GdbMixin, TarantoolServer), {})
+        elif 'lldb' in ini and ini['lldb']:
+            cls = type('LLdbTarantoolServer', (LLdbMixin, TarantoolServer), {})
 
         return super(TarantoolServer, cls).__new__(cls)
 
@@ -385,6 +423,7 @@ class TarantoolServer(Server):
         ini = {
             'core': 'tarantool',
             'gdb': False,
+            'lldb': False,
             'script': None,
             'lua_libs': [],
             'valgrind': False,
@@ -405,7 +444,9 @@ class TarantoolServer(Server):
         self.status = None
         #-----InitBasicVars-----#
         self.core = ini['core']
+
         self.gdb = ini['gdb']
+        self.lldb = ini['lldb']
         self.script = ini['script']
         self.lua_libs = ini['lua_libs']
         self.valgrind = ini['valgrind']
@@ -638,7 +679,7 @@ class TarantoolServer(Server):
         if wait_load:
             msg = 'entering the event loop|will retry binding'
             self.logfile_pos.seek_wait(
-                msg, self.process if not self.gdb else None)
+                msg, self.process if not self.gdb and not self.lldb else None)
         while True:
             try:
                 temp = AdminConnection('localhost', self.admin.port)

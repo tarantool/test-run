@@ -175,4 +175,3 @@ class TestSuite:
             color_stdout(shortsep, "\n", schema='separator')
             return ['valgrind error in ' + self.suite_path]
         return failed_tests
-

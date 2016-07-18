@@ -32,6 +32,7 @@ import shutil
 import os.path
 import argparse
 
+from itertools            import product
 from lib.colorer          import Colorer
 from lib.parallel         import Supervisor
 from lib.test_suite       import TestSuite
@@ -87,8 +88,20 @@ class Options:
                 action = "store_true",
                 default = False,
                 help = """Start the server under 'gdb' debugger in detached
-                Screen. This option is mutually exclusive with --valgrind.
+                Screen. This option is mutually exclusive with --valgrind and
+                --lldb.
                 Default: false.""")
+
+        parser.add_argument(
+                "--lldb",
+                dest = "lldb",
+                action = "store_true",
+                default = False,
+                help = """Start the server under 'lldb' debugger in detached
+                Screen. This option is mutually exclusive with --valgrind
+                and --gdb.
+                Default: false.""")
+
 
         parser.add_argument(
                 "--valgrind",
@@ -140,9 +153,16 @@ class Options:
     def check(self):
         """Check the arguments for correctness."""
         check_error = False
-        if self.args.gdb and self.args.valgrind:
-            color_stdout("Error: option --gdb is not compatible with option --valgrind", schema='error')
-            check_error = True
+        conflict_options = ('valgrind', 'gdb', 'lldb')
+        for op1, op2 in product(conflict_options, repeat=2):
+            if op1 != op2 and getattr(self, op1, '') and \
+                    getattr(self, op2, ''):
+                format_str = "Error: option --{} is not compatible \
+                                with option --{}"
+                color_stdout(format_str.format(op1, op2), schema='error')
+                check_error = True
+
+
         if check_error:
             exit(-1)
 
