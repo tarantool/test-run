@@ -686,6 +686,8 @@ class TarantoolServer(Server):
                 ans = yaml.load(temp.execute('box.info.status'))[0]
                 if ans in ('running', 'hot_standby', 'orphan'):
                     return True
+                elif ans in ('loading'):
+                    continue
                 else:
                     raise Exception("Strange output for `box.info.status`: %s" % (ans))
             except socket.error as e:
