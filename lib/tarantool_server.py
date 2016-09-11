@@ -512,7 +512,9 @@ class TarantoolServer(Server):
             self._admin = os.path.join(self.vardir, "socket-admin")
         else:
             self._admin = find_port(port)
-        self._iproto = find_port(port + 1)
+            port = self._admin.port + 1
+
+        self._iproto = find_port(port)
 
     def deploy(self, silent=True, **kwargs):
         self.install(silent)
