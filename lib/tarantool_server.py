@@ -1,24 +1,20 @@
-import os
-import re
-import sys
-import glob
-import time
-import yaml
 import errno
-import shlex
+import gc
+import glob
+import os
+import os.path
 import random
+import re
+import shlex
 import shutil
 import signal
-from gevent import socket
-import difflib
-import filecmp
-import traceback
 import subprocess
-import collections
-import os.path
+import sys
+import time
+
 import gevent
-import threading
-import gc
+import yaml
+from gevent import socket
 
 try:
     from cStringIO import StringIO
@@ -37,7 +33,9 @@ from lib.utils import check_port
 from greenlet import greenlet, GreenletExit
 
 from lib.colorer import Colorer
+
 color_stdout = Colorer()
+
 
 def find_in_path(name):
     path = os.curdir + os.pathsep + os.environ["PATH"]
@@ -46,6 +44,7 @@ def find_in_path(name):
         if os.access(exe, os.X_OK):
             return exe
     return ''
+
 
 def save_join(green_obj, timeout=None):
     """
@@ -57,12 +56,15 @@ def save_join(green_obj, timeout=None):
     except GreenletExit as e:
         pass
 
+
 class FuncTest(Test):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
 
+
 class LuaTest(FuncTest):
     TIMEOUT = 60 * 10
+
     def exec_loop(self, ts):
         cmd = None
 
@@ -85,7 +87,7 @@ class LuaTest(FuncTest):
                 if line.strip() or cmd.getvalue():
                     cmd.write(line)
                 delim_len = -len(ts.delimiter) if len(ts.delimiter) else None
-                if line.endswith(ts.delimiter+'\n') and cmd.getvalue().strip()[:delim_len].strip():
+                if line.endswith(ts.delimiter + '\n') and cmd.getvalue().strip()[:delim_len].strip():
                     sys.stdout.write(cmd.getvalue())
                     rescom = cmd.getvalue()[:delim_len].replace('\n\n', '\n')
                     result = send_command(rescom)
@@ -117,6 +119,7 @@ class LuaTest(FuncTest):
                 continue
             save_join(server.crash_detector)
 
+
 class PythonTest(FuncTest):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
@@ -124,10 +127,12 @@ class PythonTest(FuncTest):
         if os.path.exists(server.logfile):
             server.crash_grep()
 
+
 CON_SWITCH = {
     LuaTest: AdminAsyncConnection,
     PythonTest: AdminConnection
 }
+
 
 class TarantoolLog(object):
     def __init__(self, path):
@@ -177,14 +182,16 @@ class TarantoolLog(object):
                     return
                 cur_pos = f.tell()
 
+
 class Mixin(object):
     pass
 
+
 class ValgrindMixin(Mixin):
     default_valgr = {
-            "logfile":       "valgrind.log",
-            "suppress_path": "share/",
-            "suppress_name": "tarantool.sup"
+        "logfile": "valgrind.log",
+        "suppress_path": "share/",
+        "suppress_name": "tarantool.sup"
     }
 
     @property
@@ -198,6 +205,7 @@ class ValgrindMixin(Mixin):
                                 self.default_valgr['suppress_path'],
                                 self.default_valgr['suppress_name'])
         return self._valgrind_sup
+
     @valgrind_sup.setter
     def valgrind_sup(self, val):
         self._valgrind_sup = os.path.abspath(val)
@@ -209,16 +217,17 @@ class ValgrindMixin(Mixin):
     def prepare_args(self):
         if not find_in_path('valgrind'):
             raise OSError('`valgrind` executables not found in PATH')
-        return  shlex.split("valgrind --log-file={log} --suppressions={sup} \
+        return shlex.split("valgrind --log-file={log} --suppressions={sup} \
                 --gen-suppressions=all --trace-children=yes --leak-check=full \
                 --read-var-info=yes --quiet {bin}".format(
-            log = self.valgrind_log,
-            sup = self.valgrind_sup,
-            bin = ' '.join([self.ctl_path, 'start', os.path.basename(self.script)])
+            log=self.valgrind_log,
+            sup=self.valgrind_sup,
+            bin=' '.join([self.ctl_path, 'start', os.path.basename(self.script)])
         ))
 
     def wait_stop(self):
         return self.process.wait()
+
 
 class DebugMixin(Mixin):
     debugger_args = {
@@ -237,9 +246,9 @@ class DebugMixin(Mixin):
         if not find_in_path(debugger):
             raise OSError('`%s` executables not found in PATH' % debugger)
         color_stdout('You started the server in %s mode.\n' % debugger,
-            schema='info')
+                     schema='info')
         color_stdout('To attach, use `screen -r %s `\n' % screen_name,
-            schema='info')
+                     schema='info')
         return shlex.split(sh_string.format(
             self.debugger_args['name'], self.binary,
             ' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
@@ -249,6 +258,7 @@ class DebugMixin(Mixin):
     def wait_stop(self):
         self.kill_old_server()
         self.process.wait()
+
 
 class GdbMixin(DebugMixin):
     debugger_args = {
@@ -267,19 +277,19 @@ class LLdbMixin(DebugMixin):
                         -o 'b main'
                         -o 'settings set target.run-args {2}'
                         -o 'process launch -o {3} -e {3}' """
-        }
-
+    }
 
 
 class TarantoolServer(Server):
     default_tarantool = {
-        "bin":     "tarantool",
+        "bin": "tarantool",
         "logfile": "tarantool.log",
         "pidfile": "tarantool.pid",
-        "name":    "default",
-        "ctl":     "tarantoolctl",
+        "name": "default",
+        "ctl": "tarantoolctl",
     }
-#----------------------------------PROPERTIES----------------------------------#
+
+    # ----------------------------------PROPERTIES----------------------------------#
     @property
     def debug(self):
         return self.test_debug()
@@ -289,6 +299,7 @@ class TarantoolServer(Server):
         if not hasattr(self, '_name') or not self._name:
             return self.default_tarantool["name"]
         return self._name
+
     @name.setter
     def name(self, val):
         self._name = val
@@ -298,6 +309,7 @@ class TarantoolServer(Server):
         if not hasattr(self, '_logfile') or not self._logfile:
             return os.path.join(self.vardir, self.default_tarantool["logfile"])
         return self._logfile
+
     @logfile.setter
     def logfile(self, val):
         self._logfile = os.path.join(self.vardir, val)
@@ -307,6 +319,7 @@ class TarantoolServer(Server):
         if not hasattr(self, '_pidfile') or not self._pidfile:
             return os.path.join(self.vardir, self.default_tarantool["pidfile"])
         return self._pidfile
+
     @pidfile.setter
     def pidfile(self, val):
         self._pidfile = os.path.join(self.vardir, val)
@@ -316,6 +329,7 @@ class TarantoolServer(Server):
         if not hasattr(self, '_builddir'):
             raise ValueError("No build-dir is specified")
         return self._builddir
+
     @builddir.setter
     def builddir(self, val):
         if val is None:
@@ -330,6 +344,7 @@ class TarantoolServer(Server):
     def logfile_pos(self):
         if not hasattr(self, '_logfile_pos'): self._logfile_pos = None
         return self._logfile_pos
+
     @logfile_pos.setter
     def logfile_pos(self, val):
         self._logfile_pos = TarantoolLog(val).positioning()
@@ -338,6 +353,7 @@ class TarantoolServer(Server):
     def script(self):
         if not hasattr(self, '_script'): self._script = None
         return self._script
+
     @script.setter
     def script(self, val):
         if val is None:
@@ -351,6 +367,7 @@ class TarantoolServer(Server):
     def _admin(self):
         if not hasattr(self, 'admin'): self.admin = None
         return self.admin
+
     @_admin.setter
     def _admin(self, port):
         if hasattr(self, 'admin'):
@@ -363,6 +380,7 @@ class TarantoolServer(Server):
     def _iproto(self):
         if not hasattr(self, 'iproto'): self.iproto = None
         return self.iproto
+
     @_iproto.setter
     def _iproto(self, port):
         try:
@@ -377,6 +395,7 @@ class TarantoolServer(Server):
     def log_des(self):
         if not hasattr(self, '_log_des'): self._log_des = open(self.logfile, 'a')
         return self._log_des
+
     @log_des.deleter
     def log_des(self):
         if not hasattr(self, '_log_des'): return
@@ -387,14 +406,15 @@ class TarantoolServer(Server):
     def rpl_master(self):
         if not hasattr(self, '_rpl_master'): self._rpl_master = None
         return self._rpl_master
+
     @rpl_master.setter
     def rpl_master(self, val):
         if not isinstance(self, (TarantoolServer, None)):
             raise ValueError('Replication master must be Tarantool'
-                    ' Server class, his derivation or None')
+                             ' Server class, his derivation or None')
         self._rpl_master = val
 
-#------------------------------------------------------------------------------#
+    # ------------------------------------------------------------------------------#
 
     def __new__(cls, ini=None):
         if ini is None:
@@ -442,7 +462,7 @@ class TarantoolServer(Server):
         self.name = "default"
         self.conf = {}
         self.status = None
-        #-----InitBasicVars-----#
+        # -----InitBasicVars-----#
         self.core = ini['core']
 
         self.gdb = ini['gdb']
@@ -567,9 +587,9 @@ class TarantoolServer(Server):
         # redirect strout from tarantoolctl and tarantool
         os.putenv("TEST_WORKDIR", self.vardir)
         self.process = subprocess.Popen(args,
-                cwd = self.vardir,
-                stdout=self.log_des,
-                stderr=self.log_des)
+                                        cwd=self.vardir,
+                                        stdout=self.log_des,
+                                        stderr=self.log_des)
 
         # gh-19 crash detection
         self.crash_detector = gevent.Greenlet.spawn(self.crash_detect)
@@ -593,19 +613,21 @@ class TarantoolServer(Server):
             return
         if not os.path.exists(self.logfile):
             return
+
         self.crash_grep()
 
     def crash_grep(self):
-        bt = []
+        bt = list()
         with open(self.logfile, 'r') as log:
             lines = log.readlines()
-            for line in reversed(lines):
+            for pos, line in enumerate(reversed(lines)):
                 if line.startswith('Segmentation fault'):
-                    bt.insert(0, line)
+                    bt = lines[-pos - 1:]
                     break
-                if 'Starting instance' in line:
-                    break
-        if not len(bt):
+            else:
+                bt = list()
+
+        if not bt:
             return
 
         sys.stderr.write('[Instance "%s" crash detected]\n' % self.name)
@@ -616,9 +638,9 @@ class TarantoolServer(Server):
         sys.stderr.flush()
 
         if not self.crash_enabled:
-            gevent.killall([
-                obj for obj in gc.get_objects() if isinstance(obj, greenlet) and obj != gevent.getcurrent()
-            ])
+            greenlets = [obj for obj in gc.get_objects() if isinstance(obj, greenlet) and obj != gevent.getcurrent()
+                         and hasattr(obj, "parent") and hasattr(obj.parent, "handle_error")]
+            gevent.killall(greenlets)
 
     def wait_stop(self):
         self.process.wait()
@@ -634,7 +656,7 @@ class TarantoolServer(Server):
             return
         if self.status != 'started':
             if not silent:
-                color_stdout('The server is not started.\n', schema='lerror')
+                raise Exception('Server is not started')
             return
         if not silent:
             color_stdout('Stopping the server ...\n', schema='serv_text')
@@ -728,8 +750,8 @@ class TarantoolServer(Server):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
             print " ".join([os.path.basename(self.binary)] + args[1:])
-        output = subprocess.Popen(args, cwd = self.vardir, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT).stdout.read()
+        output = subprocess.Popen(args, cwd=self.vardir, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT).stdout.read()
         return output
 
     def test_option(self, option_list_str):
@@ -743,13 +765,13 @@ class TarantoolServer(Server):
     def find_tests(self, test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
         get_tests = lambda x: sorted(glob.glob(os.path.join(suite_path, x)))
-        tests  = [PythonTest(k, test_suite.args, test_suite.ini)
-            for k in get_tests("*.test.py")
-        ]
+        tests = [PythonTest(k, test_suite.args, test_suite.ini)
+                 for k in get_tests("*.test.py")
+                 ]
         for k in get_tests("*.test.lua"):
             runs = test_suite.get_multirun_params(k)
             is_correct = lambda x: test_suite.args.conf is None or \
-                test_suite.args.conf == x
+                                   test_suite.args.conf == x
             if runs:
                 tests.extend([LuaTest(
                     k, test_suite.args,
@@ -766,7 +788,7 @@ class TarantoolServer(Server):
                 if test.name.find(name) != -1:
                     test_suite.tests.append(test)
 
-    def get_param(self, param = None):
+    def get_param(self, param=None):
         if not param is None:
             return yaml.load(self.admin("box.info." + param, silent=True))[0]
         return yaml.load(self.admin("box.info", silent=True))
@@ -782,13 +804,13 @@ class TarantoolServer(Server):
 
     def wait_lsn(self, node_id, lsn):
         while (self.get_lsn(node_id) < lsn):
-            #print("wait_lsn", node_id, lsn, self.get_param("vclock"))
+            # print("wait_lsn", node_id, lsn, self.get_param("vclock"))
             time.sleep(0.01)
 
     def version(self):
         p = subprocess.Popen([self.binary, "--version"],
-                             cwd = self.vardir,
-                             stdout = subprocess.PIPE)
+                             cwd=self.vardir,
+                             stdout=subprocess.PIPE)
         version = p.stdout.read().rstrip()
         p.wait()
         return version

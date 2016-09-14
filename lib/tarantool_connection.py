@@ -21,15 +21,17 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from gevent import socket as gsocket
-import socket
-from connpool import ConnectionPool
 import ctypes
-import sys
 import errno
 import re
-import gevent
+import socket
 from contextlib import contextmanager
+
+import gevent
+from gevent import socket as gsocket
+
+from connpool import ConnectionPool
+
 
 class TarantoolPool(ConnectionPool):
     def __init__(self, host, port, *args, **kwargs):

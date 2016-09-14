@@ -21,12 +21,12 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-import yaml
-import sys
 import re
+import sys
+
+import yaml
+
 from tarantool_connection import TarantoolConnection, TarantoolPool, TarantoolAsyncConnection
-from gevent import socket as gsocket
-import gevent
 
 ADMIN_SEPARATOR = '\n'
 

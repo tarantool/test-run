@@ -1,13 +1,11 @@
 import os
-
-import sys
 import shlex
-import shutil
+import sys
 from ast import literal_eval
-from gevent import socket
-import yaml
-
 from collections import deque
+
+import yaml
+from gevent import socket
 
 from lib.admin_connection import AdminAsyncConnection
 

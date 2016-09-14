@@ -1,10 +1,9 @@
-import gevent
-import shlex
-import yaml
 import os
 
-from gevent.server import StreamServer
+import yaml
 from gevent.lock import Semaphore
+from gevent.server import StreamServer
+
 
 class TarantoolInspector(StreamServer):
     """

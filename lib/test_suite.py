@@ -1,21 +1,13 @@
-import os
-import re
-import sys
-import time
-import json
-import shutil
-import difflib
-import threading
-import traceback
-import collections
 import ConfigParser
+import json
+import os
 
-
-from lib.tarantool_server import TarantoolServer
-from lib.server import Server
 from lib.colorer import Colorer
-from lib.utils import check_valgrind_log, print_tail_n
 from lib.inspector import TarantoolInspector
+from lib.server import Server
+from lib.tarantool_server import TarantoolServer
+from lib.utils import check_valgrind_log, print_tail_n
+
 color_stdout = Colorer()
 try:
     from cStringIO import StringIO
@@ -158,7 +150,7 @@ class TestSuite:
             # server crashes
             inspector.stop()
             self.server.cleanup()
-        except (KeyboardInterrupt) as e:
+        except KeyboardInterrupt:
             color_stdout("\n%s\n" % shortsep, schema='separator')
             self.server.stop(silent=False)
             raise
