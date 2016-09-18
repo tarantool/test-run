@@ -159,7 +159,7 @@ local function get_cfg(self, name)
     return self.run_conf[name]
 end
 
-local function grep_log(self, node, what, bytes)
+local function grep_log(self, node, what)
     local filename = self:eval(node, "box.cfg.logger")[1]
     local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
     if file == nil then
@@ -167,24 +167,41 @@ local function grep_log(self, node, what, bytes)
         error("Failed to open log file: "..filename..' : '..err)
     end
     io.flush() -- attempt to flush stdout == log fd
-    local bytes = bytes or 2048
-    if file:seek(-bytes, 'SEEK_END') == nil then
-        local err = errno.strerror()
-        file:close()
-        error("Failed to seek log file: "..filename..' : '..err)
-    end
-    while true do
-        local line = file:read(bytes)
-        if line == nil then
+    local found, buf
+    repeat -- read file in chunks
+        local s = file:read(2048)
+        if s == nil then
             local err = errno.strerror()
             file:close()
             error("Failed to read log file: "..filename..' : '..err)
-        elseif line ~= '' then
-            file:close()
-            return string.match(line, what)
         end
-        fiber.sleep(0)
-    end
+        local pos = 1
+        repeat -- split read string in lines
+            local endpos = string.find(s, '\n', pos)
+            endpos = endpos and endpos - 1 -- strip terminating \n
+            local line = string.sub(s, pos, endpos)
+            if endpos == nil and s ~= '' then
+                -- line doesn't end with \n or eof, append it to buffer
+                -- to be checked on next iteration
+                buf = buf or {}
+                table.insert(buf, line)
+            else
+                if buf ~= nil then -- prepend line with buffered data
+                    table.insert(buf, line)
+                    line = table.concat(buf)
+                    buf = nil
+                end
+                if string.match(line, "Starting instance") then
+                    found = nil -- server was restarted, reset search
+                else
+                    found = string.match(line, what) or found
+                end
+            end
+            pos = endpos and endpos + 2 -- jump to char after \n
+        until pos == nil
+    until s == ''
+    file:close()
+    return found
 end
 
 local function new(host, port)
