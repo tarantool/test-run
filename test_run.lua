@@ -159,21 +159,35 @@ local function get_cfg(self, name)
     return self.run_conf[name]
 end
 
-local function grep_log(self, node, what)
+local function grep_log(self, node, what, bytes)
     local filename = self:eval(node, "box.cfg.logger")[1]
-    local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
-    if file == nil then
+    local file -- forward declaration for fail() to capture
+    local function fail(msg)
         local err = errno.strerror()
-        error("Failed to open log file: "..filename..' : '..err)
+        if file ~= nil then
+            file:close()
+        end
+        error(string.format("%s: %s: %s", msg, filename, err))
+    end
+    file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
+    if file == nil then
+        fail("Failed to open log file")
     end
     io.flush() -- attempt to flush stdout == log fd
+    local filesize = file:seek(0, 'SEEK_END')
+    if filesize == nil then
+        fail("Failed to get log file size")
+    end
+    local bytes = bytes or 65536 -- don't read whole log - it can be huge
+    bytes = bytes > filesize and filesize or bytes
+    if file:seek(-bytes, 'SEEK_END') == nil then
+        fail("Failed to seek log file")
+    end
     local found, buf
     repeat -- read file in chunks
         local s = file:read(2048)
         if s == nil then
-            local err = errno.strerror()
-            file:close()
-            error("Failed to read log file: "..filename..' : '..err)
+            fail("Failed to read log file")
         end
         local pos = 1
         repeat -- split read string in lines
