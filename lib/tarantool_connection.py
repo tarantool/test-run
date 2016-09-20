@@ -21,23 +21,26 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+import sys
 import ctypes
 import errno
 import re
 import socket
+import gc
 from contextlib import contextmanager
 
 import gevent
 from gevent import socket as gsocket
 
 from connpool import ConnectionPool
+from test import TestRunGreenlet
 
 
 class TarantoolPool(ConnectionPool):
     def __init__(self, host, port, *args, **kwargs):
         self.host = host
         self.port = port
-        return super(TarantoolPool, self).__init__(*args, **kwargs)
+        super(TarantoolPool, self).__init__(*args, **kwargs)
 
     def _new_connection(self):
         result = None
@@ -67,11 +70,13 @@ class TarantoolPool(ConnectionPool):
     @contextmanager
     def get(self):
         self.lock.acquire()
+
         try:
             c = self.conn.pop()
             yield c
         except self.exc_classes:
-            gevent.spawn_later(1, self._addOne)
+            greenlet = TestRunGreenlet(self._addOne)
+            greenlet.start_later(1)
             raise
         except:
             self.conn.append(c)

@@ -7,6 +7,8 @@ from collections import deque
 from contextlib import contextmanager
 from functools import wraps
 
+from test import TestRunGreenlet
+
 __all__ = ["ConnectionPool", "retry"]
 
 DEFAULT_EXC_CLASSES = (socket.error,)
@@ -33,9 +35,11 @@ class ConnectionPool(object):
         for i in xrange(size):
             self.lock.acquire()
         for i in xrange(size):
-            gevent.spawn_later(self.SPAWN_FREQUENCY*i, self._addOne)
+            greenlet = TestRunGreenlet(self._addOne)
+            greenlet.start_later(self.SPAWN_FREQUENCY * i)
         if self.keepalive:
-            gevent.spawn(self._keepalive_periodic)
+            greenlet = TestRunGreenlet(self._keepalive_periodic)
+            greenlet.start_later()
 
     def _new_connection(self):
         """
@@ -91,7 +95,8 @@ class ConnectionPool(object):
             yield c
         except self.exc_classes:
             # The current connection has failed, drop it and create a new one
-            gevent.spawn_later(1, self._addOne)
+            greenlet = TestRunGreenlet(self._addOne)
+            greenlet.start_later(1)
             raise
         except:
             self.conn.append(c)

@@ -5,6 +5,7 @@ import time
 import filecmp
 import difflib
 import traceback
+import gevent
 
 try:
     from cStringIO import StringIO
@@ -14,6 +15,20 @@ except ImportError:
 from lib.colorer import Colorer
 from lib.utils import check_valgrind_log, print_tail_n
 color_stdout = Colorer()
+
+
+class TestRunGreenlet(gevent.Greenlet):
+    def __init__(self, green_callable, *args, **kwargs):
+        self.callable = green_callable
+        self.callable_args = args
+        self.callable_kwargs = kwargs
+        super(TestRunGreenlet, self).__init__()
+
+    def _run(self, *args, **kwargs):
+        self.callable(*self.callable_args, **self.callable_kwargs)
+
+    def __repr__(self):
+            return "<TestRunGreenlet at %s info='%s'>" % (hex(id(self)), getattr(self, "info", None))
 
 class FilteredStream:
     """Helper class to filter .result file output"""

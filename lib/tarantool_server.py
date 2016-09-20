@@ -31,6 +31,7 @@ from lib.utils import find_port
 from lib.utils import check_port
 
 from greenlet import greenlet, GreenletExit
+from test import TestRunGreenlet
 
 from lib.colorer import Colorer
 
@@ -105,7 +106,8 @@ class LuaTest(FuncTest):
             self.run_params
         )
         self.inspector.set_parser(ts)
-        lua = gevent.Greenlet.spawn(self.exec_loop, ts)
+        lua = TestRunGreenlet(self.exec_loop, ts)
+        lua.start()
         save_join(lua, timeout=self.TIMEOUT)
 
         # join all crash detectors before stream swap
@@ -559,7 +561,7 @@ class TarantoolServer(Server):
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
 
-    def start(self, silent=True, **kwargs):
+    def start(self, silent=True, wait=True, wait_load=True, **kwargs):
         if self._start_against_running:
             return
         if self.status == 'started':
@@ -592,9 +594,11 @@ class TarantoolServer(Server):
                                         stderr=self.log_des)
 
         # gh-19 crash detection
-        self.crash_detector = gevent.Greenlet.spawn(self.crash_detect)
-        wait = kwargs.get('wait', True)
-        wait_load = kwargs.get('wait_load', True)
+        self.crash_detector = TestRunGreenlet(self.crash_detect)
+        self.crash_detector.info = "Crash detector: %s" % self.process
+        self.crash_detector.start()
+        wait = wait
+        wait_load = wait_load
         if wait:
             self.wait_until_started(wait_load)
 
@@ -608,9 +612,10 @@ class TarantoolServer(Server):
             self.process.poll()
             if self.process.returncode is None:
                 gevent.sleep(0.1)
-                continue
+
         if self.process.returncode in [0, signal.SIGKILL]:
             return
+
         if not os.path.exists(self.logfile):
             return
 
@@ -637,10 +642,8 @@ class TarantoolServer(Server):
             sys.stderr.write(trace)
         sys.stderr.flush()
 
-        if not self.crash_enabled:
-            greenlets = [obj for obj in gc.get_objects() if isinstance(obj, greenlet) and obj != gevent.getcurrent()
-                         and hasattr(obj, "parent") and hasattr(obj.parent, "handle_error")]
-            gevent.killall(greenlets)
+        greenlets = [obj for obj in gc.get_objects() if isinstance(obj, TestRunGreenlet) and obj != gevent.getcurrent() and obj]
+        gevent.killall(greenlets)
 
     def wait_stop(self):
         self.process.wait()

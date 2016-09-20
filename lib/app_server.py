@@ -12,8 +12,7 @@ from lib.server import Server
 from lib.tarantool_server import Test, TarantoolServer
 from lib.preprocessor import TestState
 from lib.utils import find_port
-import gevent
-import threading
+from test import TestRunGreenlet
 
 def run_server(execs, cwd):
     proc = Popen(execs, stdout=PIPE, cwd=cwd)
@@ -25,7 +24,9 @@ class AppTest(Test):
         self.inspector.set_parser(ts)
 
         execs = [os.path.join(os.getcwd(), self.name)]
-        tarantool = gevent.Greenlet.spawn(run_server, execs, server.vardir)
+        tarantool = TestRunGreenlet(run_server, execs, server.vardir)
+        tarantool.start()
+
         tarantool.join()
 
 class AppServer(Server):
