@@ -51,11 +51,14 @@ def save_join(green_obj, timeout=None):
     """
     Gevent join wrapper for
     test-run stop-on-crash feature
+
+    :return True in case of crash and False otherwise
     """
     try:
         green_obj.join(timeout=timeout)
-    except GreenletExit as e:
-        pass
+    except GreenletExit:
+        return True
+    return False
 
 
 class FuncTest(Test):
@@ -108,27 +111,31 @@ class LuaTest(FuncTest):
         self.inspector.set_parser(ts)
         lua = TestRunGreenlet(self.exec_loop, ts)
         lua.start()
-        save_join(lua, timeout=self.TIMEOUT)
+        crash_occured = save_join(lua, timeout=self.TIMEOUT)
 
-        # join all crash detectors before stream swap
+        # kill all servers and crash detectors before stream swap
         check_list = ts.servers.values() + [server, ]
-        for server in check_list:
-            if server.crash_detector is None:
-                continue
-            server.process.poll()
-            # skip working instances
-            if server.process.returncode is None:
-                continue
-            save_join(server.crash_detector)
 
+        # check that all servers stopped correctly
+        for server in check_list:
+            crash_occured = crash_occured or server.process.returncode not in (None, 0, signal.SIGKILL, signal.SIGTERM)
+
+        for server in check_list:
+            server.process.poll()
+
+            if crash_occured:
+                # kill all servers and crash detectors on crash
+                if server.process.returncode is None:
+                    server.process.kill()
+                gevent.kill(server.crash_detector)
+            elif server.process.returncode is not None:
+                # join crash detectors of stopped servers
+                save_join(server.crash_detector)
 
 class PythonTest(FuncTest):
     def execute(self, server):
         execfile(self.name, dict(locals(), **server.__dict__))
-        # crash dectection support for legacy tests
-        if os.path.exists(server.logfile):
-            server.crash_grep()
-
+        #TODO: crash dectection support for legacy tests
 
 CON_SWITCH = {
     LuaTest: AdminAsyncConnection,
@@ -613,8 +620,8 @@ class TarantoolServer(Server):
             if self.process.returncode is None:
                 gevent.sleep(0.1)
 
-        if self.process.returncode in [0, signal.SIGKILL]:
-            return
+        if self.process.returncode in [0, signal.SIGKILL, signal.SIGTERM]:
+           return
 
         if not os.path.exists(self.logfile):
             return
