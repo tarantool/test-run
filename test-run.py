@@ -120,7 +120,7 @@ class Options:
                 "--stress",
                 dest = "stress",
                 default = None,
-                help = """Name of streess TestSuite to run""")
+                help = """Name of stress TestSuite to run""")
 
         parser.add_argument(
                 "--tarantool-port",
