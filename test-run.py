@@ -194,6 +194,7 @@ def main():
     os.chdir(path)
     setenv()
 
+    options.args.builddir = os.path.abspath(os.path.expanduser(options.args.builddir))
     os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
     os.environ["BUILDDIR"] = os.path.abspath(options.args.builddir)
 
