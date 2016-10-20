@@ -194,6 +194,9 @@ def main():
     os.chdir(path)
     setenv()
 
+    os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
+    os.environ["BUILDDIR"] = os.path.abspath(options.args.builddir)
+
     failed_tests = []
 
     try:
