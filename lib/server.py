@@ -9,6 +9,7 @@ class Server(object):
     replication slaves. The server is started once at the beginning
     of each suite, and stopped at the end."""
     DEFAULT_INSPECTOR = 0
+    TEST_RUN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
     @property
     def vardir(self):

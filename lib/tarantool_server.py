@@ -566,7 +566,8 @@ class TarantoolServer(Server):
                         continue
                     raise
         shutil.copy('.tarantoolctl', self.vardir)
-        shutil.copy('../test-run/test_run.lua', self.vardir)
+        shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
+                    self.vardir)
 
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]

@@ -65,7 +65,8 @@ class AppServer(Server):
                         continue
                     raise
         os.putenv("LISTEN", str(find_port(34000)))
-        shutil.copy('../test-run/test_run.lua', self.vardir)
+        shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
+                    self.vardir)
 
     @classmethod
     def find_exe(cls, builddir):
