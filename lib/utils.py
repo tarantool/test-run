@@ -53,11 +53,21 @@ def check_port(port, rais=True):
         raise RuntimeError("The server is already running on port {0}".format(port))
     return False
 
+# A list of ports used so far. Avoid reusing ports
+# to reduce race conditions between starting and stopping servers.
+# We're using tarantoolctl for instance control, and it reports
+# a successful stop of the server before it really closes its
+# network sockets
+ports = {}
+
 def find_port(port):
+    global ports
     while port < 65536:
-        if check_port(port, False):
+        if port not in ports and check_port(port, False):
+            ports[port] = True
             return port
         port += 1
+# We've made a full circle, clear the list of used ports and start
+# from scratch
+    ports = {}
     return find_port(34000)
-
-
