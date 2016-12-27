@@ -712,7 +712,7 @@ class TarantoolServer(Server):
 
         """
         if wait_load:
-            msg = 'entering the event loop|hot standby mode'
+            msg = 'entering the event loop|will retry binding|hot standby mode'
             self.logfile_pos.seek_wait(
                 msg, self.process if not self.gdb and not self.lldb else None)
         while True:
