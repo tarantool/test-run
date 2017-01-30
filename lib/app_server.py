@@ -15,8 +15,11 @@ from lib.utils import find_port
 from test import TestRunGreenlet
 
 def run_server(execs, cwd):
-    proc = Popen(execs, stdout=PIPE, cwd=cwd)
-    sys.stdout.write(proc.communicate()[0])
+    proc = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    stdout, stderr = proc.communicate()
+    sys.stdout.write(stdout)
+    if proc.wait() != 0:
+        sys.stdout.write(stderr)
 
 class AppTest(Test):
     def execute(self, server):
@@ -44,8 +47,8 @@ class AppServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.inprogress",
-            "*.sup", "*.lua", "*.pid"]
+            "*.snap", "*.xlog", "*.inprogress", "*.sup", "*.lua", "*.pid"
+        ]
         self.cleanup()
         self.builddir = ini['builddir']
         self.debug = False
@@ -65,8 +68,10 @@ class AppServer(Server):
                         continue
                     raise
         os.putenv("LISTEN", str(find_port(34000)))
-        shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
-                    self.vardir)
+        shutil.copy(
+            os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
+            self.vardir
+        )
 
     @classmethod
     def find_exe(cls, builddir):
