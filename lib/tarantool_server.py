@@ -237,6 +237,22 @@ class ValgrindMixin(Mixin):
     def wait_stop(self):
         return self.process.wait()
 
+class StraceMixin(Mixin):
+    @property
+    def strace_log(self):
+        return os.path.join(self.vardir, 'strace.log')
+
+    def prepare_args(self):
+        if not find_in_path('strace'):
+            raise OSError('`strace` executables not found in PATH')
+        return shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
+            bin=' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
+            log=self.strace_log
+        ))
+
+    def wait_stop(self):
+        self.kill_old_server()
+        return self.process.wait()
 
 class DebugMixin(Mixin):
     debugger_args = {
@@ -429,7 +445,7 @@ class TarantoolServer(Server):
         if ini is None:
             ini = {'core': 'tarantool'}
 
-        conflict_options = ('valgrind', 'gdb', 'lldb')
+        conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
         for op1, op2 in product(conflict_options, repeat=2):
             if op1 != op2 and \
                     (op1 in ini and ini[op1]) and \
@@ -443,6 +459,8 @@ class TarantoolServer(Server):
             cls = type('GdbTarantoolServer', (GdbMixin, TarantoolServer), {})
         elif 'lldb' in ini and ini['lldb']:
             cls = type('LLdbTarantoolServer', (LLdbMixin, TarantoolServer), {})
+        elif 'strace' in ini and ini['strace']:
+            cls = type('StraceTarantoolServer', (StraceMixin, TarantoolServer), {})
 
         return super(TarantoolServer, cls).__new__(cls)
 
@@ -458,7 +476,8 @@ class TarantoolServer(Server):
             'valgrind': False,
             'vardir': None,
             'use_unix_sockets': False,
-            'tarantool_port': None
+            'tarantool_port': None,
+            'strace': False
         }
         ini.update(_ini)
         Server.__init__(self, ini)
@@ -479,6 +498,7 @@ class TarantoolServer(Server):
         self.script = ini['script']
         self.lua_libs = ini['lua_libs']
         self.valgrind = ini['valgrind']
+        self.strace = ini['strace']
         self.use_unix_sockets = ini['use_unix_sockets']
         self._start_against_running = ini['tarantool_port']
         self.crash_detector = None
