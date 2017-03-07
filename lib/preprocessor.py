@@ -20,7 +20,7 @@ class LuaPreprocessorException(Exception):
         return "lua preprocessor error: " + repr(self.value)
 
 class TestState(object):
-    def __init__(self, suite_ini, default_server, create_server, params = {}):
+    def __init__(self, suite_ini, default_server, create_server, params = {}, **kwargs):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
@@ -37,6 +37,8 @@ class TestState(object):
             setattr(nmsp, 'admin', default_server.admin.uri)
             setattr(nmsp, 'listen', default_server.iproto.uri)
             setattr(self.environ, 'default', nmsp)
+        # for propagating 'current_test' to non-default servers
+        self.default_server_no_connect = kwargs.get('default_server_no_connect')
 
     def parse_preprocessor(self, string):
         token_store = deque()
@@ -183,6 +185,10 @@ class TestState(object):
         temp.inspector_port = int(self.suite_ini.get(
             'inspector_port', temp.DEFAULT_INSPECTOR
         ))
+        if self.default_server_no_connect:
+            temp.current_test = self.default_server_no_connect.current_test
+        elif self.servers['default']:
+            temp.current_test = self.servers['default'].current_test
         self.servers[sname] = temp
         if 'workdir' not in opts:
             self.servers[sname].deploy(silent=True, **opts)

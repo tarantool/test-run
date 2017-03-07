@@ -21,6 +21,8 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+import inspect  # for caller_globals
+
 from itertools import product
 from lib.test import Test
 from lib.server import Server
@@ -31,7 +33,7 @@ from lib.utils import find_port
 from lib.utils import check_port
 
 from greenlet import greenlet, GreenletExit
-from test import TestRunGreenlet
+from test import TestRunGreenlet, TestExecutionError
 
 from lib.colorer import Colorer
 
@@ -63,6 +65,7 @@ def save_join(green_obj, timeout=None):
 
 class FuncTest(Test):
     def execute(self, server):
+        server.current_test = self
         execfile(self.name, dict(locals(), **server.__dict__))
 
 
@@ -101,15 +104,17 @@ class LuaTest(FuncTest):
             # join inspector handler
             self.inspector.sem.wait()
         # stop any servers created by the test, except the default one
-        ts.cleanup()
+        ts.cleanup()  # XXX: put under finally block?
 
     def execute(self, server):
+        server.current_test = self
         ts = TestState(
             self.suite_ini, server, TarantoolServer,
             self.run_params
         )
         self.inspector.set_parser(ts)
         lua = TestRunGreenlet(self.exec_loop, ts)
+        self.current_test_greenlet = lua
         lua.start()
         crash_occured = save_join(lua, timeout=self.TIMEOUT)
 
@@ -118,7 +123,7 @@ class LuaTest(FuncTest):
 
         # check that all servers stopped correctly
         for server in check_list:
-            crash_occured = crash_occured or server.process.returncode not in (None, 0, signal.SIGKILL, signal.SIGTERM)
+            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
 
         for server in check_list:
             server.process.poll()
@@ -134,13 +139,21 @@ class LuaTest(FuncTest):
 
 class PythonTest(FuncTest):
     def execute(self, server):
-        execfile(self.name, dict(locals(), **server.__dict__))
-        #TODO: crash dectection support for legacy tests
+        server.current_test = self
+        execfile(self.name, dict(locals(), test_run_current_test=self,
+                                 **server.__dict__))
+        # crash was detected (possibly on non-default server)
+        if server.current_test.is_crash_reported:
+            raise TestExecutionError
 
 CON_SWITCH = {
     LuaTest: AdminAsyncConnection,
     PythonTest: AdminConnection
 }
+
+
+class TarantoolStartError(OSError):
+    pass
 
 
 class TarantoolLog(object):
@@ -181,7 +194,7 @@ class TarantoolLog(object):
             while True:
                 if not (proc is None):
                     if not (proc.poll() is None):
-                        raise OSError("Can't start Tarantool")
+                        raise TarantoolStartError
                 log_str = f.readline()
                 if not log_str:
                     time.sleep(0.001)
@@ -486,6 +499,16 @@ class TarantoolServer(Server):
         # to enable crashes in test
         self.crash_enabled = False
 
+        # set in from a test let test-run ignore server's crashes
+        self.crash_expected = False
+
+        # filled in {Test,FuncTest,LuaTest,PythonTest}.execute()
+        # or passed through execfile() for PythonTest
+        self.current_test = None
+        caller_globals = inspect.stack()[1][0].f_globals
+        if 'test_run_current_test' in caller_globals.keys():
+            self.current_test = caller_globals['test_run_current_test']
+
     def __del__(self):
         self.stop()
 
@@ -611,7 +634,24 @@ class TarantoolServer(Server):
         wait = wait
         wait_load = wait_load
         if wait:
-            self.wait_until_started(wait_load)
+            try:
+                self.wait_until_started(wait_load)
+            except TarantoolStartError:
+                # Python tests expect we raise an exception when non-default
+                # server fails
+                if self.crash_expected:
+                    raise
+                if not self.current_test or not self.current_test.is_crash_reported:
+                    if self.current_test:
+                        self.current_test.is_crash_reported = True
+                    color_stdout('\n[Instance "{}"] Tarantool server failed to start\n'.format(
+                        self.name), schema='error')
+                    self.print_log(15)
+                # if the server fails before any test started, we should inform
+                # a caller by the exception
+                if not self.current_test:
+                    raise
+                self.kill_current_test()
 
         port = self.admin.port
         self.admin.disconnect()
@@ -619,18 +659,24 @@ class TarantoolServer(Server):
         self.status = 'started'
 
     def crash_detect(self):
+        if self.crash_expected:
+            return
+
         while self.process.returncode is None:
             self.process.poll()
             if self.process.returncode is None:
                 gevent.sleep(0.1)
 
-        if self.process.returncode in [0, signal.SIGKILL, signal.SIGTERM]:
+        if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
            return
 
         if not os.path.exists(self.logfile):
             return
 
-        self.crash_grep()
+        if not self.current_test.is_crash_reported:
+            self.current_test.is_crash_reported = True
+            self.crash_grep()
+        self.kill_current_test()
 
     def crash_grep(self):
         bt = list()
@@ -643,18 +689,27 @@ class TarantoolServer(Server):
             else:
                 bt = list()
 
-        if not bt:
-            return
-
-        sys.stderr.write('[Instance "%s" crash detected]\n' % self.name)
-        sys.stderr.write('[ReturnCode=%s]\n' % repr(self.process.returncode))
+        color_stdout('\n\n[Instance "%s" crash detected]\n' % self.name,
+                     schema='error')
+        color_stdout('[ReturnCode=%s]\n' % repr(self.process.returncode),
+                     schema='error')
         sys.stderr.flush()
         for trace in bt:
             sys.stderr.write(trace)
+        if not bt:
+            color_stdout(
+                'Silent crash: no "Segmentation fault" found in the logfile [{}]\n'.format(
+                    self.logfile), schema='error')
+            self.print_log(15)
         sys.stderr.flush()
 
-        greenlets = [obj for obj in gc.get_objects() if isinstance(obj, TestRunGreenlet) and obj != gevent.getcurrent() and obj]
-        gevent.killall(greenlets)
+    def kill_current_test(self):
+        """ Unblock save_join() call inside LuaTest.execute(), which doing
+            necessary servers/greenlets clean up.
+        """
+        # current_test_greenlet is None for PythonTest
+        if self.current_test.current_test_greenlet:
+            gevent.kill(self.current_test.current_test_greenlet)
 
     def wait_stop(self):
         self.process.wait()
@@ -754,11 +809,13 @@ class TarantoolServer(Server):
         return pid
 
     def print_log(self, lines):
-        color_stdout("\nLast {0} lines of Tarantool Log file:\n".format(lines), schema='error')
+        color_stdout('\nLast {0} lines of Tarantool Log file [Instance "{1}"][{2}]:\n'.format(
+            lines, self.name, self.logfile or 'null'), schema='error')
         if os.path.exists(self.logfile):
             with open(self.logfile, 'r') as log:
-                return log.readlines()[-lines:]
-        color_stdout("    Can't find log:\n", schema='error')
+                color_stdout(''.join(log.readlines()[-lines:]))
+        else:
+            color_stdout("    Can't find log:\n", schema='error')
 
     def test_option_get(self, option_list_str, silent=False):
         args = [self.binary] + shlex.split(option_list_str)

@@ -36,7 +36,7 @@ from itertools            import product
 from lib.colorer          import Colorer
 from lib.parallel         import Supervisor
 from lib.test_suite       import TestSuite
-from lib.tarantool_server import TarantoolServer
+from lib.tarantool_server import TarantoolServer, TarantoolStartError
 from lib.unittest_server  import UnittestServer
 color_stdout = Colorer()
 #
@@ -220,6 +220,9 @@ def main():
             suites = [Supervisor(suite_name, options.args) for suite_name in sorted(suite_names)]
             for suite in suites:
                 suite.run_all()
+    except TarantoolStartError:
+        # fail silently, we already reported it to stdout
+        return (-1)
     except RuntimeError as e:
         color_stdout("\nFatal error: %s. Execution aborted.\n" % e, schema='error')
         if options.args.gdb:

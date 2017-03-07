@@ -23,11 +23,14 @@ def run_server(execs, cwd):
 
 class AppTest(Test):
     def execute(self, server):
-        ts = TestState(self.suite_ini, None, TarantoolServer)
+        server.current_test = self
+        ts = TestState(self.suite_ini, None, TarantoolServer,
+                       default_server_no_connect=server)
         self.inspector.set_parser(ts)
 
         execs = [os.path.join(os.getcwd(), self.name)]
         tarantool = TestRunGreenlet(run_server, execs, server.vardir)
+        self.current_test_greenlet = tarantool
         tarantool.start()
 
         tarantool.join()
