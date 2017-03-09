@@ -1,7 +1,10 @@
 import logging
 
 import gevent
-from gevent.coros import BoundedSemaphore
+try:
+    from gevent.lock import BoundedSemaphore
+except:
+    from gevent.coros import BoundedSemaphore  # before gevent-1.0
 from gevent import socket
 from collections import deque
 from contextlib import contextmanager
