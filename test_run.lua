@@ -160,7 +160,7 @@ local function get_cfg(self, name)
 end
 
 local function grep_log(self, node, what, bytes)
-    local filename = self:eval(node, "box.cfg.logger")[1]
+    local filename = self:eval(node, "box.cfg.log")[1]
     local file -- forward declaration for fail() to capture
     local function fail(msg)
         local err = errno.strerror()
