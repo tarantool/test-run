@@ -451,7 +451,7 @@ class TarantoolServer(Server):
                 raise OSError(format_str.format(op1, op2))
 
         if 'valgrind' in ini and ini['valgrind']:
-            cls = type('ValgrindTarantooServer', (ValgrindMixin, TarantoolServer), {})
+            cls = type('ValgrindTarantoolServer', (ValgrindMixin, TarantoolServer), {})
         elif 'gdb' in ini and ini['gdb']:
             cls = type('GdbTarantoolServer', (GdbMixin, TarantoolServer), {})
         elif 'lldb' in ini and ini['lldb']:

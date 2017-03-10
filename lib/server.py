@@ -40,6 +40,10 @@ class Server(object):
             'inspector_port', self.DEFAULT_INSPECTOR
         ))
 
+    @property
+    def valgrind_log(self):
+        return 'valgrind.log'
+
     def prepare_args(self):
         return []
 
