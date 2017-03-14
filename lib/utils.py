@@ -1,6 +1,7 @@
 import os
 import sys
 import collections
+import shutil
 from gevent import socket
 
 
@@ -27,9 +28,13 @@ def check_libs():
             print(e)
             sys.exit(1)
 
-def check_valgrind_log(path_to_log):
+def non_empty_valgrind_logs(paths_to_log):
     """ Check that there were no warnings in the log."""
-    return os.path.exists(path_to_log) and os.path.getsize(path_to_log) != 0
+    non_empty_logs = []
+    for path_to_log in paths_to_log:
+        if os.path.exists(path_to_log) and os.path.getsize(path_to_log) != 0:
+            non_empty_logs.append(path_to_log)
+    return non_empty_logs
 
 def print_tail_n(filename, num_lines):
     """Print N last lines of a file."""
@@ -71,3 +76,22 @@ def find_port(port):
 # from scratch
     ports = {}
     return find_port(34000)
+
+
+def var_rotate(vardir, keep_old_items=5):
+    """ var -> var.1; var.1 -> var.2; ... """
+    def format_path(num):
+        if num > 0:
+            return '%s.%d' % (vardir, num)
+        else:
+            return vardir
+
+    oldest = format_path(keep_old_items)
+    if os.path.exists(oldest):
+        shutil.rmtree(oldest)
+    num = keep_old_items - 1
+    while num >= 0:
+        path = format_path(num)
+        if os.path.exists(path):
+            os.rename(path, format_path(num + 1))
+        num -= 1

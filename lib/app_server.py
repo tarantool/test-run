@@ -57,6 +57,15 @@ class AppServer(Server):
         self.debug = False
         self.lua_libs = ini['lua_libs']
 
+    @property
+    def valgrind_log(self):
+        # Valgrind is not supported in AppServer for now
+        return ''  # gh #13
+
+    def current_valgrind_logs(self, *args, **kwargs):
+        # Valgrind is not supported in AppServer for now
+        return []
+
     def deploy(self, vardir=None, silent=True, need_init=True):
         self.vardir = vardir
         if not os.access(self.vardir, os.F_OK):

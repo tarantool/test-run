@@ -109,7 +109,7 @@ class LuaTest(FuncTest):
     def execute(self, server):
         server.current_test = self
         ts = TestState(
-            self.suite_ini, server, TarantoolServer,
+            self.suite_ini, server, server.__class__,
             self.run_params
         )
         self.inspector.set_parser(ts)
@@ -211,14 +211,50 @@ class Mixin(object):
 
 class ValgrindMixin(Mixin):
     default_valgr = {
-        "logfile": "valgrind.log",
         "suppress_path": "share/",
         "suppress_name": "tarantool.sup"
     }
 
+    def format_valgrind_log_path(self, suite_name, test_name, conf, server_name, num):
+        basename = '{}.{}.{}.{}.{}.valgrind.log'.format(
+            suite_name, test_name, conf, server_name, str(num))
+        return os.path.join(self.vardir, basename)
+
     @property
     def valgrind_log(self):
-        return os.path.join(self.vardir, self.default_valgr['logfile'])
+        # suite.{test/default}.{conf/none}.instance.num.valgrind.log
+        if self.test_suite:
+            suite_name = os.path.basename(self.test_suite.suite_path)
+            path = self.format_valgrind_log_path(
+                suite_name, 'default', 'none', self.name, 1)
+        else:
+            suite_name = os.path.basename(self.current_test.suite_ini['suite'])
+            test_name = os.path.basename(self.current_test.name)
+            conf_name = self.current_test.conf_name or 'none'
+            num = 1
+            while True:
+                path = self.format_valgrind_log_path(
+                    suite_name, test_name, conf_name, self.name, num)
+                if not os.path.isfile(path):
+                    break
+                num += 1
+        return path
+
+    def current_valgrind_logs(self, for_suite=False, for_test=False):
+        if not self.test_suite or not self.current_test:
+            raise ValueError(
+                "The method should be called on a default suite's server.")
+        if for_suite == for_test:
+            raise ValueError('Set for_suite OR for_test to True')
+        suite_name = os.path.basename(self.test_suite.suite_path)
+        if for_test:
+            test_name = os.path.basename(self.current_test.name)
+            default_tmpl = self.format_valgrind_log_path(suite_name, 'default', '*', '*', '*')
+            non_default_tmpl = self.format_valgrind_log_path(suite_name, test_name, '*', '*', '*')
+            return sorted(glob.glob(default_tmpl) + glob.glob(non_default_tmpl))
+        else:
+            suite_tmpl = self.format_valgrind_log_path(suite_name, '*', '*', '*', '*')
+            return sorted(glob.glob(suite_tmpl))
 
     @property
     def valgrind_sup(self):
@@ -438,7 +474,7 @@ class TarantoolServer(Server):
 
     # ------------------------------------------------------------------------------#
 
-    def __new__(cls, ini=None):
+    def __new__(cls, ini=None, *args, **kwargs):
         if ini is None:
             ini = {'core': 'tarantool'}
 
@@ -459,7 +495,7 @@ class TarantoolServer(Server):
 
         return super(TarantoolServer, cls).__new__(cls)
 
-    def __init__(self, _ini=None):
+    def __init__(self, _ini=None, test_suite=None):
         if _ini is None:
             _ini = {}
         ini = {
@@ -508,6 +544,10 @@ class TarantoolServer(Server):
         caller_globals = inspect.stack()[1][0].f_globals
         if 'test_run_current_test' in caller_globals.keys():
             self.current_test = caller_globals['test_run_current_test']
+
+        # Used in valgrind_log property. 'test_suite' is not None only for
+        # default servers running in TestSuite.run_all()
+        self.test_suite = test_suite
 
     def __del__(self):
         self.stop()

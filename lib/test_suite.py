@@ -6,7 +6,7 @@ from lib.colorer import Colorer
 from lib.inspector import TarantoolInspector
 from lib.server import Server
 from lib.tarantool_server import TarantoolServer
-from lib.utils import check_valgrind_log, print_tail_n
+from lib.utils import non_empty_valgrind_logs, print_tail_n
 
 color_stdout = Colorer()
 try:
@@ -83,7 +83,7 @@ class TestSuite:
                     dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
         try:
             if self.ini['core'] in ['tarantool', 'stress']:
-                self.server = TarantoolServer(self.ini)
+                self.server = TarantoolServer(self.ini, test_suite=self)
             else:
                 self.server = Server(self.ini)
             self.ini["server"] = self.server
@@ -160,10 +160,14 @@ class TestSuite:
                                                 ", ".join(failed_tests)),
                                                 schema='error')
 
-        if self.args.valgrind and check_valgrind_log(self.server.valgrind_log):
-            color_stdout(shortsep, "\n", schema='separator')
-            color_stdout("  Error! There were warnings/errors in valgrind log file:\n", schema='error')
-            print_tail_n(self.server.valgrind_log, 20)
-            color_stdout(shortsep, "\n", schema='separator')
-            return ['valgrind error in ' + self.suite_path]
+        if self.args.valgrind:
+            non_empty_logs = non_empty_valgrind_logs(
+                self.server.current_valgrind_logs(for_suite=True))
+            for log_file in non_empty_logs:
+                color_stdout(shortsep, "\n", schema='separator')
+                color_stdout("  Error! There were warnings/errors in valgrind log file [%s]:\n" % log_file, schema='error')
+                print_tail_n(log_file, 20)
+                color_stdout(shortsep, "\n", schema='separator')
+            if bool(non_empty_logs):
+                return ['valgrind error in ' + self.suite_path]
         return failed_tests

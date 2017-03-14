@@ -13,7 +13,7 @@ except ImportError:
     from StringIO import StringIO
 
 from lib.colorer import Colorer
-from lib.utils import check_valgrind_log, print_tail_n
+from lib.utils import non_empty_valgrind_logs, print_tail_n
 color_stdout = Colorer()
 
 
@@ -172,7 +172,9 @@ class Test:
             self.is_equal_result = 1
 
         if self.args.valgrind:
-            self.is_valgrind_clean = (check_valgrind_log(server.valgrind_log) == False)
+            non_empty_logs = non_empty_valgrind_logs(
+                server.current_valgrind_logs(for_test=True))
+            self.is_valgrind_clean = not bool(non_empty_logs)
 
         if self.skip:
             color_stdout("[ skip ]\n", schema='test_skip')
@@ -201,8 +203,11 @@ class Test:
                 where = ": wrong test output"
             elif not self.is_crash_reported and not self.is_valgrind_clean:
                 os.remove(self.reject)
-                self.print_diagnostics(server.valgrind_log, "Test failed! Last 10 lines of valgrind.log:\n")
-                where = ": there were warnings in valgrind.log"
+                for log_file in non_empty_logs:
+                    self.print_diagnostics(log_file,
+                            "Test failed! Last 10 lines of {}:\n".format(
+                                log_file))
+                where = ": there were warnings in the valgrind log file(s)"
 
             if not self.args.is_force:
                 # gh-1026

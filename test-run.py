@@ -38,6 +38,7 @@ from lib.parallel         import Supervisor
 from lib.test_suite       import TestSuite
 from lib.tarantool_server import TarantoolServer, TarantoolStartError
 from lib.unittest_server  import UnittestServer
+from lib.utils            import var_rotate
 color_stdout = Colorer()
 #
 # Run a collection of tests.
@@ -193,6 +194,9 @@ def main():
         path = '.'
     os.chdir(path)
     setenv()
+
+    # always run with clean (non-existent) 'var' directory
+    var_rotate(options.args.vardir)
 
     options.args.builddir = os.path.abspath(os.path.expanduser(options.args.builddir))
     os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
