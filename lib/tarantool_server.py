@@ -108,8 +108,16 @@ class LuaTest(FuncTest):
 
     def execute(self, server):
         server.current_test = self
+        cls_name = server.__class__.__name__.lower()
+        if 'gdb' in cls_name or 'lldb' in cls_name:
+            # don't propagate gdb/lldb mixin to non-default servers, it doesn't
+            # work properly for now
+            create_server = TarantoolServer
+        else:
+            # propagate valgrind mixin to non-default servers
+            create_server = server.__class__
         ts = TestState(
-            self.suite_ini, server, server.__class__,
+            self.suite_ini, server, create_server,
             self.run_params
         )
         self.inspector.set_parser(ts)
