@@ -28,7 +28,7 @@ class AppTest(Test):
                        default_server_no_connect=server)
         self.inspector.set_parser(ts)
 
-        execs = [os.path.join(os.getcwd(), self.name)]
+        execs = server.prepare_args()
         tarantool = TestRunGreenlet(run_server, execs, server.vardir)
         self.current_test_greenlet = tarantool
         tarantool.start()
@@ -37,16 +37,17 @@ class AppTest(Test):
 
 class AppServer(Server):
     """A dummy server implementation for application server tests"""
-    def __new__(cls, ini=None):
-        return Server.__new__(cls)
+    def __new__(cls, ini=None, *args, **kwargs):
+        cls = Server.get_mixed_class(cls, ini)
+        return object.__new__(cls)
 
-    def __init__(self, _ini=None):
+    def __init__(self, _ini=None, test_suite=None):
         if _ini is None:
             _ini = {}
         ini = {
             'vardir': None
         }; ini.update(_ini)
-        Server.__init__(self, ini)
+        Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.re_vardir_cleanup += [
@@ -56,15 +57,10 @@ class AppServer(Server):
         self.builddir = ini['builddir']
         self.debug = False
         self.lua_libs = ini['lua_libs']
+        self.name = 'app_server'
 
-    @property
-    def valgrind_log(self):
-        # Valgrind is not supported in AppServer for now
-        return ''  # gh #13
-
-    def current_valgrind_logs(self, *args, **kwargs):
-        # Valgrind is not supported in AppServer for now
-        return []
+    def prepare_args(self):
+        return [os.path.join(os.getcwd(), self.current_test.name)]
 
     def deploy(self, vardir=None, silent=True, need_init=True):
         self.vardir = vardir

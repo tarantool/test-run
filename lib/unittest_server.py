@@ -10,26 +10,37 @@ from lib.server import Server
 from lib.tarantool_server import Test
 
 class UnitTest(Test):
+    def __init__(self, *args, **kwargs):
+        Test.__init__(self, *args, **kwargs)
+        self.valgrind = kwargs.get('valgrind', False)
+
     def execute(self, server):
-        execs = [os.path.join(server.builddir, "test", self.name)]
+        server.current_test = self
+        execs = server.prepare_args()
         proc = Popen(execs, stdout=PIPE, stderr=STDOUT)
         sys.stdout.write(proc.communicate()[0])
 
 class UnittestServer(Server):
     """A dummy server implementation for unit test suite"""
-    def __new__(cls, ini=None):
-        return Server.__new__(cls)
+    def __new__(cls, ini=None, *args, **kwargs):
+        cls = Server.get_mixed_class(cls, ini)
+        return object.__new__(cls)
 
-    def __init__(self, _ini=None):
+    def __init__(self, _ini=None, test_suite=None):
         if _ini is None:
             _ini = {}
         ini = {
             'vardir': None,
         }; ini.update(_ini)
-        Server.__init__(self, ini)
+        Server.__init__(self, ini, test_suite)
+        self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.builddir = ini['builddir']
         self.debug = False
+        self.name = 'unittest_server'
+
+    def prepare_args(self):
+        return [os.path.join(self.builddir, "test", self.current_test.name)]
 
     def deploy(self, vardir=None, silent=True, wait=True):
         self.vardir = vardir

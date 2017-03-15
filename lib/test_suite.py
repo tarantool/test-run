@@ -85,7 +85,7 @@ class TestSuite:
             if self.ini['core'] in ['tarantool', 'stress']:
                 self.server = TarantoolServer(self.ini, test_suite=self)
             else:
-                self.server = Server(self.ini)
+                self.server = Server(self.ini, test_suite=self)
             self.ini["server"] = self.server
         except Exception as e:
             print e

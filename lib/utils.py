@@ -76,3 +76,12 @@ def find_port(port):
 # from scratch
     ports = {}
     return find_port(34000)
+
+
+def find_in_path(name):
+    path = os.curdir + os.pathsep + os.environ["PATH"]
+    for _dir in path.split(os.pathsep):
+        exe = os.path.join(_dir, name)
+        if os.access(exe, os.X_OK):
+            return exe
+    return ''
