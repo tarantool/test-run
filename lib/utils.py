@@ -77,21 +77,3 @@ def find_port(port):
     ports = {}
     return find_port(34000)
 
-
-def var_rotate(vardir, keep_old_items=5):
-    """ var -> var.1; var.1 -> var.2; ... """
-    def format_path(num):
-        if num > 0:
-            return '%s.%d' % (vardir, num)
-        else:
-            return vardir
-
-    oldest = format_path(keep_old_items)
-    if os.path.exists(oldest):
-        shutil.rmtree(oldest)
-    num = keep_old_items - 1
-    while num >= 0:
-        path = format_path(num)
-        if os.path.exists(path):
-            os.rename(path, format_path(num + 1))
-        num -= 1

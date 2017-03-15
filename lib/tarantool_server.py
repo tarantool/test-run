@@ -576,6 +576,9 @@ class TarantoolServer(Server):
                 os.environ["PATH"] = (os.path.abspath(ctl_dir) + os.pathsep +
                                       os.path.abspath(_dir) + os.pathsep +
                                       os.environ["PATH"])
+                os.environ["TARANTOOLCTL_PLUGIN_PATH"] = os.path.abspath(
+                        os.path.join(ctl_dir, 'plugins')
+                )
                 cls.ctl_path = os.path.abspath(ctl)
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
