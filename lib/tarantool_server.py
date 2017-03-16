@@ -30,6 +30,7 @@ from lib.box_connection import BoxConnection
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
 from lib.utils import check_port
+from lib.utils import signame
 
 from greenlet import greenlet, GreenletExit
 from test import TestRunGreenlet, TestExecutionError
@@ -507,7 +508,7 @@ class TarantoolServer(Server):
             os.putenv("MASTER", self.rpl_master.iproto.uri)
         self.logfile_pos = self.logfile
 
-        # redirect strout from tarantoolctl and tarantool
+        # redirect stdout from tarantoolctl and tarantool
         os.putenv("TEST_WORKDIR", self.vardir)
         self.process = subprocess.Popen(args,
                                         cwd=self.vardir,
@@ -566,28 +567,51 @@ class TarantoolServer(Server):
         self.kill_current_test()
 
     def crash_grep(self):
+        print_log_lines = 15
+        assert_fail_re = re.compile(r'^.*: Assertion .* failed\.$')
+
+        # find and save backtrace or assertion fail
+        assert_lines = list()
         bt = list()
         with open(self.logfile, 'r') as log:
             lines = log.readlines()
-            for pos, line in enumerate(reversed(lines)):
+            for rpos, line in enumerate(reversed(lines)):
                 if line.startswith('Segmentation fault'):
-                    bt = lines[-pos - 1:]
+                    bt = lines[-rpos - 1:]
+                    break
+                if assert_fail_re.match(line):
+                    pos = len(lines) - rpos
+                    assert_lines = lines[max(0, pos - print_log_lines):pos]
                     break
             else:
                 bt = list()
 
-        color_stdout('\n\n[Instance "%s" crash detected]\n' % self.name,
-                     schema='error')
-        color_stdout('[ReturnCode=%s]\n' % repr(self.process.returncode),
-                     schema='error')
+        # print insident meat
+        if self.process.returncode < 0:
+            color_stdout('\n\n[Instance "%s" killed by signal: %d (%s)]\n' % (
+                self.name, -self.process.returncode,
+                signame(-self.process.returncode)), schema='error')
+        else:
+            color_stdout('\n\n[Instance "%s" returns with non-zero exit code: %d]\n' % (
+                self.name, self.process.returncode), schema='error')
+
+        # print assert line if any and return
+        if assert_lines:
+            color_stdout('Found assertion fail in the results file [%s]:\n' % self.logfile, schema='error')
+            sys.stderr.flush()
+            for line in assert_lines:
+                sys.stderr.write(line)
+            sys.stderr.flush()
+            return
+
+        # print backtrace if any
         sys.stderr.flush()
         for trace in bt:
             sys.stderr.write(trace)
+
+        # print log otherwise (if backtrace was not found)
         if not bt:
-            color_stdout(
-                'Silent crash: no "Segmentation fault" found in the logfile [{}]\n'.format(
-                    self.logfile), schema='error')
-            self.print_log(15)
+            self.print_log(print_log_lines)
         sys.stderr.flush()
 
     def kill_current_test(self):

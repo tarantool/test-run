@@ -1,6 +1,7 @@
 import os
 import sys
 import collections
+import signal
 from gevent import socket
 
 
@@ -84,3 +85,9 @@ def find_in_path(name):
         if os.access(exe, os.X_OK):
             return exe
     return ''
+
+# http://stackoverflow.com/a/2549950
+SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
+    if k.startswith('SIG') and not k.startswith('SIG_'))
+def signame(signum):
+    return SIGNAMES[signum]
