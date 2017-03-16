@@ -2,6 +2,8 @@ import os
 import glob
 import shlex
 from lib.utils import find_in_path
+from lib.utils import print_tail_n
+from lib.utils import non_empty_valgrind_logs
 from lib.colorer import Colorer
 
 color_stdout = Colorer()
@@ -94,6 +96,20 @@ class ValgrindMixin(Mixin):
 
     def wait_stop(self):
         return self.process.wait()
+
+    def crash_grep(self):
+        if self.process.returncode < 0 or \
+                not non_empty_valgrind_logs([self.valgrind_log]):
+            super(ValgrindMixin, self).crash_grep()
+            return
+
+        lines_cnt = 50
+        color_stdout('\n\nValgrind for [Instance "%s"] returns non-zero exit code: %d\n' % (
+            self.name, self.process.returncode), schema='error')
+        color_stdout("It's known that it can be valgrind's \"the 'impossible' happened\" error\n", schema='error')
+        color_stdout('Last %d lines of valgring log file [%s]:\n' % (
+            lines_cnt, self.valgrind_log), schema='error')
+        print_tail_n(self.valgrind_log, 50)
 
 
 class DebugMixin(Mixin):

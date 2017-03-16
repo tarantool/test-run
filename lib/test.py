@@ -194,7 +194,7 @@ class Test:
 
             where = ""
             if not self.is_crash_reported and not self.is_executed_ok:
-                self.print_diagnostics(self.reject, "Test failed! Last 10 lines of the result file:\n")
+                self.print_diagnostics(self.reject, "Test failed! Last 15 lines of the result file:\n")
                 server.print_log(15)
                 where = ": test execution aborted, reason '{0}'".format(diagnostics)
             elif not self.is_crash_reported and not self.is_equal_result:
