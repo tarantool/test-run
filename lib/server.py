@@ -1,7 +1,6 @@
 import glob
 import os
 import shutil
-import shlex
 from itertools import product
 from lib.server_mixins import ValgrindMixin, GdbMixin, LLdbMixin
 

@@ -1,10 +1,8 @@
 import os
-import re
 import sys
 import glob
 import errno
 import shutil
-import traceback
 
 from gevent.subprocess import Popen, PIPE
 

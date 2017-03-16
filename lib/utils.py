@@ -1,7 +1,6 @@
 import os
 import sys
 import collections
-import shutil
 from gevent import socket
 
 

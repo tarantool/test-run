@@ -21,12 +21,10 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-import sys
 import ctypes
 import errno
 import re
 import socket
-import gc
 from contextlib import contextmanager
 
 import gevent

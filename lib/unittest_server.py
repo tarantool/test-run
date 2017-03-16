@@ -1,9 +1,6 @@
 import os
-import re
 import sys
 import glob
-import traceback
-import subprocess
 from subprocess import Popen, PIPE, STDOUT
 
 from lib.server import Server

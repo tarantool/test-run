@@ -27,7 +27,6 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import os
 import sys
 import time
-import string
 import shutil
 import os.path
 import argparse
