@@ -141,9 +141,6 @@ class Test:
             if os.path.exists(self.skip_cond):
                 sys.stdout = FilteredStream(self.tmp_result)
                 stdout_fileno = sys.stdout.stream.fileno()
-                # XXX: Not sure crash reporting is adequate on these tests,
-                # maybe we need to pass 'test_run_current_test' to their
-                # non-default servers.
                 execfile(self.skip_cond, dict(locals(), **server.__dict__))
                 sys.stdout.close()
                 sys.stdout = save_stdout
