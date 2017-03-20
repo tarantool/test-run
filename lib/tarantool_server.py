@@ -31,13 +31,13 @@ from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
 from lib.utils import check_port
 from lib.utils import signame
+from lib.utils import warn_unix_socket
+from lib.utils import format_process
 
 from greenlet import greenlet, GreenletExit
 from test import TestRunGreenlet, TestExecutionError
 
-from lib.colorer import Colorer
-
-color_stdout = Colorer()
+from lib.colorer import color_stdout, color_log
 
 
 def save_join(green_obj, timeout=None):
@@ -76,6 +76,8 @@ class LuaTest(FuncTest):
             return result
 
         for line in open(self.name, 'r'):
+            if not line.endswith('\n'):
+                line += '\n'
             # context switch for inspector after each line
             if not cmd:
                 cmd = StringIO()
@@ -95,7 +97,27 @@ class LuaTest(FuncTest):
             # join inspector handler
             self.inspector.sem.wait()
         # stop any servers created by the test, except the default one
-        ts.cleanup()  # XXX: put under finally block?
+        ts.stop_nondefault()
+
+    def killall_servers(self, server, ts, crash_occured):
+        """ kill all servers and crash detectors before stream swap """
+        check_list = ts.servers.values() + [server, ]
+
+        # check that all servers stopped correctly
+        for server in check_list:
+            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
+
+        for server in check_list:
+            server.process.poll()
+
+            if crash_occured:
+                # kill all servers and crash detectors on crash
+                if server.process.returncode is None:
+                    server.process.kill()
+                gevent.kill(server.crash_detector)
+            elif server.process.returncode is not None:
+                # join crash detectors of stopped servers
+                save_join(server.crash_detector)
 
     def execute(self, server):
         server.current_test = self
@@ -117,26 +139,16 @@ class LuaTest(FuncTest):
         lua = TestRunGreenlet(self.exec_loop, ts)
         self.current_test_greenlet = lua
         lua.start()
-        crash_occured = save_join(lua, timeout=self.TIMEOUT)
+        crash_occured = True
+        try:
+            crash_occured = save_join(lua, timeout=self.TIMEOUT)
+            self.killall_servers(server, ts, crash_occured)
+        except KeyboardInterrupt:
+            # prevent tests greenlet from writing to the real stdout
+            lua.kill()
 
-        # kill all servers and crash detectors before stream swap
-        check_list = ts.servers.values() + [server, ]
-
-        # check that all servers stopped correctly
-        for server in check_list:
-            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
-
-        for server in check_list:
-            server.process.poll()
-
-            if crash_occured:
-                # kill all servers and crash detectors on crash
-                if server.process.returncode is None:
-                    server.process.kill()
-                gevent.kill(server.crash_detector)
-            elif server.process.returncode is not None:
-                # join crash detectors of stopped servers
-                save_join(server.crash_detector)
+            ts.stop_nondefault()
+            raise
 
 class PythonTest(FuncTest):
     def execute(self, server):
@@ -148,8 +160,8 @@ class PythonTest(FuncTest):
             raise TestExecutionError
 
 CON_SWITCH = {
-    LuaTest: AdminAsyncConnection,
-    PythonTest: AdminConnection
+    'lua': AdminAsyncConnection,
+    'python': AdminConnection
 }
 
 
@@ -298,9 +310,9 @@ class TarantoolServer(Server):
     def _admin(self, port):
         if hasattr(self, 'admin'):
             del self.admin
-        if not hasattr(self, 'cls'):
-            self.cls = LuaTest
-        self.admin = CON_SWITCH[self.cls]('localhost', port)
+        if not hasattr(self, 'tests_type'):
+            self.tests_type = 'lua'
+        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
 
     @property
     def _iproto(self):
@@ -406,9 +418,8 @@ class TarantoolServer(Server):
         cls.builddir = os.path.abspath(builddir)
         builddir = os.path.join(builddir, "src")
         path = builddir + os.pathsep + os.environ["PATH"]
-        if not silent:
-            color_stdout("Looking for server binary in ", schema='serv_text')
-            color_stdout(path + ' ...\n', schema='path')
+        color_log("Looking for server binary in ", schema='serv_text')
+        color_log(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
             exe = os.path.join(_dir, cls.default_tarantool["bin"])
             ctl_dir = _dir
@@ -437,31 +448,31 @@ class TarantoolServer(Server):
             self._iproto = self._start_against_running
             self._admin = int(self._start_against_running) + 1
             return
-        if not silent:
-            color_stdout('Installing the server ...\n', schema='serv_text')
-            color_stdout('    Found executable at ', schema='serv_text')
-            color_stdout(self.binary + '\n', schema='path')
-            color_stdout('    Found tarantoolctl at  ', schema='serv_text')
-            color_stdout(self.ctl_path + '\n', schema='path')
-            color_stdout('    Creating and populating working directory in ', schema='serv_text')
-            color_stdout(self.vardir + ' ...\n', schema='path')
+        color_log('Installing the server ...\n', schema='serv_text')
+        color_log('    Found executable at ', schema='serv_text')
+        color_log(self.binary + '\n', schema='path')
+        color_log('    Found tarantoolctl at  ', schema='serv_text')
+        color_log(self.ctl_path + '\n', schema='path')
+        color_log('    Creating and populating working directory in ', schema='serv_text')
+        color_log(self.vardir + ' ...\n', schema='path')
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
-            if not silent:
-                color_stdout('    Found old vardir, deleting ...\n', schema='serv_text')
+            color_log('    Found old vardir, deleting ...\n', schema='serv_text')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
-        port = random.randrange(3300, 9999)
 
         if self.use_unix_sockets:
             self._admin = os.path.join(self.vardir, "socket-admin")
         else:
-            self._admin = find_port(port)
-            port = self._admin.port + 1
+            self._admin = find_port()
 
-        self._iproto = find_port(port)
+        self._iproto = find_port()
+
+        # these sockets will be created by tarantool itself
+        path = os.path.join(self.vardir, self.name + '.control')
+        warn_unix_socket(path)
 
     def deploy(self, silent=True, **kwargs):
         self.install(silent)
@@ -487,7 +498,8 @@ class TarantoolServer(Server):
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
 
-    def start(self, silent=True, wait=True, wait_load=True, **kwargs):
+    def start(self, silent=True, wait=True, wait_load=True, rais=True,
+              **kwargs):
         if self._start_against_running:
             return
         if self.status == 'started':
@@ -499,13 +511,13 @@ class TarantoolServer(Server):
         self.pidfile = '%s.pid' % self.name
         self.logfile = '%s.log' % self.name
 
-        if not silent:
-            color_stdout("Starting the server ...\n", schema='serv_text')
-            color_stdout("Starting ", schema='serv_text')
-            color_stdout((os.path.basename(self.binary) if not self.script else self.script_dst) + " \n", schema='path')
-            color_stdout(self.version() + "\n", schema='version')
+        path = self.script_dst if self.script else \
+            os.path.basename(self.binary)
+        color_log("Starting the server ...\n", schema='serv_text')
+        color_log("Starting ", schema='serv_text')
+        color_log(path + " \n", schema='path')
+        color_log(self.version() + "\n", schema='version')
 
-        check_port(self.admin.port)
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:
@@ -529,6 +541,10 @@ class TarantoolServer(Server):
             try:
                 self.wait_until_started(wait_load)
             except TarantoolStartError:
+                # Raise exception when caller ask for it (e.g. in case of
+                # non-default servers)
+                if rais:
+                    raise
                 # Python tests expect we raise an exception when non-default
                 # server fails
                 if self.crash_expected:
@@ -547,7 +563,7 @@ class TarantoolServer(Server):
 
         port = self.admin.port
         self.admin.disconnect()
-        self.admin = CON_SWITCH[self.cls]('localhost', port)
+        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
         self.status = 'started'
 
     def crash_detect(self):
@@ -562,13 +578,14 @@ class TarantoolServer(Server):
         if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
            return
 
+        self.kill_current_test()
+
         if not os.path.exists(self.logfile):
             return
 
         if not self.current_test.is_crash_reported:
             self.current_test.is_crash_reported = True
             self.crash_grep()
-        self.kill_current_test()
 
     def crash_grep(self):
         print_log_lines = 15
@@ -642,11 +659,15 @@ class TarantoolServer(Server):
             if not silent:
                 raise Exception('Server is not started')
             return
-        if not silent:
-            color_stdout('Stopping the server ...\n', schema='serv_text')
+        color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
-        if self.process.returncode is None:
-            self.process.terminate()
+        if self.process is not None and self.process.returncode is None:
+            color_log('TarantoolServer.stop(): stopping the %s\n'
+                % format_process(self.process.pid), schema='test_var')
+            try:
+                self.process.terminate()
+            except OSError:
+                pass
             if self.crash_detector is not None:
                 save_join(self.crash_detector)
             self.wait_stop()
@@ -748,7 +769,8 @@ class TarantoolServer(Server):
             return True
         return False
 
-    def find_tests(self, test_suite, suite_path):
+    @staticmethod
+    def find_tests(test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
         get_tests = lambda x: sorted(glob.glob(os.path.join(suite_path, x)))
         tests = [PythonTest(k, test_suite.args, test_suite.ini)

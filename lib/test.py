@@ -12,9 +12,9 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from lib.colorer import Colorer
 from lib.utils import non_empty_valgrind_logs, print_tail_n
-color_stdout = Colorer()
+
+from lib.colorer import color_stdout
 
 
 class TestExecutionError(OSError):
@@ -101,7 +101,7 @@ class Test:
                 os.path.basename(self.rg.sub('.result', name)))
         self.skip_cond = os.path.join(suite_ini['suite'],
                 os.path.basename(self.rg.sub('.skipcond', name)))
-        self.tmp_result = os.path.join(self.args.vardir,
+        self.tmp_result = os.path.join(self.suite_ini['vardir'],
                                        os.path.basename(self.result))
         self.reject = self.rg.sub('.reject', name)
         self.is_executed = False
@@ -118,6 +118,10 @@ class Test:
         # prevent double/triple reporting
         self.is_crash_reported = False
 
+    @property
+    def id(self):
+        return self.name, self.conf_name
+
     def passed(self):
         """Return true if this test was run successfully."""
         return self.is_executed and self.is_executed_ok and self.is_equal_result
@@ -128,12 +132,22 @@ class Test:
         server.current_test = self
 
     def run(self, server):
-        """Execute the test assuming it's a python program.
-        If the test aborts, print its output to stdout, and raise
-        an exception. Else, comprare result and reject files.
-        If there is a difference, print it to stdout and raise an
-        exception. The exception is raised only if is_force flag is
-        not set."""
+        """ Execute the test assuming it's a python program.  If the test
+            aborts, print its output to stdout, and raise an exception. Else,
+            comprare result and reject files.  If there is a difference, print
+            it to stdout.
+
+            Returns short status of the test as a string: 'skip', 'pass',
+            'new', or 'fail'. There is also one possible value for
+            short_status, 'disabled', but it returned in the caller,
+            TestSuite.run_test().
+        """
+
+        # Note: test was created before certain worker become known, so we need
+        # to update temporary result directory here as it depends on 'vardir'.
+        self.tmp_result = os.path.join(self.suite_ini['vardir'],
+                                       os.path.basename(self.result))
+
         diagnostics = "unknown"
         save_stdout = sys.stdout
         try:
@@ -153,7 +167,11 @@ class Test:
         except TestExecutionError:
             self.is_executed_ok = False
         except Exception as e:
-            traceback.print_exc(e)
+            if e.__class__.__name__ == 'TarantoolStartError':
+                # worker should stop
+                raise
+            color_stdout('\nTest.run() received the following error:\n' +
+                traceback.format_exc() + '\n', schema='error')
             diagnostics = str(e)
         finally:
             if sys.stdout and sys.stdout != save_stdout:
@@ -173,20 +191,26 @@ class Test:
                 server.current_valgrind_logs(for_test=True))
             self.is_valgrind_clean = not bool(non_empty_logs)
 
+        short_status = None
+
         if self.skip:
+            short_status = 'skip'
             color_stdout("[ skip ]\n", schema='test_skip')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif self.is_executed_ok and self.is_equal_result and self.is_valgrind_clean:
+            short_status = 'pass'
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and not self.is_equal_result and not
               os.path.isfile(self.result)):
             os.rename(self.tmp_result, self.result)
+            short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
         else:
             os.rename(self.tmp_result, self.reject)
+            short_status = 'fail'
             color_stdout("[ fail ]\n", schema='test_fail')
 
             where = ""
@@ -205,13 +229,7 @@ class Test:
                             "Test failed! Last 10 lines of {}:\n".format(
                                 log_file))
                 where = ": there were warnings in the valgrind log file(s)"
-
-            if not self.args.is_force:
-                # gh-1026
-                # stop and cleanup tarantool instance for incorrect tests
-                server.stop()
-                server.cleanup()
-                raise RuntimeError("Failed to run test " + self.name + where)
+        return short_status
 
     def print_diagnostics(self, logfile, message):
         """Print 10 lines of client program output leading to test

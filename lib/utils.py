@@ -2,13 +2,16 @@ import os
 import sys
 import collections
 import signal
+import random
 from gevent import socket
+from lib.colorer import color_stdout
 
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+UNIX_SOCKET_LEN_LIMIT = 107
+
 
 def check_libs():
+
     deps = [
         ('msgpack', 'msgpack-python'),
         ('tarantool', 'tarantool-python')
@@ -45,18 +48,28 @@ def print_tail_n(filename, num_lines):
 
 
 def check_port(port, rais=True):
+    """ True -- it's possible to listen on this port for TCP/IPv4 or TCP/IPv6
+    connections (UNIX Sockets in case of file path). False -- otherwise.
+    """
     try:
         if isinstance(port, (int, long)):
-            sock = socket.create_connection(("localhost", port))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('127.0.0.1', port))
+            sock.listen(5)
+            sock.close()
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            sock.bind(('::1', port))
+            sock.listen(5)
+            sock.close()
         else:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(port)
-
-    except socket.error:
-        return True
-    if rais:
-        raise RuntimeError("The server is already running on port {0}".format(port))
-    return False
+    except socket.error as e:
+        return False
+        if rais:
+            raise RuntimeError(
+                "The server is already running on port {0}".format(port))
+    return True
 
 # A list of ports used so far. Avoid reusing ports
 # to reduce race conditions between starting and stopping servers.
@@ -65,17 +78,22 @@ def check_port(port, rais=True):
 # network sockets
 ports = {}
 
-def find_port(port):
+def find_port():
     global ports
-    while port < 65536:
+    start_port = int(os.environ.get('TEST_RUN_TCP_PORT_START', '3000'))
+    end_port = int(os.environ.get('TEST_RUN_TCP_PORT_END', '65535'))
+    port = random.randrange(start_port, end_port + 1)
+
+    while port <= end_port:
         if port not in ports and check_port(port, False):
             ports[port] = True
             return port
         port += 1
-# We've made a full circle, clear the list of used ports and start
-# from scratch
+
+    # We've made a full circle, clear the list of used ports and start
+    # from scratch
     ports = {}
-    return find_port(34000)
+    return find_port()
 
 
 def find_in_path(name):
@@ -91,3 +109,62 @@ SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
     if k.startswith('SIG') and not k.startswith('SIG_'))
 def signame(signum):
     return SIGNAMES[signum]
+
+
+def warn_unix_sockets_at_start(vardir):
+    max_unix_socket_rel = '??_replication/autobootstrap_guest3.control'
+    real_vardir = os.path.realpath(vardir)
+    max_unix_socket_abs = os.path.join(real_vardir, max_unix_socket_rel)
+    max_unix_socket_real = os.path.realpath(max_unix_socket_abs)
+    if len(max_unix_socket_real) > UNIX_SOCKET_LEN_LIMIT:
+        color_stdout(
+            'WARGING: unix sockets can become longer than %d symbols:\n'
+            % UNIX_SOCKET_LEN_LIMIT,
+            schema='error')
+        color_stdout('WARNING: for example: "%s" has length %d\n' %
+                     (max_unix_socket_real, len(max_unix_socket_real)),
+                     schema='error')
+
+
+def warn_unix_socket(path):
+    real_path = os.path.realpath(path)
+    if len(real_path) <= UNIX_SOCKET_LEN_LIMIT or \
+            real_path in warn_unix_socket.warned:
+        return
+    color_stdout(
+        '\nWARGING: unix socket\'s "%s" path has length %d symbols that is '
+        'longer than %d. That likely will cause failing of tests.\n' %
+        (real_path, len(real_path), UNIX_SOCKET_LEN_LIMIT), schema='error')
+    warn_unix_socket.warned.add(real_path)
+
+
+warn_unix_socket.warned = set()
+
+
+def safe_makedirs(directory):
+    if os.path.isdir(directory):
+        return
+    # try-except to prevent races btw processes
+    try:
+        os.makedirs(directory)
+    except OSError:
+        pass
+
+
+def format_process(pid):
+    cmdline = 'unknown'
+    try:
+        with open('/proc/%d/cmdline' % pid, 'r') as f:
+            cmdline = ' '.join(f.read().split('\0')).strip() or cmdline
+    except (OSError, IOError):
+        pass
+    status = 'unknown'
+    try:
+        with open('/proc/%d/status' % pid, 'r') as f:
+            for line in f:
+                key, value = line.split(':', 1)
+                if key == 'State':
+                    status = value.strip()
+    except (OSError, IOError):
+        pass
+    return 'process %d [%s; %s]' % (pid, status, cmdline)

@@ -110,5 +110,5 @@ class AdminAsyncConnection(TarantoolAsyncConnection, ExecMixIn):
             self.connect()
         try:
             return self.execute_no_reconnect(command, silent)
-        except Exception, e:
+        except Exception:
             return None

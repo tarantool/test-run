@@ -9,6 +9,8 @@ from gevent import socket
 
 from lib.admin_connection import AdminAsyncConnection
 
+from lib.colorer import color_stdout, color_log
+
 class Namespace(object):
     pass
 
@@ -145,9 +147,12 @@ class TestState(object):
             raise LuaPreprocessorException("Wrong option: "+repr(key))
 
     def server_start(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_start(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)),
+            schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
-        self.servers[sname].start(silent=True)
+        self.servers[sname].start(silent=True, rais=True)
         self.connections[sname] = self.servers[sname].admin
         try:
             self.connections[sname]('return true', silent=True)
@@ -155,6 +160,8 @@ class TestState(object):
             LuaPreprocessorException('Can\'t start server '+repr(sname))
 
     def server_stop(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)), schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t stop nonexistent server '+repr(sname))
         self.connections[sname].disconnect()
@@ -162,6 +169,9 @@ class TestState(object):
         self.servers[sname].stop()
 
     def server_create(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_create(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)),
+            schema='test_var')
         if sname in self.servers:
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
@@ -321,14 +331,28 @@ class TestState(object):
         string = string[3:].strip()
         self.parse_preprocessor(string)
 
-    def cleanup(self):
-        sys.stdout.clear_all_filters()
-        # don't stop the default server
-        self.servers.pop('default')
+    def stop_nondefault(self):
+        color_log('\nDEBUG: TestState[%s].stop_nondefault()\n'
+                  % hex(id(self)), schema='test_var')
+        if sys.stdout.__class__.__name__ == 'FilteredStream':
+            sys.stdout.clear_all_filters()
         for k, v in self.servers.iteritems():
+            # don't stop the default server
+            if k == 'default':
+                continue
             v.stop(silent=True)
-            v.cleanup()
             if k in self.connections:
                 self.connections[k].disconnect()
                 self.connections.pop(k)
 
+    def cleanup_nondefault(self):
+        color_log('\nDEBUG: TestState[%s].cleanup()\n' % hex(id(self)),
+                  schema='test_var')
+        for k, v in self.servers.iteritems():
+            # don't cleanup the default server
+            if k == 'default':
+                continue
+            v.cleanup()
+
+    def kill_current_test(self):
+        self.servers['default'].kill_current_test()

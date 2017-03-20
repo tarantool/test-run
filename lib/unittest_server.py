@@ -48,7 +48,8 @@ class UnittestServer(Server):
     def find_exe(cls, builddir):
         cls.builddir = builddir
 
-    def find_tests(self, test_suite, suite_path):
+    @staticmethod
+    def find_tests(test_suite, suite_path):
         def patterned(test, patterns):
             answer = []
             for i in patterns:
@@ -60,7 +61,7 @@ class UnittestServer(Server):
         tests = glob.glob(os.path.join(suite_path, "*.test" ))
 
         if not tests:
-            tests = glob.glob(os.path.join(self.builddir, 'test', suite_path, '*.test'))
+            tests = glob.glob(os.path.join(test_suite.args.builddir, 'test', suite_path, '*.test'))
         test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini) for k in sorted(tests)]
         test_suite.tests = sum([patterned(x, test_suite.args.tests) for x in test_suite.tests], [])
 

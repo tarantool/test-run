@@ -32,6 +32,7 @@ from gevent import socket as gsocket
 
 from connpool import ConnectionPool
 from test import TestRunGreenlet
+from utils import warn_unix_socket
 
 
 class TarantoolPool(ConnectionPool):
@@ -43,6 +44,7 @@ class TarantoolPool(ConnectionPool):
     def _new_connection(self):
         result = None
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
+            warn_unix_socket(self.port)
             result = gsocket.socket(gsocket.AF_UNIX, gsocket.SOCK_STREAM)
             result.connect(self.port)
         else:
@@ -99,6 +101,8 @@ class TarantoolConnection(object):
         self.host = host
         self.port = port
         self.is_connected = False
+        if self.host == 'unix/' or re.search(r'^/', str(self.port)):
+            warn_unix_socket(self.port)
 
     def connect(self):
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
@@ -154,10 +158,8 @@ class TarantoolAsyncConnection(TarantoolConnection):
     pool = TarantoolPool
 
     def __init__(self, host, port):
-        self.host = host
-        self.port = port
+        super(TarantoolAsyncConnection, self).__init__(host, port)
         self.connections = None
-        self.is_connected = False
         libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
         self._sys_recv = libc.recv
 

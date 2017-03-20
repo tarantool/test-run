@@ -1,12 +1,23 @@
 import os
 import sys
+from lib.singleton import Singleton
 
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+
+# Use it to print messages on the screen and to the worker's log.
+color_stdout = None  # = Colorer(); below the class definition
+
+
+def color_log(*args, **kwargs):
+    """ Print the message only to log file, not on the screen. The intention is
+    use this function only for regular, non-error output that appears every run
+    and mostly not needed for a user (but useful when investigating occured
+    problem). Don't hide errors and backtraces (or any other details of an
+    exceptional circumstances) from the screen, because such details especially
+    useful with CI bots.
+    """
+    kwargs['log_only'] = True
+    color_stdout(*args, **kwargs)
+
 
 class CSchema(object):
     objects = {}
@@ -130,6 +141,12 @@ class Colorer(object):
     disable = begin+'0'+end
 
     def __init__(self):
+        # These two fields can be filled later. It's for passing output from
+        # workers via result queue. When worker initializes, it set these
+        # fields and just use Colorer as before having multiplexed output.
+        self.queue_msg_wrapper = None
+        self.queue = None
+
         self.stdout = sys.stdout
         self.is_term = self.stdout.isatty()
         self.colors = None
@@ -155,6 +172,18 @@ class Colorer(object):
     def ret_stdout(self):
         sys.stdout = self.stdout
 
+    def _write(self, obj, log_only):
+        if self.queue:
+            if self.queue_msg_wrapper:
+                obj = self.queue_msg_wrapper(obj, log_only)
+            self.queue.put(obj)
+        elif not log_only:
+            self.stdout.write(obj)
+
+    def _flush(self):
+        if not self.queue:
+            self.stdout.flush()
+
     def write(self, *args, **kwargs):
         flags = []
         if 'schema' in kwargs:
@@ -165,13 +194,21 @@ class Colorer(object):
         flags.append(self.fgcolor[kwargs['fgcolor']]) if 'fgcolor' in kwargs else None
         flags.append(self.bgcolor[kwargs['bgcolor']]) if 'bgcolor' in kwargs else None
 
-        if self.is_term:
-            self.stdout.write(self.begin+';'.join(flags)+self.end)
+        data = ''
+        if self.is_term and flags:
+            data += self.begin + (';'.join(flags)) + self.end
         for i in args:
-            self.stdout.write(str(i))
+            data += str(i)
         if self.is_term:
-            self.stdout.write(self.disable)
-        self.stdout.flush()
+            # write 'color disable' before newline to better work with parallel
+            # processes writing signle stdout/stderr
+            if data.endswith('\n'):
+                data = data[:-1] + self.disable + '\n'
+            else:
+                data += self.disable
+        if data:
+            self._write(data, kwargs.get('log_only', False))
+        self._flush()
 
     def __call__(self, *args, **kwargs):
         self.write(*args, **kwargs)
@@ -195,3 +232,10 @@ class Colorer(object):
 
     def isatty(self):
         return self.is_term
+
+
+# Globals
+#########
+
+
+color_stdout = Colorer()

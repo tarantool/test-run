@@ -1,8 +1,39 @@
 import os
-
 import yaml
+import traceback
+
+import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
+
+from lib.utils import find_port
+from lib.colorer import color_stdout
+
+from lib.tarantool_server import TarantoolStartError
+
+
+# Module initialization
+#######################
+
+
+def gevent_propagate_exc():
+    """Don't print backtraces and propagate the exception to the parent
+    greenlet when Ctrl+C or startup fail hit the process when the active
+    greenlet is one of the StreamServer owned.
+    """
+    ghub = gevent.get_hub()
+    for exc_t in [KeyboardInterrupt, TarantoolStartError]:
+        if exc_t not in ghub.NOT_ERROR:
+            ghub.NOT_ERROR = ghub.NOT_ERROR + (exc_t,)
+        if exc_t not in ghub.SYSTEM_ERROR:
+            ghub.SYSTEM_ERROR = ghub.SYSTEM_ERROR + (exc_t,)
+
+
+gevent_propagate_exc()
+
+
+# TarantoolInspector
+####################
 
 
 class TarantoolInspector(StreamServer):
@@ -15,6 +46,10 @@ class TarantoolInspector(StreamServer):
     """
 
     def __init__(self, host, port):
+        # When specific port range was acquired for current worker, don't allow
+        # OS set port for us that isn't from specified range.
+        if port == 0:
+            port = find_port()
         super(TarantoolInspector, self).__init__((host, port))
         self.parser = None
 
@@ -55,10 +90,13 @@ class TarantoolInspector(StreamServer):
         for line in self.readline(socket):
             try:
                 result = self.parser.parse_preprocessor(line)
-            except Exception, e:
-                print('error', e)
-                import traceback
-                traceback.print_exc()
+            except (KeyboardInterrupt, TarantoolStartError):
+                # propagate to the main greenlet
+                raise
+            except Exception as e:
+                self.parser.kill_current_test()
+                color_stdout('\nTarantoolInpector.handle() received the following error:\n' +
+                    traceback.format_exc() + '\n', schema='error')
                 result = { "error": repr(e) }
             if result == None:
                 result = True
@@ -69,3 +107,6 @@ class TarantoolInspector(StreamServer):
 
         self.sem.release()
 
+    def cleanup_nondefault(self):
+        if self.parser:
+            self.parser.cleanup_nondefault()

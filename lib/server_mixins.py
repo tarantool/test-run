@@ -4,9 +4,7 @@ import shlex
 from lib.utils import find_in_path
 from lib.utils import print_tail_n
 from lib.utils import non_empty_valgrind_logs
-from lib.colorer import Colorer
-
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 class Mixin(object):
