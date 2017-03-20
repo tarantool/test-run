@@ -24,17 +24,13 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-import os
 import sys
 import time
-import shutil
 
 import lib
-from lib.colorer          import Colorer
-from lib.parallel         import Supervisor
-from lib.test_suite       import TestSuite
-from lib.tarantool_server import TarantoolServer, TarantoolStartError
-from lib.unittest_server  import UnittestServer
+from lib.tarantool_server import TarantoolStartError
+
+from lib.colorer import Colorer
 color_stdout = Colorer()
 
 #
@@ -55,7 +51,8 @@ def main():
             tasks = basket['tasks']
             if not tasks:
                 continue
-            worker = basket['gen_worker']()
+            worker_id = 1
+            worker = basket['gen_worker'](worker_id)
             for task in tasks:
                 worker.run_task(task)
             del worker # XXX: temp hack to run in one process in a sequence
@@ -72,7 +69,7 @@ def main():
         # fail silently, we already reported it to stdout
         return (-1)
     except RuntimeError as e:
-        raise
+        raise # XXX: remove it
         color_stdout("\nFatal error: %s. Execution aborted.\n" % e, schema='error')
         if options.args.gdb:
             time.sleep(100)

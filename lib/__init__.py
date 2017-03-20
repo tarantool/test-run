@@ -6,6 +6,7 @@ import os
 import sys
 import shutil
 import atexit
+import traceback
 
 from options              import Options
 from lib.tarantool_server import TarantoolServer
@@ -24,16 +25,41 @@ __all__ = ['options'] # TODO; needed?
 
 
 class Worker:
-    def __init__(self, suite):
+    def __init__(self, suite, _id):
         #color_stdout('DEBUG: Worker.__init__(suite=%s)\n' % suite.suite_path, schema='error')
+        self.id = _id
         self.suite = suite
+        self.name = '%02d_%s' % (self.id, self.suite.suite_path)
+        self.suite.ini['vardir'] += '/' + self.name
         self.server = suite.gen_server()
         self.inspector = suite.start_server(self.server)
 
     def run_task(self, task):
         #color_stdout('DEBUG: Worker.run(); suite=%s\n' % self.suite.suite_path, schema='error')
-        res = self.suite.run_test(task, self.server, self.inspector)
-        # TODO: add to queue
+        try:
+            res = self.suite.run_test(task, self.server, self.inspector)
+        except Exception as e:
+            color_stdout('Worker "%s" received the following error (and ignored it):\n' \
+                % self.name, schema='error')
+            color_stdout(traceback.format_exc() + '\n', schema='error')
+        # TODO: add res to output queue
+
+    def run_all(self, task_queue):
+        while True:
+            task_name = task_queue.get()
+            # None is 'stop worker' marker
+            if not task_name:
+                task_queue.task_done()
+                return
+            # find task by name
+            # XXX: should we abstract it somehow? don't access certain field
+            for cur_task in self.suite.tests:
+                if cur_task.name == task_name:
+                    task = cur_task
+                    break
+            res = self.run_task(task)
+            # TODO: add res to output queue
+            task_queue.task_done()
 
     def __del__(self):
         #color_stdout('DEBUG: Worker.__del__(); suite=%s\n' % self.suite.suite_path, schema='error')
@@ -60,7 +86,7 @@ def task_baskets():
     res = {}
     for suite in suites:
         key = os.path.basename(suite.suite_path)
-        gen_worker = lambda suite=suite: Worker(suite)
+        gen_worker = lambda _id, suite=suite: Worker(suite, _id)
         tasks = suite.find_tests()
         if tasks:
             res[key] = {

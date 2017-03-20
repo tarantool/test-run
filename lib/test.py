@@ -101,7 +101,7 @@ class Test:
                 os.path.basename(self.rg.sub('.result', name)))
         self.skip_cond = os.path.join(suite_ini['suite'],
                 os.path.basename(self.rg.sub('.skipcond', name)))
-        self.tmp_result = os.path.join(self.args.vardir,
+        self.tmp_result = os.path.join(self.suite_ini['vardir'],
                                        os.path.basename(self.result))
         self.reject = self.rg.sub('.reject', name)
         self.is_executed = False
