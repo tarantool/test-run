@@ -20,10 +20,10 @@ class TarantoolInspector(StreamServer):
 
     def start(self):
         super(TarantoolInspector, self).start()
-        os.environ['INSPECTOR'] = str(self.server_port)
+        os.environ['INSPECTOR'] = str(self.server_port) # XXX: environ cannot work async
 
     def stop(self):
-        del os.environ['INSPECTOR']
+        del os.environ['INSPECTOR'] # XXX
 
     def set_parser(self, parser):
         self.parser = parser

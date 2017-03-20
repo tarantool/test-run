@@ -83,7 +83,8 @@ class AppServer(Server):
     def find_exe(cls, builddir):
         cls.builddir = builddir
 
-    def find_tests(self, test_suite, suite_path):
+    @staticmethod
+    def find_tests(test_suite, suite_path):
         def patterned(test, patterns):
             answer = []
             for i in patterns:

@@ -744,7 +744,8 @@ class TarantoolServer(Server):
             return True
         return False
 
-    def find_tests(self, test_suite, suite_path):
+    @staticmethod
+    def find_tests(test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
         get_tests = lambda x: sorted(glob.glob(os.path.join(suite_path, x)))
         tests = [PythonTest(k, test_suite.args, test_suite.ini)
