@@ -71,6 +71,10 @@ class TestSuite:
         self.ini.update(self.args.__dict__)
         self.multi_run = self.get_multirun_conf(suite_path)
 
+        # list of long running tests
+        if 'long_run' not in self.ini:
+            self.ini['long_run'] = []
+
         if self.args.stress is None and self.ini['core'] == 'stress':
             return
 
@@ -96,6 +100,21 @@ class TestSuite:
         color_stdout(": ", self.ini["description"], ".\n", schema='ts_text')
         self.server.find_tests(self, suite_path)
         color_stdout("Found ", str(len(self.tests)), " tests.\n", schema='path')
+
+    def is_test_enabled(self, test, conf):
+        test_name = os.path.basename(test.name)
+        tconf = '%s:%s' % (test_name, conf)
+        checks = [
+            (True, self.ini["disabled"]),
+            (not self.server.debug, self.ini["release_disabled"]),
+            (self.args.valgrind, self.ini["valgrind_disabled"]),
+            (not self.args.long, self.ini["long_run"])]
+        for check in checks:
+            check_enabled, disabled_tests = check
+            if check_enabled and (test_name in disabled_tests
+                    or tconf in disabled_tests):
+                return False
+        return True
 
     def run_all(self):
         """For each file in the test suite, run client program
@@ -133,16 +152,12 @@ class TestSuite:
                 if test.run_params:
                     conf = test.conf_name
                 color_stdout("%s" % conf.ljust(16), schema='test_var')
-                test_name = os.path.basename(test.name)
-                if (test_name in self.ini["disabled"]
-                    or not self.server.debug and test_name in self.ini["release_disabled"]
-                    or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
-                    or not self.args.long and test_name in self.ini.get("long_run", [])):
-                    color_stdout("[ disabled ]\n", schema='t_name')
-                else:
+                if self.is_test_enabled(test, conf):
                     test.run(self.server)
                     if not test.passed():
                         failed_tests.append(test.name)
+                else:
+                    color_stdout("[ disabled ]\n", schema='t_name')
             color_stdout(shortsep, "\n", schema='separator')
             self.server.stop(silent=False)
             # don't delete core files or state of the data dir
