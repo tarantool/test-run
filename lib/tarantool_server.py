@@ -100,9 +100,11 @@ class LuaTest(FuncTest):
     def execute(self, server):
         server.current_test = self
         cls_name = server.__class__.__name__.lower()
-        if 'gdb' in cls_name or 'lldb' in cls_name:
-            # don't propagate gdb/lldb mixin to non-default servers, it doesn't
+        if 'gdb' in cls_name or 'lldb' in cls_name or 'strace' in cls_name:
+            # don't propagate gdb/lldb/strace mixin to non-default servers, it doesn't
             # work properly for now
+            # TODO: strace isn't interactive, so it's easy to make it works for
+            #       non-default server
             create_server = TarantoolServer
         else:
             # propagate valgrind mixin to non-default servers
@@ -356,7 +358,8 @@ class TarantoolServer(Server):
             'valgrind': False,
             'vardir': None,
             'use_unix_sockets': False,
-            'tarantool_port': None
+            'tarantool_port': None,
+            'strace': False
         }
         ini.update(_ini)
         Server.__init__(self, ini, test_suite)
@@ -377,6 +380,7 @@ class TarantoolServer(Server):
         self.script = ini['script']
         self.lua_libs = ini['lua_libs']
         self.valgrind = ini['valgrind']
+        self.strace = ini['strace']
         self.use_unix_sockets = ini['use_unix_sockets']
         self._start_against_running = ini['tarantool_port']
         self.crash_detector = None
