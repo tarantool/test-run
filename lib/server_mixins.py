@@ -115,6 +115,7 @@ class ValgrindMixin(Mixin):
 class StraceMixin(Mixin):
     @property
     def strace_log(self):
+        # TODO: don't overwrite log, like in the 'valgrind_log' property above
         return os.path.join(self.vardir, 'strace.log')
 
     def prepare_args(self):
