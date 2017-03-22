@@ -1,7 +1,7 @@
 import os
 import sys
 import collections
-import shutil
+import signal
 from gevent import socket
 
 
@@ -76,3 +76,18 @@ def find_port(port):
 # from scratch
     ports = {}
     return find_port(34000)
+
+
+def find_in_path(name):
+    path = os.curdir + os.pathsep + os.environ["PATH"]
+    for _dir in path.split(os.pathsep):
+        exe = os.path.join(_dir, name)
+        if os.access(exe, os.X_OK):
+            return exe
+    return ''
+
+# http://stackoverflow.com/a/2549950
+SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
+    if k.startswith('SIG') and not k.startswith('SIG_'))
+def signame(signum):
+    return SIGNAMES[signum]

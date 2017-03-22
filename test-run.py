@@ -27,7 +27,6 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import os
 import sys
 import time
-import string
 import shutil
 import os.path
 import argparse
@@ -111,6 +110,13 @@ class Options:
                 help = "Run the server under 'valgrind'. Default: false.")
 
         parser.add_argument(
+                "--strace",
+                dest = "strace",
+                action = "store_true",
+                default = False,
+                help = "Run the server under 'strace'. Default: false.")
+
+        parser.add_argument(
                 "--builddir",
                 dest = "builddir",
                 default = "..",
@@ -153,7 +159,7 @@ class Options:
     def check(self):
         """Check the arguments for correctness."""
         check_error = False
-        conflict_options = ('valgrind', 'gdb', 'lldb')
+        conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
         for op1, op2 in product(conflict_options, repeat=2):
             if op1 != op2 and getattr(self, op1, '') and \
                     getattr(self, op2, ''):

@@ -1,6 +1,8 @@
 import glob
 import os
 import shutil
+from itertools import product
+from lib.server_mixins import ValgrindMixin, StraceMixin, GdbMixin, LLdbMixin
 
 
 class Server(object):
@@ -22,16 +24,47 @@ class Server(object):
             return
         self._vardir = os.path.abspath(path)
 
-    def __new__(cls, ini=None):
+    @staticmethod
+    def get_mixed_class(cls, ini):
+        if ini is None:
+            return cls
+
+        conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
+        for op1, op2 in product(conflict_options, repeat=2):
+            if op1 != op2 and \
+                    (op1 in ini and ini[op1]) and \
+                    (op2 in ini and ini[op2]):
+                format_str = 'Can\'t run under {} and {} simultaniously'
+                raise OSError(format_str.format(op1, op2))
+
+        lname = cls.__name__.lower()
+        if ('tarantoolserver' not in lname) and (ini.get('gdb')
+                or ini.get('lldb') or ini.get('strace')):
+            # Only TarantoolServer supports running under gdb/lldb/strace for now
+            # TODO: support AppServer and UnittestServer
+            return cls
+
+        if ini.get('valgrind') and not 'valgrind' in lname:
+            cls = type('Valgrind' + cls.__name__, (ValgrindMixin, cls), {})
+        elif ini.get('gdb') and not 'gdb' in lname:
+            cls = type('Gdb' + cls.__name__, (GdbMixin, cls), {})
+        elif ini.get('lldb') and not 'lldb' in lname:
+            cls = type('LLdb' + cls.__name__, (LLdbMixin, cls), {})
+        elif 'strace' in ini and ini['strace']:
+            cls = type('Strace' + cls.__name__, (StraceMixin, cls), {})
+
+        return cls
+
+    def __new__(cls, ini=None, *args, **kwargs):
         if ini == None or 'core' not in ini or ini['core'] is None:
             return object.__new__(cls)
         core = ini['core'].lower().strip()
         cls.mdlname = "lib.{0}_server".format(core.replace(' ', '_'))
         cls.clsname = "{0}Server".format(core.title().replace(' ', ''))
         corecls = __import__(cls.mdlname, fromlist=cls.clsname).__dict__[cls.clsname]
-        return corecls.__new__(corecls, core)
+        return corecls.__new__(corecls, ini, *args, **kwargs)
 
-    def __init__(self, ini):
+    def __init__(self, ini, test_suite=None):
         self.core = ini['core']
         self.ini = ini
         self.re_vardir_cleanup = ['*.core.*', 'core']
@@ -39,6 +72,15 @@ class Server(object):
         self.inspector_port = int(ini.get(
             'inspector_port', self.DEFAULT_INSPECTOR
         ))
+
+        # filled in {Test,FuncTest,LuaTest,PythonTest}.execute()
+        # or passed through execfile() for PythonTest (see
+        # TarantoolServer.__init__).
+        self.current_test = None
+
+        # Used in valgrind_log property. 'test_suite' is not None only for
+        # default servers running in TestSuite.run_all()
+        self.test_suite = test_suite
 
     def prepare_args(self):
         return []
