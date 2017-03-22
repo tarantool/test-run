@@ -134,6 +134,12 @@ class Test:
         If there is a difference, print it to stdout and raise an
         exception. The exception is raised only if is_force flag is
         not set."""
+
+        # Note: test was created before certain worker become known, so we need
+        # to update temporary result directory here as it depends on 'vardir'.
+        self.tmp_result = os.path.join(self.suite_ini['vardir'],
+                                       os.path.basename(self.result))
+
         diagnostics = "unknown"
         save_stdout = sys.stdout
         try:
