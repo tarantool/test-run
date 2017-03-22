@@ -26,7 +26,6 @@ __all__ = ['options'] # TODO; needed?
 
 class Worker:
     def __init__(self, suite, _id):
-        #color_stdout('DEBUG: Worker.__init__(suite=%s)\n' % suite.suite_path, schema='error')
         self.id = _id
         self.suite = suite
         self.name = '%02d_%s' % (self.id, self.suite.suite_path)
@@ -34,23 +33,33 @@ class Worker:
         self.server = suite.gen_server()
         self.inspector = suite.start_server(self.server)
 
+    # TODO: timeout for task
     def run_task(self, task):
-        #color_stdout('DEBUG: Worker.run(); suite=%s\n' % self.suite.suite_path, schema='error')
         try:
             res = self.suite.run_test(task, self.server, self.inspector)
+        except KeyboardInterrupt:
+            color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' % self.name, schema='test_var')
+            raise
         except Exception as e:
-            color_stdout('Worker "%s" received the following error (and ignored it):\n' \
+            color_stdout('Worker "%s" received the following error; stopping...\n' \
                 % self.name, schema='error')
             color_stdout(traceback.format_exc() + '\n', schema='error')
+            raise
+            # XXX: there are errors after which we can continue? Or its
+            #      processed down by the call stack?
         # TODO: add res to output queue
 
-    def run_all(self, task_queue):
+    def run_loop(self, task_queue):
+        """ called from 'run_all' """
         while True:
             task_name = task_queue.get()
             # None is 'stop worker' marker
-            if not task_name:
+            if task_name is None:
+                color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
+                    % self.name, schema='test_var')
+                self.suite.stop_server(self.server, self.inspector)
                 task_queue.task_done()
-                return
+                break
             # find task by name
             # XXX: should we abstract it somehow? don't access certain field
             for cur_task in self.suite.tests:
@@ -61,9 +70,23 @@ class Worker:
             # TODO: add res to output queue
             task_queue.task_done()
 
-    def __del__(self):
-        #color_stdout('DEBUG: Worker.__del__(); suite=%s\n' % self.suite.suite_path, schema='error')
-        self.suite.stop_server(self.server, self.inspector)
+    def run_all(self, task_queue):
+        try:
+            self.run_loop(task_queue)
+        except Exception: # KeyboardInterrupt:
+            # some task were in progress when the exception raised
+            task_queue.task_done()
+            self.flush_all(task_queue)  # unblock task_queue
+            self.suite.stop_server(self.server, self.inspector, silent=True)
+
+    def flush_all(self, task_queue):
+        # TODO: add 'not run' status to output queue for flushed tests
+        while True:
+            task_name = task_queue.get()
+            task_queue.task_done()
+            # None is 'stop worker' marker
+            if task_name is None:
+                break
 
 
 def find_suites():

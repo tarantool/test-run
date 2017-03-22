@@ -122,9 +122,9 @@ class TestSuite:
         server.deploy(silent=False)
         return inspector
 
-    def stop_server(self, server, inspector):
+    def stop_server(self, server, inspector, silent=False):
         #color_stdout(shortsep, "\n", schema='separator') # XXX
-        server.stop(silent=False)
+        server.stop(silent=silent)
         # don't delete core files or state of the data dir
         # in case of exception, which is raised when the
         # server crashes
@@ -168,7 +168,7 @@ class TestSuite:
         except KeyboardInterrupt:
             # XXX: move it above by a function call stack
             #color_stdout("\n%s\n" % shortsep, schema='separator')
-            server.stop(silent=False)
+            #server.stop(silent=False)
             raise
 
 # TODO: return TaskStatus(...)
