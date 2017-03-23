@@ -65,6 +65,9 @@ def main():
 #        else:
 #            for suite in suites:
 #                suite.run_all()
+    except KeyboardInterrupt:
+        color_stdout('[Main loop] Caught keyboard interrupt\n', schema='test_var')
+        return (-1)
     except TarantoolStartError:
         # fail silently, we already reported it to stdout
         return (-1)

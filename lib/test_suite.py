@@ -144,32 +144,26 @@ class TestSuite:
 #        color_stdout("RESULT\n", schema='test_pass')
 #        color_stdout(shortsep, "\n", schema='separator')
 
-        try:
-            test.inspector = inspector
-            color_stdout(os.path.join(
-                self.ini['suite'], os.path.basename(test.name)).ljust(48),
-                schema='t_name'
-            )
-            # for better diagnostics in case of a long-running test
+        test.inspector = inspector
+        color_stdout(os.path.join(
+            self.ini['suite'], os.path.basename(test.name)).ljust(48),
+            schema='t_name'
+        )
+        # for better diagnostics in case of a long-running test
 
-            conf = ''
-            if test.run_params:
-                conf = test.conf_name
-            color_stdout("%s" % conf.ljust(16), schema='test_var')
-            test_name = os.path.basename(test.name)
-            if (test_name in self.ini["disabled"]
-                or not server.debug and test_name in self.ini["release_disabled"]
-                or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
-                or not self.args.long and test_name in self.ini.get("long_run", [])):
-                color_stdout("[ disabled ]\n", schema='t_name')
-            else:
-                test.run(server)
-                return test.passed()
-        except KeyboardInterrupt:
-            # XXX: move it above by a function call stack
-            #color_stdout("\n%s\n" % shortsep, schema='separator')
-            #server.stop(silent=False)
-            raise
+        conf = ''
+        if test.run_params:
+            conf = test.conf_name
+        color_stdout("%s" % conf.ljust(16), schema='test_var')
+        test_name = os.path.basename(test.name)
+        if (test_name in self.ini["disabled"]
+            or not server.debug and test_name in self.ini["release_disabled"]
+            or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
+            or not self.args.long and test_name in self.ini.get("long_run", [])):
+            color_stdout("[ disabled ]\n", schema='t_name')
+        else:
+            test.run(server)
+            return test.passed()
 
 # TODO: return TaskStatus(...)
 #        if failed_tests:

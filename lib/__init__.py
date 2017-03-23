@@ -25,20 +25,32 @@ __all__ = ['options'] # TODO; needed?
 
 
 class Worker:
+    def report_keyboard_interrupt(self):
+        color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
+            % self.name, schema='test_var')
+
     def __init__(self, suite, _id):
+        self.initialized = False
         self.id = _id
         self.suite = suite
         self.name = '%02d_%s' % (self.id, self.suite.suite_path)
         self.suite.ini['vardir'] += '/' + self.name
-        self.server = suite.gen_server()
-        self.inspector = suite.start_server(self.server)
+        try:
+            self.server = suite.gen_server()
+            self.inspector = suite.start_server(self.server)
+            self.initialized = True
+        except KeyboardInterrupt:
+            self.report_keyboard_interrupt()
 
     # TODO: timeout for task
+    # Note: it's not exception safe
     def run_task(self, task):
+        if not self.initialized:
+            return
         try:
             res = self.suite.run_test(task, self.server, self.inspector)
         except KeyboardInterrupt:
-            color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' % self.name, schema='test_var')
+            self.report_keyboard_interrupt()
             raise
         except Exception as e:
             color_stdout('Worker "%s" received the following error; stopping...\n' \
@@ -71,9 +83,11 @@ class Worker:
             task_queue.task_done()
 
     def run_all(self, task_queue):
+        if not self.initialized:
+            return
         try:
             self.run_loop(task_queue)
-        except Exception: # KeyboardInterrupt:
+        except (KeyboardInterrupt, Exception):
             # some task were in progress when the exception raised
             task_queue.task_done()
             self.flush_all(task_queue)  # unblock task_queue

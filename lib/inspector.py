@@ -1,8 +1,15 @@
 import os
 
 import yaml
+import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
+
+
+# don't print backtraces when Ctrl+C hit the process when the active greenlet
+# is one of the StreamServer owned
+if KeyboardInterrupt not in gevent.get_hub().NOT_ERROR:
+    gevent.get_hub().NOT_ERROR = gevent.get_hub().NOT_ERROR + (KeyboardInterrupt,)
 
 
 class TarantoolInspector(StreamServer):
@@ -55,6 +62,9 @@ class TarantoolInspector(StreamServer):
         for line in self.readline(socket):
             try:
                 result = self.parser.parse_preprocessor(line)
+            except KeyboardInterrupt:
+                # propagate to the main greenlet
+                raise
             except Exception, e:
                 print('error', e)
                 import traceback
