@@ -28,8 +28,8 @@ def main_loop(processes, task_queues):
         task_queue = multiprocessing.JoinableQueue()
         task_queues.append(task_queue)
         for task in tasks:
-            task_queue.put(task.name)
-        task_queue.put(None)  # 'stop worker' marker
+            task_queue.put((task.name, task.conf_name)) # XXX: task.id
+        task_queue.put((None, None))  # 'stop worker' marker
         # It's python-style closure; XXX: prettify
         entry = lambda gen_worker=basket['gen_worker'], \
             task_queue=task_queue, worker_next_id=worker_next_id: \

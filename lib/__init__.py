@@ -64,7 +64,7 @@ class Worker:
     def run_loop(self, task_queue):
         """ called from 'run_all' """
         while True:
-            task_name = task_queue.get()
+            task_name, conf_name = task_queue.get()
             # None is 'stop worker' marker
             if task_name is None:
                 color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
@@ -75,7 +75,8 @@ class Worker:
             # find task by name
             # XXX: should we abstract it somehow? don't access certain field
             for cur_task in self.suite.tests:
-                if cur_task.name == task_name:
+                if cur_task.name == task_name \
+                        and cur_task.conf_name == conf_name:
                     task = cur_task
                     break
             res = self.run_task(task)
@@ -96,7 +97,7 @@ class Worker:
     def flush_all(self, task_queue):
         # TODO: add 'not run' status to output queue for flushed tests
         while True:
-            task_name = task_queue.get()
+            task_name, _ = task_queue.get()
             task_queue.task_done()
             # None is 'stop worker' marker
             if task_name is None:
@@ -124,7 +125,7 @@ def task_baskets():
     for suite in suites:
         key = os.path.basename(suite.suite_path)
         gen_worker = lambda _id, suite=suite: Worker(suite, _id)
-        tasks = suite.find_tests()
+        tasks = suite.find_tests() # XXX: ids here?
         if tasks:
             res[key] = {
                 'gen_worker': gen_worker,
