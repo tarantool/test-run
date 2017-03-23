@@ -5,6 +5,8 @@ import time
 import select
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
+
+
 import lib
 from lib.colorer import Colorer
 
@@ -38,11 +40,31 @@ class TaskStatistics(TaskResultListener):
         color_stdout('Statistics: %s\n' % str(self.stats), schema='test_var')
 
 
+# TODO: appropriatelly process color escape-sequences
 class TaskOutput(TaskResultListener):
+    def __init__(self):
+        self.buffer = dict()
+
+    @staticmethod
+    def _write(obj):
+        sys.stdout.write(obj)
+
     def process_result(self, worker_name, obj):
+        # worker sent 'done' marker
+        if obj is None:
+            bufferized = self.buffer.get(worker_name, '')
+            if bufferized:
+                TaskOutput._write(bufferized)
+
         if not isinstance(obj, str):
             return
-        sys.stdout.write(obj)
+
+        bufferized = self.buffer.get(worker_name, '')
+        if obj.endswith('\n'):
+            TaskOutput._write(bufferized + obj)
+            self.buffer[worker_name] = ''
+        else:
+            self.buffer[worker_name] = bufferized + obj
 
 
 def run_worker(gen_worker, task_queue, result_queue, worker_id):
@@ -95,12 +117,12 @@ def main_loop():
             while not result_queue.empty():
                 objs.append(result_queue.get())
             for obj in objs:
-                if obj is None:
-                    workers_cnt -= 1
-                    break
                 worker_name = inputs.index(ready_input) # XXX: tmp
                 for listener in listeners:
                     listener.process_result(worker_name, obj)
+                if obj is None:
+                    workers_cnt -= 1
+                    break
 
     statistics.print_statistics()
 
