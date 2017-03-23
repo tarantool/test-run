@@ -12,6 +12,39 @@ from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
+class TaskResultListener(object):
+    def process_result(self):
+        raise ValueError('override me')
+
+
+class TaskStatistics(TaskResultListener):
+    def __init__(self):
+        self.stats = dict()
+
+    def process_result(self, worker_name, obj):
+        if not isinstance(obj, bool):
+            return
+        if not worker_name in self.stats.keys():
+            self.stats[worker_name] = {
+                'pass': 0,
+                'othr': 0,
+            }
+        if obj:
+            self.stats[worker_name]['pass'] += 1
+        else:
+            self.stats[worker_name]['othr'] += 1
+
+    def print_statistics(self):
+        color_stdout('Statistics: %s\n' % str(self.stats), schema='test_var')
+
+
+class TaskOutput(TaskResultListener):
+    def process_result(self, worker_name, obj):
+        if not isinstance(obj, str):
+            return
+        sys.stdout.write(obj)
+
+
 def run_worker(gen_worker, task_queue, result_queue, worker_id):
     color_stdout.queue = result_queue
     worker = gen_worker(worker_id)
@@ -50,32 +83,26 @@ def main_loop():
     if not processes:
         return
 
-    stats = dict()
     inputs = [q._reader for q in result_queues]
     workers_cnt = len(inputs)
+    statistics = TaskStatistics()
+    listeners = [statistics, TaskOutput()]
     while workers_cnt > 0:
         ready_inputs, _, _ = select.select(inputs, [], [])
         for ready_input in ready_inputs:
-            idx = inputs.index(ready_input) # XXX: tmp
             result_queue = result_queues[inputs.index(ready_input)]
-            obj = result_queue.get()
-            if obj is None:
-                workers_cnt -= 1
-                break
-            elif isinstance(obj, bool):
-                if not idx in stats.keys():
-                    stats[idx] = {
-                        'pass': 0,
-                        'othr': 0,
-                    }
-                if obj:
-                    stats[idx]['pass'] += 1
-                else:
-                    stats[idx]['othr'] += 1
-            elif isinstance(obj, str):
-                sys.stdout.write(obj)
+            objs = []
+            while not result_queue.empty():
+                objs.append(result_queue.get())
+            for obj in objs:
+                if obj is None:
+                    workers_cnt -= 1
+                    break
+                worker_name = inputs.index(ready_input) # XXX: tmp
+                for listener in listeners:
+                    listener.process_result(worker_name, obj)
 
-    color_stdout('Statistics: %s\n' % str(stats))
+    statistics.print_statistics()
 
     for process in processes:
         process.join()
