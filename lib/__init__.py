@@ -73,11 +73,15 @@ class Worker:
                 break
             # find task by name
             # XXX: should we abstract it somehow? don't access certain field
+            task = None
             for cur_task in self.suite.tests:
                 if cur_task.name == task_name \
                         and cur_task.conf_name == conf_name:
                     task = cur_task
                     break
+            if task is None:
+                raise ValueError('Cannot find test: (%s, %s)' % \
+                    (task_name, conf_name))
             res = self.run_task(task)
             result_queue.put(res)
 
