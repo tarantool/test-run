@@ -55,7 +55,6 @@ def main():
             worker = basket['gen_worker'](worker_id)
             for task in tasks:
                 worker.run_task(task)
-            del worker # XXX: temp hack to run in one process in a sequence
 
 # XXX: collect failed_tests
 #        suites = lib.find_suites()

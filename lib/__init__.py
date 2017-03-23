@@ -46,7 +46,7 @@ class Worker:
     # Note: it's not exception safe
     def run_task(self, task):
         if not self.initialized:
-            return
+            return None # 'done' marker
         try:
             res = self.suite.run_test(task, self.server, self.inspector)
         except KeyboardInterrupt:
@@ -59,9 +59,9 @@ class Worker:
             raise
             # XXX: there are errors after which we can continue? Or its
             #      processed down by the call stack?
-        # TODO: add res to output queue
+        return res
 
-    def run_loop(self, task_queue):
+    def run_loop(self, task_queue, result_queue):
         """ called from 'run_all' """
         while True:
             task_name, conf_name = task_queue.get()
@@ -70,7 +70,6 @@ class Worker:
                 color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
                     % self.name, schema='test_var')
                 self.suite.stop_server(self.server, self.inspector)
-                task_queue.task_done()
                 break
             # find task by name
             # XXX: should we abstract it somehow? don't access certain field
@@ -80,25 +79,24 @@ class Worker:
                     task = cur_task
                     break
             res = self.run_task(task)
-            # TODO: add res to output queue
-            task_queue.task_done()
+            result_queue.put(res)
 
-    def run_all(self, task_queue):
+    def run_all(self, task_queue, result_queue):
         if not self.initialized:
+            result_queue.put(None) # 'done' marker
             return
         try:
-            self.run_loop(task_queue)
+            self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
             # some task were in progress when the exception raised
-            task_queue.task_done()
             self.flush_all(task_queue)  # unblock task_queue
             self.suite.stop_server(self.server, self.inspector, silent=True)
+        result_queue.put(None) # 'done' marker
 
     def flush_all(self, task_queue):
         # TODO: add 'not run' status to output queue for flushed tests
         while True:
             task_name, _ = task_queue.get()
-            task_queue.task_done()
             # None is 'stop worker' marker
             if task_name is None:
                 break

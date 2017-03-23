@@ -130,6 +130,9 @@ class Colorer(object):
     disable = begin+'0'+end
 
     def __init__(self):
+        # can be filled later
+        # if there is queue we will pass strings to it
+        self.queue = None
         self.stdout = sys.stdout
         self.is_term = self.stdout.isatty()
         self.colors = None
@@ -155,6 +158,16 @@ class Colorer(object):
     def ret_stdout(self):
         sys.stdout = self.stdout
 
+    def _write(self, obj):
+        if self.queue:
+            self.queue.put(obj)
+        else:
+            self.stdout.write(obj)
+
+    def _flush(self):
+        if not self.queue:
+            self.stdout.flush()
+
     def write(self, *args, **kwargs):
         flags = []
         if 'schema' in kwargs:
@@ -166,12 +179,12 @@ class Colorer(object):
         flags.append(self.bgcolor[kwargs['bgcolor']]) if 'bgcolor' in kwargs else None
 
         if self.is_term:
-            self.stdout.write(self.begin+';'.join(flags)+self.end)
+            self._write(self.begin+';'.join(flags)+self.end)
         for i in args:
-            self.stdout.write(str(i))
+            self._write(str(i))
         if self.is_term:
-            self.stdout.write(self.disable)
-        self.stdout.flush()
+            self._write(self.disable)
+        self._flush()
 
     def __call__(self, *args, **kwargs):
         self.write(*args, **kwargs)
