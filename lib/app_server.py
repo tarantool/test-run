@@ -49,7 +49,7 @@ class AppServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.inprogress", "*.sup", "*.lua", "*.pid"
+            "*.snap", "*.xlog", "*.xctl", "*.inprogress", "*.sup", "*.lua", "*.pid"
         ]
         self.cleanup()
         self.builddir = ini['builddir']
