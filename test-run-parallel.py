@@ -65,7 +65,7 @@ class TaskOutput(TaskResultListener):
                 TaskOutput._write(bufferized)
             return
 
-        if not isinstance(obj, str):
+        if not isinstance(obj, basestring):
             return
 
         bufferized = self.buffer.get(worker_name, '')
