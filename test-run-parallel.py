@@ -113,8 +113,8 @@ def reproduce_buckets(reproduce, all_buckets):
     return { key: bucket }
 
 
-def start_workers(processes, task_queues, result_queues, buckets):
-    workers_per_suite = 2
+def start_workers(processes, task_queues, result_queues, buckets,
+        workers_per_suite):
     worker_next_id = 1
     for bucket in buckets.values():
         task_ids = bucket['task_ids']
@@ -174,11 +174,12 @@ def main_loop():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
     buckets = lib.task_buckets()
+    workers_per_suite = 2
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
-        # TODO: when several workers will able to work on one task queue we
-        #       need to limit workers count to 1 when reproducing
-    start_workers(processes, task_queues, result_queues, buckets)
+        workers_per_suite = 1
+    start_workers(processes, task_queues, result_queues, buckets,
+        workers_per_suite)
 
     if not processes:
         return
