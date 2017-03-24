@@ -161,6 +161,7 @@ class TestSuite:
             or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
             or not self.args.long and test_name in self.ini.get("long_run", [])):
             color_stdout("[ disabled ]\n", schema='t_name')
+            return False
         else:
             test.run(server)
             return test.passed()
