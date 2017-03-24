@@ -178,12 +178,20 @@ class Colorer(object):
         flags.append(self.fgcolor[kwargs['fgcolor']]) if 'fgcolor' in kwargs else None
         flags.append(self.bgcolor[kwargs['bgcolor']]) if 'bgcolor' in kwargs else None
 
+        data = ''
         if self.is_term:
-            self._write(self.begin+';'.join(flags)+self.end)
+            data += self.begin+';'.join(flags)+self.end
         for i in args:
-            self._write(str(i))
+            data += str(i)
         if self.is_term:
-            self._write(self.disable)
+            # write 'color disable' before newline to better work with parallel
+            # processes writing signle stdout/stderr
+            if data.endswith('\n'):
+                data = data[:-1] + self.disable + '\n'
+            else:
+                data += self.disable
+        if data:
+            self._write(data)
         self._flush()
 
     def __call__(self, *args, **kwargs):

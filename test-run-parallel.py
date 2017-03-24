@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import re
 import sys
 import time
 import select
@@ -26,6 +27,7 @@ class TaskStatistics(TaskResultListener):
     def process_result(self, worker_name, obj):
         if not isinstance(obj, bool):
             return
+
         if not worker_name in self.stats.keys():
             self.stats[worker_name] = {
                 'pass': 0,
@@ -40,8 +42,9 @@ class TaskStatistics(TaskResultListener):
         color_stdout('Statistics: %s\n' % str(self.stats), schema='test_var')
 
 
-# TODO: appropriatelly process color escape-sequences
 class TaskOutput(TaskResultListener):
+    color_re = re.compile('\033' + r'\[\d(?:;\d\d)?m')
+
     def __init__(self):
         self.buffer = dict()
 
@@ -49,18 +52,23 @@ class TaskOutput(TaskResultListener):
     def _write(obj):
         sys.stdout.write(obj)
 
+    @staticmethod
+    def _decolor(obj):
+        return TaskOutput.color_re.sub('', obj)
+
     def process_result(self, worker_name, obj):
         # worker sent 'done' marker
         if obj is None:
             bufferized = self.buffer.get(worker_name, '')
             if bufferized:
                 TaskOutput._write(bufferized)
+            return
 
         if not isinstance(obj, str):
             return
 
         bufferized = self.buffer.get(worker_name, '')
-        if obj.endswith('\n'):
+        if TaskOutput._decolor(obj).endswith('\n'):
             TaskOutput._write(bufferized + obj)
             self.buffer[worker_name] = ''
         else:
