@@ -47,12 +47,12 @@ def main():
 
     try:
         color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
-        for basket in lib.task_baskets().values():
-            task_ids = basket['task_ids']
+        for bucket in lib.task_buckets().values():
+            task_ids = bucket['task_ids']
             if not task_ids:
                 continue
             worker_id = 1
-            worker = basket['gen_worker'](worker_id)
+            worker = bucket['gen_worker'](worker_id)
             for task_id in task_ids:
                 worker.run_task(task_id)
 

@@ -82,34 +82,34 @@ def run_worker(gen_worker, task_queue, result_queue, worker_id):
     worker.run_all(task_queue, result_queue)
 
 
-def reproduce_baskets(reproduce, all_baskets):
-    # check test list and find basket
-    found_basket_ids = []
+def reproduce_buckets(reproduce, all_buckets):
+    # check test list and find a bucket
+    found_bucket_ids = []
     if not lib.reproduce:
         raise ValueError('[reproduce] Tests list cannot be empty')
     for i, task_id in enumerate(lib.reproduce):
-        for basket_id, basket in all_baskets.items():
-            if task_id in basket['task_ids']:
-                found_basket_ids.append(basket_id)
+        for bucket_id, bucket in all_buckets.items():
+            if task_id in bucket['task_ids']:
+                found_bucket_ids.append(bucket_id)
                 break
-        if len(found_basket_ids) != i + 1:
+        if len(found_bucket_ids) != i + 1:
             raise ValueError('[reproduce] Cannot find test "%s"' % str(task_id))
-    found_basket_ids = list(set(found_basket_ids))
-    if len(found_basket_ids) < 1:
+    found_bucket_ids = list(set(found_bucket_ids))
+    if len(found_bucket_ids) < 1:
         raise ValueError('[reproduce] Cannot find any suite for given tests')
-    elif len(found_basket_ids) > 1:
+    elif len(found_bucket_ids) > 1:
         raise ValueError('[reproduce] Given tests contained by different suites')
 
-    key = found_basket_ids[0]
-    basket = copy.deepcopy(all_baskets[key])
-    basket['task_ids'] = lib.reproduce
-    return { key: basket }
+    key = found_bucket_ids[0]
+    bucket = copy.deepcopy(all_buckets[key])
+    bucket['task_ids'] = lib.reproduce
+    return { key: bucket }
 
 
-def start_workers(processes, task_queues, result_queues, baskets):
+def start_workers(processes, task_queues, result_queues, buckets):
     worker_next_id = 1
-    for basket in baskets.values():
-        task_ids = basket['task_ids']
+    for bucket in buckets.values():
+        task_ids = bucket['task_ids']
         if not task_ids:
             continue
         result_queue = SimpleQueue()
@@ -120,7 +120,7 @@ def start_workers(processes, task_queues, result_queues, baskets):
             task_queue.put(task_id)
         task_queue.put(None)  # 'stop worker' marker
         # It's python-style closure; XXX: prettify
-        entry = lambda gen_worker=basket['gen_worker'], \
+        entry = lambda gen_worker=bucket['gen_worker'], \
                 task_queue=task_queue, result_queue=result_queue, \
                 worker_next_id=worker_next_id: \
             run_worker(gen_worker, task_queue, result_queue, worker_next_id)
@@ -160,12 +160,12 @@ def main_loop():
 
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
-    baskets = lib.task_baskets()
+    buckets = lib.task_buckets()
     if lib.reproduce:
-        baskets = reproduce_baskets(lib.reproduce, baskets)
+        buckets = reproduce_buckets(lib.reproduce, buckets)
         # TODO: when several workers will able to work on one task queue we
         #       need to limit workers count to 1 when reproducing
-    start_workers(processes, task_queues, result_queues, baskets)
+    start_workers(processes, task_queues, result_queues, buckets)
 
     if not processes:
         return

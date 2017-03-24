@@ -130,7 +130,7 @@ def find_suites():
     return suites
 
 
-def task_baskets():
+def task_buckets():
     suites = find_suites()
     res = {}
     for suite in suites:
