@@ -118,6 +118,10 @@ class Test:
         # prevent double/triple reporting
         self.is_crash_reported = False
 
+    @property
+    def id(self):
+        return self.name, self.conf_name
+
     def passed(self):
         """Return true if this test was run successfully."""
         return self.is_executed and self.is_executed_ok and self.is_equal_result

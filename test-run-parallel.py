@@ -6,6 +6,7 @@ import time
 import select
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
+import copy
 
 
 import lib
@@ -81,24 +82,43 @@ def run_worker(gen_worker, task_queue, result_queue, worker_id):
     worker.run_all(task_queue, result_queue)
 
 
-def main_loop():
-    processes = []
-    task_queues = []
-    result_queues = []
+def reproduce_baskets(reproduce, all_baskets):
+    # check test list and find basket
+    found_basket_ids = []
+    if not lib.reproduce:
+        raise ValueError('[reproduce] Tests list cannot be empty')
+    for i, task_id in enumerate(lib.reproduce):
+        for basket_id, basket in all_baskets.items():
+            if task_id in basket['task_ids']:
+                found_basket_ids.append(basket_id)
+                break
+        if len(found_basket_ids) != i + 1:
+            raise ValueError('[reproduce] Cannot find test "%s"' % str(task_id))
+    found_basket_ids = list(set(found_basket_ids))
+    if len(found_basket_ids) < 1:
+        raise ValueError('[reproduce] Cannot find any suite for given tests')
+    elif len(found_basket_ids) > 1:
+        raise ValueError('[reproduce] Given tests contained by different suites')
 
-    color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
+    key = found_basket_ids[0]
+    basket = copy.deepcopy(all_baskets[key])
+    basket['task_ids'] = lib.reproduce
+    return { key: basket }
+
+
+def start_workers(processes, task_queues, result_queues, baskets):
     worker_next_id = 1
-    for basket in lib.task_baskets().values():
-        tasks = basket['tasks']
-        if not tasks:
+    for basket in baskets.values():
+        task_ids = basket['task_ids']
+        if not task_ids:
             continue
         result_queue = SimpleQueue()
         result_queues.append(result_queue)
         task_queue = SimpleQueue()
         task_queues.append(task_queue)
-        for task in tasks:
-            task_queue.put((task.name, task.conf_name)) # XXX: task.id
-        task_queue.put((None, None))  # 'stop worker' marker
+        for task_id in task_ids:
+            task_queue.put(task_id)
+        task_queue.put(None)  # 'stop worker' marker
         # It's python-style closure; XXX: prettify
         entry = lambda gen_worker=basket['gen_worker'], \
                 task_queue=task_queue, result_queue=result_queue, \
@@ -110,9 +130,8 @@ def main_loop():
         process.start()
         processes.append(process)
 
-    if not processes:
-        return
 
+def wait_result_queues(processes, task_queues, result_queues):
     inputs = [q._reader for q in result_queues]
     workers_cnt = len(inputs)
     statistics = TaskStatistics()
@@ -131,7 +150,27 @@ def main_loop():
                 if obj is None:
                     workers_cnt -= 1
                     break
+    return statistics
 
+
+def main_loop():
+    processes = []
+    task_queues = []
+    result_queues = []
+
+    color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
+
+    baskets = lib.task_baskets()
+    if lib.reproduce:
+        baskets = reproduce_baskets(lib.reproduce, baskets)
+        # TODO: when several workers will able to work on one task queue we
+        #       need to limit workers count to 1 when reproducing
+    start_workers(processes, task_queues, result_queues, baskets)
+
+    if not processes:
+        return
+
+    statistics = wait_result_queues(processes, task_queues, result_queues)
     statistics.print_statistics()
 
     for process in processes:

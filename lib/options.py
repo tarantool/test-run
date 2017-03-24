@@ -111,6 +111,14 @@ class Options:
                 help="""Force set test configuration mode"""
         )
 
+        parser.add_argument(
+                "--reproduce",
+                dest="reproduce",
+                default=None,
+                help="""Run tests in the order described by the file.
+                Such files created by workers in "var/${WORKER_ID}/tests.txt" files.
+                Note: The option works now only with test-run-parallel.py.""")
+
         self.args = parser.parse_args()
         self.check()
 
