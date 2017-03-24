@@ -10,6 +10,7 @@ import copy
 
 
 import lib
+from lib import WorkerOutput, WorkerDone
 from lib.colorer import Colorer
 
 
@@ -17,7 +18,7 @@ color_stdout = Colorer()
 
 
 class TaskResultListener(object):
-    def process_result(self):
+    def process_result(self, *args, **kwargs):
         raise ValueError('override me')
 
 
@@ -25,6 +26,7 @@ class TaskStatistics(TaskResultListener):
     def __init__(self):
         self.stats = dict()
 
+    # XXX: remove worker_name
     def process_result(self, worker_name, obj):
         if not isinstance(obj, bool):
             return
@@ -50,30 +52,35 @@ class TaskOutput(TaskResultListener):
         self.buffer = dict()
 
     @staticmethod
-    def _write(obj):
-        sys.stdout.write(obj)
+    def _write(name, output):
+        #prefix_max_len = len('[Worker "xx_replication-py"] ')
+        #prefix = ('[Worker "%s"] ' % name).ljust(prefix_max_len)
+        #output = output.rstrip('\n')
+        #lines = [(line + '\n') for line in output.split('\n')]
+        #output = prefix + prefix.join(lines)
+        sys.stdout.write(output)
 
     @staticmethod
     def _decolor(obj):
         return TaskOutput.color_re.sub('', obj)
 
+    # XXX: remove worker_name arg
     def process_result(self, worker_name, obj):
-        # worker sent 'done' marker
-        if obj is None:
-            bufferized = self.buffer.get(worker_name, '')
+        if isinstance(obj, WorkerDone):
+            bufferized = self.buffer.get(obj.worker_id, '')
             if bufferized:
-                TaskOutput._write(bufferized)
+                TaskOutput._write(obj.worker_name, bufferized)
             return
 
-        if not isinstance(obj, basestring):
+        if not isinstance(obj, WorkerOutput):
             return
 
-        bufferized = self.buffer.get(worker_name, '')
-        if TaskOutput._decolor(obj).endswith('\n'):
-            TaskOutput._write(bufferized + obj)
-            self.buffer[worker_name] = ''
+        bufferized = self.buffer.get(obj.worker_id, '')
+        if TaskOutput._decolor(obj.output).endswith('\n'):
+            TaskOutput._write(obj.worker_name, bufferized + obj.output)
+            self.buffer[obj.worker_id] = ''
         else:
-            self.buffer[worker_name] = bufferized + obj
+            self.buffer[obj.worker_id] = bufferized + obj.output
 
 
 def run_worker(gen_worker, task_queue, result_queue, worker_id):
@@ -107,6 +114,7 @@ def reproduce_buckets(reproduce, all_buckets):
 
 
 def start_workers(processes, task_queues, result_queues, buckets):
+    workers_per_suite = 2
     worker_next_id = 1
     for bucket in buckets.values():
         task_ids = bucket['task_ids']
@@ -118,22 +126,27 @@ def start_workers(processes, task_queues, result_queues, buckets):
         task_queues.append(task_queue)
         for task_id in task_ids:
             task_queue.put(task_id)
-        task_queue.put(None)  # 'stop worker' marker
-        # It's python-style closure; XXX: prettify
-        entry = lambda gen_worker=bucket['gen_worker'], \
-                task_queue=task_queue, result_queue=result_queue, \
-                worker_next_id=worker_next_id: \
-            run_worker(gen_worker, task_queue, result_queue, worker_next_id)
-        worker_next_id += 1
 
-        process = multiprocessing.Process(target=entry)
-        process.start()
-        processes.append(process)
+        for _ in range(workers_per_suite):
+            # Note: each of our workers can consume only one None, but it would
+            # be good to prevent locking in case of 'bad' worker.
+            task_queue.put(None)  # 'stop worker' marker
+
+            # It's python-style closure; XXX: prettify
+            entry = lambda gen_worker=bucket['gen_worker'], \
+                    task_queue=task_queue, result_queue=result_queue, \
+                    worker_next_id=worker_next_id: \
+                run_worker(gen_worker, task_queue, result_queue, worker_next_id)
+            worker_next_id += 1
+
+            process = multiprocessing.Process(target=entry)
+            process.start()
+            processes.append(process)
 
 
 def wait_result_queues(processes, task_queues, result_queues):
     inputs = [q._reader for q in result_queues]
-    workers_cnt = len(inputs)
+    workers_cnt = len(processes)
     statistics = TaskStatistics()
     listeners = [statistics, TaskOutput()]
     while workers_cnt > 0:
@@ -147,7 +160,7 @@ def wait_result_queues(processes, task_queues, result_queues):
                 worker_name = inputs.index(ready_input) # XXX: tmp
                 for listener in listeners:
                     listener.process_result(worker_name, obj)
-                if obj is None:
+                if isinstance(obj, WorkerDone):
                     workers_cnt -= 1
                     break
     return statistics

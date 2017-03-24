@@ -132,6 +132,7 @@ class Colorer(object):
     def __init__(self):
         # can be filled later
         # if there is queue we will pass strings to it
+        self.queue_msg_wrapper = None
         self.queue = None
         self.stdout = sys.stdout
         self.is_term = self.stdout.isatty()
@@ -160,6 +161,8 @@ class Colorer(object):
 
     def _write(self, obj):
         if self.queue:
+            if self.queue_msg_wrapper:
+                obj = self.queue_msg_wrapper(obj)
             self.queue.put(obj)
         else:
             self.stdout.write(obj)

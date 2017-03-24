@@ -25,10 +25,29 @@ color_stdout = Colorer()
 __all__ = ['options'] # TODO; needed?
 
 
+class WorkerOutput:
+    def __init__(self, worker_id, worker_name, output):
+        self.worker_id = worker_id
+        self.worker_name = worker_name
+        self.output = output
+
+
+class WorkerDone:
+    def __init__(self, worker_id, worker_name):
+        self.worker_id = worker_id
+        self.worker_name = worker_name
+
+
 class Worker:
     def report_keyboard_interrupt(self):
         color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
             % self.name, schema='test_var')
+
+    def wrap_output(self, output):
+        return WorkerOutput(self.id, self.name, output)
+
+    def done_marker(self):
+        return WorkerDone(self.id, self.name)
 
     def __init__(self, suite, _id):
         self.initialized = False
@@ -37,6 +56,8 @@ class Worker:
         self.name = '%02d_%s' % (self.id, self.suite.suite_path)
         self.suite.ini['vardir'] += '/' + self.name
         self.tests_file = os.path.join(self.suite.ini['vardir'], 'tests.txt')
+        color_stdout.queue_msg_wrapper = \
+            lambda output, w=self: w.wrap_output(output)
         try:
             self.server = suite.gen_server()
             self.inspector = suite.start_server(self.server)
@@ -59,7 +80,7 @@ class Worker:
     # Note: it's not exception safe
     def run_task(self, task_id):
         if not self.initialized:
-            return None # 'done' marker
+            return self.done_marker()
         try:
             task = self.find_task(task_id)
             with open(self.tests_file, 'a') as f:
@@ -94,7 +115,7 @@ class Worker:
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
-            result_queue.put(None) # 'done' marker
+            result_queue.put(self.done_marker())
             return
         try:
             self.run_loop(task_queue, result_queue)
@@ -103,7 +124,7 @@ class Worker:
             Worker.task_done(task_queue)
             self.flush_all(task_queue)  # unblock task_queue
             self.suite.stop_server(self.server, self.inspector, silent=True)
-        result_queue.put(None) # 'done' marker
+        result_queue.put(self.done_marker())
 
     def flush_all(self, task_queue):
         # TODO: add 'not run' status to output queue for flushed tests
