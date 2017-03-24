@@ -119,6 +119,13 @@ class Options:
                 Such files created by workers in the "var/reproduce" directory.
                 Note: The option works now only with test-run-parallel.py.""")
 
+        parser.add_argument(
+               "--debug",
+               dest="debug",
+               default=False,
+               action='store_true',
+               help="""Enable test-run's debug output""")
+
         self.args = parser.parse_args()
         self.check()
 

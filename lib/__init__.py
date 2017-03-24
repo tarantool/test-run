@@ -6,11 +6,13 @@ import os
 import sys
 import shutil
 import atexit
+import signal
 import traceback
 from ast import literal_eval
 
 from options              import Options
 from lib.tarantool_server import TarantoolServer
+from lib.tarantool_server import TarantoolStartError
 from lib.unittest_server  import UnittestServer
 from lib.test_suite       import TestSuite
 from lib.parallel         import Supervisor
@@ -50,6 +52,10 @@ class WorkerDone(BaseWorkerResult):
         super(WorkerDone, self).__init__(worker_id, worker_name)
 
 
+class VoluntaryStopException(Exception):
+    pass
+
+
 class Worker:
     def report_keyboard_interrupt(self):
         color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
@@ -64,7 +70,14 @@ class Worker:
     def wrap_result(self, task_id, short_status):
         return TaskResult(self.id, self.name, task_id, short_status)
 
+    def sigterm_handler(self, signum, frame):
+        self.sigterm_received = True
+
     def __init__(self, suite, _id):
+        self.sigterm_received = False
+        signal.signal(signal.SIGTERM, lambda x, y, z=self: \
+            z.sigterm_handler(x, y))
+
         self.initialized = False
         self.id = _id
         self.suite = suite
@@ -87,6 +100,9 @@ class Worker:
             self.initialized = True
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
+        except TarantoolStartError:
+            color_stdout('Worker "%s" cannot start tarantool server; ignoring tasks...\n' \
+                % self.name, schema='error')
 
     @staticmethod
     def task_done(task_queue):
@@ -131,25 +147,37 @@ class Worker:
                 Worker.task_done(task_queue)
                 break
             short_status = self.run_task(task_id)
-            Worker.task_done(task_queue)
             result_queue.put(self.wrap_result(task_id, short_status))
+            if not options.args.is_force and short_status == 'fail':
+                color_stdout('Worker "%s" got failed test; stopping the server...\n' \
+                    % self.name, schema='test_var')
+                raise VoluntaryStopException()
+            if self.sigterm_received:
+                color_stdout('Worker "%s" got signal to terminate; stopping the server...\n' \
+                    % self.name, schema='test_var')
+                raise VoluntaryStopException()
+            Worker.task_done(task_queue)
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
             result_queue.put(self.done_marker())
             return
+
         try:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
-            # some task was in progress when the exception raised
-            Worker.task_done(task_queue)
-            # unblock task_queue is case it's JoinableQueue
-            self.flush_all(task_queue, result_queue)
-            self.suite.stop_server(self.server, self.inspector, silent=True)
+            self.stop(task_queue, result_queue)
 
         result_queue.put(self.done_marker())
 
-    def flush_all(self, task_queue, result_queue):
+    def stop(self, task_queue, result_queue):
+        # some task was in progress when the exception raised
+        Worker.task_done(task_queue)
+        # unblock task_queue is case it's JoinableQueue
+        self.flush_all_tasks(task_queue, result_queue)
+        self.suite.stop_server(self.server, self.inspector, silent=True)
+
+    def flush_all_tasks(self, task_queue, result_queue):
         while True:
             task_id = task_queue.get()
             result_queue.put(self.wrap_result(task_id, 'not_run'))

@@ -21,6 +21,10 @@ class TaskResultListener(object):
     def process_result(self, *args, **kwargs):
         raise ValueError('override me')
 
+    def report_status(self, *args, **kwargs):
+        # optionally override
+        pass
+
 
 class TaskStatistics(TaskResultListener):
     def __init__(self):
@@ -36,7 +40,7 @@ class TaskStatistics(TaskResultListener):
         self.stats[obj.short_status] += 1
 
         if obj.short_status == 'fail':
-            self.failed_tasks.append(obj.task_id)
+            self.failed_tasks.append((obj.task_id, obj.worker_name))
 
     def print_statistics(self):
         color_stdout('Statistics:\n', schema='test_var')
@@ -47,8 +51,9 @@ class TaskStatistics(TaskResultListener):
             return
 
         color_stdout('Failed tasks:\n', schema='test_var')
-        for task_id in self.failed_tasks:
-            color_stdout('* %s\n' % str(task_id), schema='test_var')
+        for task_id, worker_name in self.failed_tasks:
+            color_stdout('* %s on worker "%s"\n' % (str(task_id),
+                worker_name), schema='test_var')
 
 
 class TaskOutput(TaskResultListener):
@@ -75,6 +80,8 @@ class TaskOutput(TaskResultListener):
             bufferized = self.buffer.get(obj.worker_id, '')
             if bufferized:
                 TaskOutput._write(bufferized, obj.worker_name)
+            if obj.worker_id in self.buffer.keys():
+                del self.buffer[obj.worker_id]
             return
 
         if not isinstance(obj, WorkerOutput):
@@ -86,6 +93,25 @@ class TaskOutput(TaskResultListener):
             self.buffer[obj.worker_id] = ''
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
+
+    def report_status(self):
+        if lib.options.args.debug:
+            color_stdout("DEBUG: IDs of workers don\'t passed WorkerDone: %s\n" % \
+                str(self.buffer.keys()), schema='test_var')
+
+
+class FailWatcher(TaskResultListener):
+    def __init__(self, terminate_all_workers):
+        self.terminate_all_workers = terminate_all_workers
+
+    def process_result(self, obj):
+        if not isinstance(obj, TaskResult):
+            return
+
+        if obj.short_status == 'fail':
+            color_stdout('[Main process] Got failed test; gently terminate all workers...\n',
+                schema='test_var')
+            self.terminate_all_workers()
 
 
 def run_worker(gen_worker, task_queue, result_queue, worker_id):
@@ -116,6 +142,12 @@ def reproduce_buckets(reproduce, all_buckets):
     bucket = copy.deepcopy(all_buckets[key])
     bucket['task_ids'] = lib.reproduce
     return { key: bucket }
+
+
+def terminate_all_workers(processes):
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
 
 
 def start_workers(processes, task_queues, result_queues, buckets,
@@ -150,12 +182,19 @@ def start_workers(processes, task_queues, result_queues, buckets,
 
 
 def wait_result_queues(processes, task_queues, result_queues):
+    report_timeout = 2.0
     inputs = [q._reader for q in result_queues]
     workers_cnt = len(processes)
     statistics = TaskStatistics()
     listeners = [statistics, TaskOutput()]
+    if not lib.options.args.is_force:
+        fail_watcher = FailWatcher(lambda x=processes: terminate_all_workers(x))
+        listeners.append(fail_watcher)
     while workers_cnt > 0:
-        ready_inputs, _, _ = select.select(inputs, [], [])
+        ready_inputs, _, _ = select.select(inputs, [], [], report_timeout)
+        if not ready_inputs:
+            for listener in listeners:
+                listener.report_status()
         for ready_input in ready_inputs:
             result_queue = result_queues[inputs.index(ready_input)]
             objs = []

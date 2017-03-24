@@ -25,7 +25,7 @@ from lib.tarantool_server import TarantoolServer
 
 import logging
 logger = multiprocessing.log_to_stderr()
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 import pickle
 
