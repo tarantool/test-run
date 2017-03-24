@@ -172,7 +172,6 @@ def parse_tests_file(tests_file):
         color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
             tests_file, schema='error')
         exit(1)
-    print(str(reproduce))
     return reproduce
 
 
