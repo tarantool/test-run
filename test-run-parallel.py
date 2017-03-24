@@ -241,6 +241,7 @@ def main():
     except KeyboardInterrupt as e:
         color_stdout('\n[Main process] Caught keyboard interrupt;' \
             ' waiting for processes for doing its clean up\n', schema='test_var')
+        # TODO: print statistics
 
 
 if __name__ == "__main__":
