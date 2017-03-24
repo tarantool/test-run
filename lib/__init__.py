@@ -149,6 +149,17 @@ def task_baskets():
 ############################
 
 
+def warn_unix_sockets():
+    unix_socket_len_limit = 107
+    max_unix_socket_rel = './var/??_replication/autobootstrap_guest3.control'
+    max_unix_socket_abs = os.path.realpath(max_unix_socket_rel)
+    if len(max_unix_socket_abs) > unix_socket_len_limit:
+        color_stdout('WARGING: unix sockets can become longer than 107 symbols:\n',
+                     schema='error')
+        color_stdout('WARNING: for example: "%s" has length %d\n' % \
+            (max_unix_socket_abs, len(max_unix_socket_abs)), schema='error')
+
+
 def setenv():
     """Find where is tarantool dir by check_file"""
     check_file = 'src/fiber.h'
@@ -173,6 +184,8 @@ def module_init():
         path = '.'
     os.chdir(path)
     setenv()
+
+    warn_unix_sockets()
 
     # always run with clean (non-existent) 'var' directory
     try:
