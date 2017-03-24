@@ -115,8 +115,8 @@ class Options:
                 "--reproduce",
                 dest="reproduce",
                 default=None,
-                help="""Run tests in the order described by the file.
-                Such files created by workers in "var/${WORKER_NAME}/tests.txt" files.
+                help="""Run tests in the order given by the file.
+                Such files created by workers in the "var/reproduce" directory.
                 Note: The option works now only with test-run-parallel.py.""")
 
         self.args = parser.parse_args()

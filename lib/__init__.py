@@ -54,10 +54,18 @@ class Worker:
         self.id = _id
         self.suite = suite
         self.name = '%02d_%s' % (self.id, self.suite.suite_path)
-        self.suite.ini['vardir'] += '/' + self.name
-        self.tests_file = os.path.join(self.suite.ini['vardir'], 'tests.txt')
+
+        main_vardir = self.suite.ini['vardir']
+        self.suite.ini['vardir'] = os.path.join(main_vardir, self.name)
+
+        reproduce_dir = os.path.join(main_vardir, 'reproduce')
+        if not os.path.isdir(reproduce_dir):
+            os.makedirs(reproduce_dir)
+        self.tests_file = os.path.join(reproduce_dir, '%s.tests.txt' % self.name)
+
         color_stdout.queue_msg_wrapper = \
             lambda output, w=self: w.wrap_output(output)
+
         try:
             self.server = suite.gen_server()
             self.inspector = suite.start_server(self.server)
