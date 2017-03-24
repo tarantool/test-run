@@ -183,20 +183,26 @@ class Test:
                 server.current_valgrind_logs(for_test=True))
             self.is_valgrind_clean = not bool(non_empty_logs)
 
+        short_status = None
+
         if self.skip:
+            short_status = 'skip'
             color_stdout("[ skip ]\n", schema='test_skip')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif self.is_executed_ok and self.is_equal_result and self.is_valgrind_clean:
+            short_status = 'pass'
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and not self.is_equal_result and not
               os.path.isfile(self.result)):
             os.rename(self.tmp_result, self.result)
+            short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
         else:
             os.rename(self.tmp_result, self.reject)
+            short_status = 'fail'
             color_stdout("[ fail ]\n", schema='test_fail')
 
             where = ""
@@ -216,12 +222,14 @@ class Test:
                                 log_file))
                 where = ": there were warnings in the valgrind log file(s)"
 
-            if not self.args.is_force:
-                # gh-1026
-                # stop and cleanup tarantool instance for incorrect tests
-                server.stop()
-                server.cleanup()
-                raise RuntimeError("Failed to run test " + self.name + where)
+            # XXX: make it works
+            #if not self.args.is_force:
+            #    # gh-1026
+            #    # stop and cleanup tarantool instance for incorrect tests
+            #    server.stop()
+            #    server.cleanup()
+            #    raise RuntimeError("Failed to run test " + self.name + where)
+        return short_status
 
     def print_diagnostics(self, logfile, message):
         """Print 10 lines of client program output leading to test

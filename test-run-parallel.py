@@ -10,7 +10,7 @@ import copy
 
 
 import lib
-from lib import WorkerOutput, WorkerDone
+from lib import WorkerOutput, WorkerDone, TaskResult
 from lib.colorer import Colorer
 
 
@@ -26,23 +26,18 @@ class TaskStatistics(TaskResultListener):
     def __init__(self):
         self.stats = dict()
 
-    # XXX: remove worker_name
-    def process_result(self, worker_name, obj):
-        if not isinstance(obj, bool):
+    def process_result(self, obj):
+        if not isinstance(obj, TaskResult):
             return
 
-        if not worker_name in self.stats.keys():
-            self.stats[worker_name] = {
-                'pass': 0,
-                'othr': 0,
-            }
-        if obj:
-            self.stats[worker_name]['pass'] += 1
-        else:
-            self.stats[worker_name]['othr'] += 1
+        if obj.short_status not in self.stats:
+            self.stats[obj.short_status] = 0
+        self.stats[obj.short_status] += 1
 
     def print_statistics(self):
-        color_stdout('Statistics: %s\n' % str(self.stats), schema='test_var')
+        color_stdout('Statistics:\n', schema='test_var')
+        for short_status, cnt in self.stats.items():
+            color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
 
 class TaskOutput(TaskResultListener):
@@ -52,7 +47,7 @@ class TaskOutput(TaskResultListener):
         self.buffer = dict()
 
     @staticmethod
-    def _write(name, output):
+    def _write(output, worker_name):
         #prefix_max_len = len('[Worker "xx_replication-py"] ')
         #prefix = ('[Worker "%s"] ' % name).ljust(prefix_max_len)
         #output = output.rstrip('\n')
@@ -64,12 +59,11 @@ class TaskOutput(TaskResultListener):
     def _decolor(obj):
         return TaskOutput.color_re.sub('', obj)
 
-    # XXX: remove worker_name arg
-    def process_result(self, worker_name, obj):
+    def process_result(self, obj):
         if isinstance(obj, WorkerDone):
             bufferized = self.buffer.get(obj.worker_id, '')
             if bufferized:
-                TaskOutput._write(obj.worker_name, bufferized)
+                TaskOutput._write(bufferized, obj.worker_name)
             return
 
         if not isinstance(obj, WorkerOutput):
@@ -77,7 +71,7 @@ class TaskOutput(TaskResultListener):
 
         bufferized = self.buffer.get(obj.worker_id, '')
         if TaskOutput._decolor(obj.output).endswith('\n'):
-            TaskOutput._write(obj.worker_name, bufferized + obj.output)
+            TaskOutput._write(bufferized + obj.output, obj.worker_name)
             self.buffer[obj.worker_id] = ''
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
@@ -157,9 +151,8 @@ def wait_result_queues(processes, task_queues, result_queues):
             while not result_queue.empty():
                 objs.append(result_queue.get())
             for obj in objs:
-                worker_name = inputs.index(ready_input) # XXX: tmp
                 for listener in listeners:
-                    listener.process_result(worker_name, obj)
+                    listener.process_result(obj)
                 if isinstance(obj, WorkerDone):
                     workers_cnt -= 1
                     break

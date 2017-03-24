@@ -25,17 +25,28 @@ color_stdout = Colorer()
 __all__ = ['options'] # TODO; needed?
 
 
-class WorkerOutput:
-    def __init__(self, worker_id, worker_name, output):
+class WorkerResult(object):
+    def __init__(self, worker_id, worker_name):
+        super(WorkerResult, self).__init__()
         self.worker_id = worker_id
         self.worker_name = worker_name
+
+
+class TaskResult(WorkerResult):
+    def __init__(self, worker_id, worker_name, short_status):
+        super(TaskResult, self).__init__(worker_id, worker_name)
+        self.short_status = short_status
+
+
+class WorkerOutput(WorkerResult):
+    def __init__(self, worker_id, worker_name, output):
+        super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
 
 
-class WorkerDone:
+class WorkerDone(WorkerResult):
     def __init__(self, worker_id, worker_name):
-        self.worker_id = worker_id
-        self.worker_name = worker_name
+        super(WorkerDone, self).__init__(worker_id, worker_name)
 
 
 class Worker:
@@ -48,6 +59,9 @@ class Worker:
 
     def done_marker(self):
         return WorkerDone(self.id, self.name)
+
+    def wrap_result(self, short_status):
+        return TaskResult(self.id, self.name, short_status)
 
     def __init__(self, suite, _id):
         self.initialized = False
@@ -93,7 +107,7 @@ class Worker:
             task = self.find_task(task_id)
             with open(self.tests_file, 'a') as f:
                 f.write(repr(task.id) + '\n')
-            res = self.suite.run_test(task, self.server, self.inspector)
+            short_status = self.suite.run_test(task, self.server, self.inspector)
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
             raise
@@ -102,9 +116,7 @@ class Worker:
                 % self.name, schema='error')
             color_stdout(traceback.format_exc() + '\n', schema='error')
             raise
-            # XXX: there are errors after which we can continue? Or its
-            #      processed down by the call stack?
-        return res
+        return short_status
 
     def run_loop(self, task_queue, result_queue):
         """ called from 'run_all' """
@@ -117,9 +129,9 @@ class Worker:
                 self.suite.stop_server(self.server, self.inspector)
                 Worker.task_done(task_queue)
                 break
-            res = self.run_task(task_id)
+            short_status = self.run_task(task_id)
             Worker.task_done(task_queue)
-            result_queue.put(res)
+            result_queue.put(self.wrap_result(short_status))
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
@@ -128,7 +140,7 @@ class Worker:
         try:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
-            # some task were in progress when the exception raised
+            # some task was in progress when the exception raised
             Worker.task_done(task_queue)
             self.flush_all(task_queue)  # unblock task_queue
             self.suite.stop_server(self.server, self.inspector, silent=True)

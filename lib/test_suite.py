@@ -108,7 +108,6 @@ class TestSuite:
                 server = Server(self.ini, test_suite=self)
         except Exception as e:
             print e
-            #raise e # XXX: remove it
             raise RuntimeError("Unknown server: core = {0}".format(
                                self.ini["core"]))
         return server
@@ -161,10 +160,9 @@ class TestSuite:
             or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
             or not self.args.long and test_name in self.ini.get("long_run", [])):
             color_stdout("[ disabled ]\n", schema='t_name')
-            return False
+            return 'disabled'
         else:
-            test.run(server)
-            return test.passed()
+            return test.run(server)
 
 # TODO: return TaskStatus(...)
 #        if failed_tests:
