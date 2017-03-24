@@ -42,6 +42,11 @@ class Worker:
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
 
+    @staticmethod
+    def task_done(task_queue):
+        if 'task_done' in task_queue.__dict__.keys():
+            task_queue.task_done()
+
     # TODO: timeout for task
     # Note: it's not exception safe
     def run_task(self, task):
@@ -70,6 +75,7 @@ class Worker:
                 color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
                     % self.name, schema='test_var')
                 self.suite.stop_server(self.server, self.inspector)
+                Worker.task_done(task_queue)
                 break
             # find task by name
             # XXX: should we abstract it somehow? don't access certain field
@@ -83,6 +89,7 @@ class Worker:
                 raise ValueError('Cannot find test: (%s, %s)' % \
                     (task_name, conf_name))
             res = self.run_task(task)
+            Worker.task_done(task_queue)
             result_queue.put(res)
 
     def run_all(self, task_queue, result_queue):
@@ -93,6 +100,7 @@ class Worker:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
             # some task were in progress when the exception raised
+            Worker.task_done(task_queue)
             self.flush_all(task_queue)  # unblock task_queue
             self.suite.stop_server(self.server, self.inspector, silent=True)
         result_queue.put(None) # 'done' marker
@@ -101,6 +109,7 @@ class Worker:
         # TODO: add 'not run' status to output queue for flushed tests
         while True:
             task_name, _ = task_queue.get()
+            Worker.task_done(task_queue)
             # None is 'stop worker' marker
             if task_name is None:
                 break
