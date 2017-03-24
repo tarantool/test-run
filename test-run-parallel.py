@@ -25,6 +25,7 @@ class TaskResultListener(object):
 class TaskStatistics(TaskResultListener):
     def __init__(self):
         self.stats = dict()
+        self.failed_tasks = []
 
     def process_result(self, obj):
         if not isinstance(obj, TaskResult):
@@ -34,10 +35,20 @@ class TaskStatistics(TaskResultListener):
             self.stats[obj.short_status] = 0
         self.stats[obj.short_status] += 1
 
+        if obj.short_status == 'fail':
+            self.failed_tasks.append(obj.task_id)
+
     def print_statistics(self):
         color_stdout('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
             color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
+
+        if not self.failed_tasks:
+            return
+
+        color_stdout('Failed tasks:\n', schema='test_var')
+        for task_id in self.failed_tasks:
+            color_stdout('* %s\n' % str(task_id), schema='test_var')
 
 
 class TaskOutput(TaskResultListener):

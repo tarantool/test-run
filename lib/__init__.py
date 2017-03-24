@@ -25,26 +25,27 @@ color_stdout = Colorer()
 __all__ = ['options'] # TODO; needed?
 
 
-class WorkerResult(object):
+class BaseWorkerResult(object):
     def __init__(self, worker_id, worker_name):
-        super(WorkerResult, self).__init__()
+        super(BaseWorkerResult, self).__init__()
         self.worker_id = worker_id
         self.worker_name = worker_name
 
 
-class TaskResult(WorkerResult):
-    def __init__(self, worker_id, worker_name, short_status):
+class TaskResult(BaseWorkerResult):
+    def __init__(self, worker_id, worker_name, task_id, short_status):
         super(TaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
+        self.task_id = task_id
 
 
-class WorkerOutput(WorkerResult):
+class WorkerOutput(BaseWorkerResult):
     def __init__(self, worker_id, worker_name, output):
         super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
 
 
-class WorkerDone(WorkerResult):
+class WorkerDone(BaseWorkerResult):
     def __init__(self, worker_id, worker_name):
         super(WorkerDone, self).__init__(worker_id, worker_name)
 
@@ -60,8 +61,8 @@ class Worker:
     def done_marker(self):
         return WorkerDone(self.id, self.name)
 
-    def wrap_result(self, short_status):
-        return TaskResult(self.id, self.name, short_status)
+    def wrap_result(self, task_id, short_status):
+        return TaskResult(self.id, self.name, task_id, short_status)
 
     def __init__(self, suite, _id):
         self.initialized = False
@@ -131,7 +132,7 @@ class Worker:
                 break
             short_status = self.run_task(task_id)
             Worker.task_done(task_queue)
-            result_queue.put(self.wrap_result(short_status))
+            result_queue.put(self.wrap_result(task_id, short_status))
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
@@ -142,14 +143,16 @@ class Worker:
         except (KeyboardInterrupt, Exception):
             # some task was in progress when the exception raised
             Worker.task_done(task_queue)
-            self.flush_all(task_queue)  # unblock task_queue
+            # unblock task_queue is case it's JoinableQueue
+            self.flush_all(task_queue, result_queue)
             self.suite.stop_server(self.server, self.inspector, silent=True)
+
         result_queue.put(self.done_marker())
 
-    def flush_all(self, task_queue):
-        # TODO: add 'not run' status to output queue for flushed tests
+    def flush_all(self, task_queue, result_queue):
         while True:
             task_id = task_queue.get()
+            result_queue.put(self.wrap_result(task_id, 'not_run'))
             Worker.task_done(task_queue)
             # None is 'stop worker' marker
             if task_id is None:
@@ -207,8 +210,8 @@ def parse_tests_file(tests_file):
         if tests_file:
             with open(tests_file, 'r') as f:
                 for line in f:
-                    test_id = literal_eval(line)
-                    reproduce.append(test_id)
+                    task_id = literal_eval(line)
+                    reproduce.append(task_id)
     except IOError:
         color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
             tests_file, schema='error')
