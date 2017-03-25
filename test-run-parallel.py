@@ -225,11 +225,11 @@ def start_workers(processes, task_queues, result_queues, buckets,
     return pids
 
 
-def wait_result_queues(processes, task_queues, result_queues, pids):
+def wait_result_queues(processes, task_queues, result_queues, statistics,
+                       pids):
     report_timeout = 2.0
     inputs = [q._reader for q in result_queues]
     workers_cnt = len(processes)
-    statistics = TaskStatistics()
     listeners = [statistics, TaskOutput()]
     term_callback = lambda x=processes: terminate_all_workers(x)
     kill_callback = lambda x=pids: kill_all_workers(x)
@@ -242,10 +242,7 @@ def wait_result_queues(processes, task_queues, result_queues, pids):
         ready_inputs, _, _ = select.select(inputs, [], [], report_timeout)
         if not ready_inputs:
             for listener in listeners:
-                try:
-                    listener.process_timeout()
-                except HangError:
-                    return statistics
+                listener.process_timeout()
         for ready_input in ready_inputs:
             result_queue = result_queues[inputs.index(ready_input)]
             objs = []
@@ -278,8 +275,15 @@ def main_loop():
     if not processes:
         return
 
-    statistics = wait_result_queues(processes, task_queues, result_queues,
-                                    pids)
+    statistics = TaskStatistics()
+    try:
+        wait_result_queues(processes, task_queues, result_queues,
+                                    statistics, pids)
+    except KeyboardInterrupt:
+        statistics.print_statistics()
+        raise
+    except HangError:
+        pass
     statistics.print_statistics()
 
     for process in processes:
@@ -293,7 +297,6 @@ def main():
     except KeyboardInterrupt as e:
         color_stdout('\n[Main process] Caught keyboard interrupt;' \
             ' waiting for processes for doing its clean up\n', schema='test_var')
-        # TODO: print statistics
 
 
 if __name__ == "__main__":
