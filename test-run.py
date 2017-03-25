@@ -28,7 +28,6 @@ import sys
 import time
 
 import lib
-from lib.tarantool_server import TarantoolStartError
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
@@ -41,48 +40,43 @@ color_stdout = Colorer()
 # Program body
 #######################################################################
 
+
+def main_loop(failed_test_ids):
+    for bucket in lib.task_buckets().values():
+        task_ids = bucket['task_ids']
+        if not task_ids:
+            continue
+        worker_id = 1
+        worker = bucket['gen_worker'](worker_id)
+        for task_id in task_ids:
+            short_status = worker.run_task(task_id)
+            if short_status == 'fail':
+                failed_test_ids.append(task_id)
+                if not lib.options.args.is_force:
+                    return
+
+
 def main():
-    options = lib.options
-    failed_tests = []
+    color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
+    failed_test_ids = []
 
     try:
-        color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
-        for bucket in lib.task_buckets().values():
-            task_ids = bucket['task_ids']
-            if not task_ids:
-                continue
-            worker_id = 1
-            worker = bucket['gen_worker'](worker_id)
-            for task_id in task_ids:
-                worker.run_task(task_id)
-
-# XXX: collect failed_tests
-#        suites = lib.find_suites()
-#        if options.args.stress is None:
-#            for suite in suites:
-#                failed_tests.extend(suite.run_all())
-#        else:
-#            for suite in suites:
-#                suite.run_all()
+        main_loop(failed_test_ids)
     except KeyboardInterrupt:
         color_stdout('[Main loop] Caught keyboard interrupt\n', schema='test_var')
-        return (-1)
-    except TarantoolStartError:
-        # fail silently, we already reported it to stdout
-        return (-1)
     except RuntimeError as e:
-        raise # XXX: remove it
         color_stdout("\nFatal error: %s. Execution aborted.\n" % e, schema='error')
-        if options.args.gdb:
+        if lib.options.args.gdb:
             time.sleep(100)
         return (-1)
 
-    if failed_tests and options.args.is_force:
-        color_stdout("\n===== %d tests failed:\n" % len(failed_tests), schema='error')
-        for test in failed_tests:
-             color_stdout("----- %s\n" % test, schema='info')
+    if failed_test_ids and lib.options.args.is_force:
+        color_stdout("\n===== %d tests failed:\n" % len(failed_test_ids),
+                     schema='error')
+        for test_id in failed_test_ids:
+             color_stdout("----- %s\n" % str(test_id), schema='info')
 
-    return (-1 if failed_tests else 0)
+    return (-1 if failed_test_ids else 0)
 
 if __name__ == "__main__":
     exit(main())
