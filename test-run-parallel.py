@@ -17,11 +17,32 @@ from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
+# Helpers
+#########
+
+
+def terminate_all_workers(processes):
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
+
+
+def kill_all_workers(pids):
+    import os
+    import signal
+    for pid in pids:
+        os.kill(pid, signal.SIGKILL)
+
+
+#########
+#########
+
+
 class TaskResultListener(object):
     def process_result(self, *args, **kwargs):
         raise ValueError('override me')
 
-    def report_status(self, *args, **kwargs):
+    def process_timeout(self, *args, **kwargs):
         # optionally override
         pass
 
@@ -94,10 +115,9 @@ class TaskOutput(TaskResultListener):
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
 
-    def report_status(self):
-        if lib.options.args.debug:
-            color_stdout("DEBUG: IDs of workers don\'t passed WorkerDone: %s\n" % \
-                str(self.buffer.keys()), schema='test_var')
+    def process_timeout(self):
+        color_stdout("No output during 2 seconds. List of workers don\'t reported its done: %s\n" % \
+            str(self.buffer.keys()), schema='test_var')
 
 
 class FailWatcher(TaskResultListener):
@@ -112,6 +132,33 @@ class FailWatcher(TaskResultListener):
             color_stdout('[Main process] Got failed test; gently terminate all workers...\n',
                 schema='test_var')
             self.terminate_all_workers()
+
+
+class HangError(Exception):
+    pass
+
+
+class HangWatcher(TaskResultListener):
+    """ Terminate all workers if no output received 'no_output_times' time """
+
+    def __init__(self, no_output_times, kill_all_workers):
+        self.no_output_times = no_output_times
+        self.kill_all_workers = kill_all_workers
+        self.cur_times = 0
+
+    def process_result(self, obj):
+        self.cur_times = 0
+
+    def process_timeout(self):
+        self.cur_times += 1
+        if self.cur_times < self.no_output_times:
+            return
+        color_stdout('\n[Main process] Not output from workers. ' \
+                     'It seems that we hang. Send SIGKILL to workers; ' \
+                     'exiting...\n',
+                     schema='test_var')
+        self.kill_all_workers()
+        raise HangError()
 
 
 def run_worker(gen_worker, task_queue, result_queue, worker_id):
@@ -144,14 +191,9 @@ def reproduce_buckets(reproduce, all_buckets):
     return { key: bucket }
 
 
-def terminate_all_workers(processes):
-    for process in processes:
-        if process.is_alive():
-            process.terminate()
-
-
 def start_workers(processes, task_queues, result_queues, buckets,
         workers_per_suite):
+    pids = []
     worker_next_id = 1
     for bucket in buckets.values():
         task_ids = bucket['task_ids']
@@ -178,23 +220,32 @@ def start_workers(processes, task_queues, result_queues, buckets,
 
             process = multiprocessing.Process(target=entry)
             process.start()
+            pids.append(process.pid)
             processes.append(process)
+    return pids
 
 
-def wait_result_queues(processes, task_queues, result_queues):
+def wait_result_queues(processes, task_queues, result_queues, pids):
     report_timeout = 2.0
     inputs = [q._reader for q in result_queues]
     workers_cnt = len(processes)
     statistics = TaskStatistics()
     listeners = [statistics, TaskOutput()]
+    term_callback = lambda x=processes: terminate_all_workers(x)
+    kill_callback = lambda x=pids: kill_all_workers(x)
     if not lib.options.args.is_force:
-        fail_watcher = FailWatcher(lambda x=processes: terminate_all_workers(x))
+        fail_watcher = FailWatcher(term_callback)
         listeners.append(fail_watcher)
+    hang_watcher = HangWatcher(5, kill_callback)
+    listeners.append(hang_watcher)
     while workers_cnt > 0:
         ready_inputs, _, _ = select.select(inputs, [], [], report_timeout)
         if not ready_inputs:
             for listener in listeners:
-                listener.report_status()
+                try:
+                    listener.process_timeout()
+                except HangError:
+                    return statistics
         for ready_input in ready_inputs:
             result_queue = result_queues[inputs.index(ready_input)]
             objs = []
@@ -221,13 +272,14 @@ def main_loop():
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
         workers_per_suite = 1
-    start_workers(processes, task_queues, result_queues, buckets,
+    pids = start_workers(processes, task_queues, result_queues, buckets,
         workers_per_suite)
 
     if not processes:
         return
 
-    statistics = wait_result_queues(processes, task_queues, result_queues)
+    statistics = wait_result_queues(processes, task_queues, result_queues,
+                                    pids)
     statistics.print_statistics()
 
     for process in processes:
