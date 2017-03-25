@@ -4,6 +4,7 @@ import re
 import sys
 import time
 import select
+import random
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
 import copy
@@ -64,7 +65,8 @@ class TaskStatistics(TaskResultListener):
             self.failed_tasks.append((obj.task_id, obj.worker_name))
 
     def print_statistics(self):
-        color_stdout('Statistics:\n', schema='test_var')
+        if self.stats:
+            color_stdout('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
             color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
@@ -123,6 +125,7 @@ class TaskOutput(TaskResultListener):
 class FailWatcher(TaskResultListener):
     def __init__(self, terminate_all_workers):
         self.terminate_all_workers = terminate_all_workers
+        self.got_fail = False
 
     def process_result(self, obj):
         if not isinstance(obj, TaskResult):
@@ -131,6 +134,7 @@ class FailWatcher(TaskResultListener):
         if obj.short_status == 'fail':
             color_stdout('[Main process] Got failed test; gently terminate all workers...\n',
                 schema='test_var')
+            self.got_fail = True
             self.terminate_all_workers()
 
 
@@ -191,104 +195,166 @@ def reproduce_buckets(reproduce, all_buckets):
     return { key: bucket }
 
 
-def start_workers(processes, task_queues, result_queues, buckets,
-        workers_per_suite):
-    pids = []
-    worker_next_id = 1
-    for bucket in buckets.values():
-        task_ids = bucket['task_ids']
-        if not task_ids:
-            continue
-        result_queue = SimpleQueue()
-        result_queues.append(result_queue)
-        task_queue = SimpleQueue()
-        task_queues.append(task_queue)
-        for task_id in task_ids:
-            task_queue.put(task_id)
+class Manager:
+    def __init__(self, buckets, max_workers_cnt):
+        self.pids = []
+        self.processes = []
+        self.result_queues = []
+        self.task_queues = []
+        self.workers_cnt = 0
+        self.worker_next_id = 1
 
-        for _ in range(workers_per_suite):
-            # Note: each of our workers can consume only one None, but it would
-            # be good to prevent locking in case of 'bad' worker.
-            task_queue.put(None)  # 'stop worker' marker
+        self.bucket_managers = dict()
+        for key, bucket in buckets.items():
+            bucket_manager = BucketManager(key, bucket)
+            self.bucket_managers[key] = bucket_manager
+            self.result_queues.append(bucket_manager.result_queue)
+            self.task_queues.append(bucket_manager.task_queue)
 
-            # It's python-style closure; XXX: prettify
-            entry = lambda gen_worker=bucket['gen_worker'], \
-                    task_queue=task_queue, result_queue=result_queue, \
-                    worker_next_id=worker_next_id: \
-                run_worker(gen_worker, task_queue, result_queue, worker_next_id)
-            worker_next_id += 1
+        self.report_timeout = 2.0
+        self.kill_after_report_cnt = 5
 
-            process = multiprocessing.Process(target=entry)
-            process.start()
-            pids.append(process.pid)
-            processes.append(process)
-    return pids
+        self.statistics = None
+        self.fail_watcher = None
+        self.listeners = None
+        self.init_listeners()
+
+        self.max_workers_cnt = max_workers_cnt
+
+    def init_listeners(self):
+        self.statistics = TaskStatistics()
+        self.listeners = [self.statistics, TaskOutput()]
+        term_callback = lambda x=self.processes: terminate_all_workers(x)
+        kill_callback = lambda x=self.pids: kill_all_workers(x)
+        if not lib.options.args.is_force:
+            self.fail_watcher = FailWatcher(term_callback)
+            self.listeners.append(self.fail_watcher)
+        hang_watcher = HangWatcher(self.kill_after_report_cnt, kill_callback)
+        self.listeners.append(hang_watcher)
+
+    def start(self):
+        for _ in range(self.max_workers_cnt):
+            self.add_worker()
+
+    def find_nonempty_bucket_manager(self):
+        bucket_managers_rnd = list(self.bucket_managers.values())
+        random.shuffle(bucket_managers_rnd)
+        for bucket_manager in bucket_managers_rnd:
+            if not bucket_manager.done:
+                return bucket_manager
+        return None
+
+    def get_bucket_manager(self, worker_id):
+        for bucket_manager in self.bucket_managers.values():
+            if worker_id in bucket_manager.worker_ids:
+                return bucket_manager
+        return None
+
+    def add_worker(self):
+        # don't add new workers if fail occured and --force not passed
+        if self.fail_watcher and self.fail_watcher.got_fail:
+            return
+        bucket_manager = self.find_nonempty_bucket_manager()
+        if not bucket_manager:
+            return
+        process = bucket_manager.add_worker(self.worker_next_id)
+        self.processes.append(process)
+        self.pids.append(process.pid)
+        self.workers_cnt += 1
+        self.worker_next_id += 1
+
+    def del_worker(self, worker_id):
+        bucket_manager = self.get_bucket_manager(worker_id)
+        bucket_manager.del_worker(worker_id)
+        self.workers_cnt -= 1
+
+    def wait(self):
+        while self.workers_cnt > 0:
+            inputs = [q._reader for q in self.result_queues]
+            ready_inputs, _, _ = select.select(inputs, [], [], self.report_timeout)
+
+            if not ready_inputs:
+                for listener in self.listeners:
+                    listener.process_timeout()
+
+            for ready_input in ready_inputs:
+                result_queue = self.result_queues[inputs.index(ready_input)]
+                objs = []
+                while not result_queue.empty():
+                    objs.append(result_queue.get())
+                for obj in objs:
+                    for listener in self.listeners:
+                        listener.process_result(obj)
+                    if isinstance(obj, WorkerDone):
+                        self.del_worker(obj.worker_id)
+                        break
+
+            new_workers_cnt = self.max_workers_cnt - self.workers_cnt
+            for _ in range(new_workers_cnt):
+                self.add_worker()
+
+    def wait_processes(self):
+        for process in self.processes:
+            process.join()
+            self.processes.remove(process)
 
 
-def wait_result_queues(processes, task_queues, result_queues, statistics,
-                       pids):
-    report_timeout = 2.0
-    inputs = [q._reader for q in result_queues]
-    workers_cnt = len(processes)
-    listeners = [statistics, TaskOutput()]
-    term_callback = lambda x=processes: terminate_all_workers(x)
-    kill_callback = lambda x=pids: kill_all_workers(x)
-    if not lib.options.args.is_force:
-        fail_watcher = FailWatcher(term_callback)
-        listeners.append(fail_watcher)
-    hang_watcher = HangWatcher(5, kill_callback)
-    listeners.append(hang_watcher)
-    while workers_cnt > 0:
-        ready_inputs, _, _ = select.select(inputs, [], [], report_timeout)
-        if not ready_inputs:
-            for listener in listeners:
-                listener.process_timeout()
-        for ready_input in ready_inputs:
-            result_queue = result_queues[inputs.index(ready_input)]
-            objs = []
-            while not result_queue.empty():
-                objs.append(result_queue.get())
-            for obj in objs:
-                for listener in listeners:
-                    listener.process_result(obj)
-                if isinstance(obj, WorkerDone):
-                    workers_cnt -= 1
-                    break
-    return statistics
+class BucketManager:
+    def __init__(self, key, bucket):
+        self.key = key
+        self.gen_worker = bucket['gen_worker']
+        self.task_ids = bucket['task_ids']
+        random.shuffle(self.task_ids)
+        self.result_queue = SimpleQueue()
+        self.task_queue = SimpleQueue()
+        for task_id in self.task_ids:
+            self.task_queue.put(task_id)
+        self.worker_ids = set()
+        self.done = False
 
+    def add_worker(self, worker_id):
+        # Note: each of our workers can consume only one None, but it would
+        # be good to prevent locking in case of 'bad' worker.
+        self.task_queue.put(None)  # 'stop worker' marker
+
+        # It's python-style closure; XXX: prettify
+        entry = lambda gen_worker=self.gen_worker, \
+                task_queue=self.task_queue, result_queue=self.result_queue, \
+                worker_id=worker_id: \
+            run_worker(gen_worker, task_queue, result_queue, worker_id)
+
+        self.worker_ids.add(worker_id)
+        process = multiprocessing.Process(target=entry)
+        process.start()
+        return process
+
+    def del_worker(self, worker_id):
+        # TODO: join on process, remove pid from pids
+        self.worker_ids.remove(worker_id)
+        # mark bucket as done when the first worker done to prevent cycling
+        # with add-del workers
+        self.done = True
 
 def main_loop():
-    processes = []
-    task_queues = []
-    result_queues = []
-
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
     buckets = lib.task_buckets()
-    workers_per_suite = 2
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
-        workers_per_suite = 1
-    pids = start_workers(processes, task_queues, result_queues, buckets,
-        workers_per_suite)
 
-    if not processes:
-        return
-
-    statistics = TaskStatistics()
+    # faster result I got was with 2 * cpu_count
+    jobs = 2 * multiprocessing.cpu_count()
+    manager = Manager(buckets, jobs)
+    manager.start()
     try:
-        wait_result_queues(processes, task_queues, result_queues,
-                                    statistics, pids)
+        manager.wait()
     except KeyboardInterrupt:
-        statistics.print_statistics()
+        manager.statistics.print_statistics()
         raise
     except HangError:
         pass
-    statistics.print_statistics()
-
-    for process in processes:
-        process.join()
-        processes.remove(process)
+    manager.statistics.print_statistics()
+    manager.wait_processes()
 
 
 def main():
