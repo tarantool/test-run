@@ -119,6 +119,14 @@ class Options:
                 Such files created by workers in the "var/reproduce" directory.
                 Note: The option works now only with test-run-parallel.py.""")
 
+        parser.add_argument(
+                "--jobs",
+                dest="jobs",
+                default=0,
+                type=int,
+                help="""Workers count. Default: CPUs count x 2.
+                Note: The option works now only with test-run-parallel.py.""")
+
         self.args = parser.parse_args()
         self.check()
 

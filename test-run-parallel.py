@@ -338,12 +338,16 @@ class BucketManager:
 def main_loop():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
+    jobs = lib.options.args.jobs
+    if jobs == 0:
+        # faster result I got was with 2 * cpu_count
+        jobs = 2 * multiprocessing.cpu_count()
+
     buckets = lib.task_buckets()
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
+        jobs = 1
 
-    # faster result I got was with 2 * cpu_count
-    jobs = 2 * multiprocessing.cpu_count()
     manager = Manager(buckets, jobs)
     manager.start()
     try:
