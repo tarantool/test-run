@@ -58,7 +58,7 @@ class VoluntaryStopException(Exception):
 
 class Worker:
     def report_keyboard_interrupt(self):
-        color_stdout('[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
+        color_stdout('\n[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
             % self.name, schema='test_var')
 
     def wrap_output(self, output):

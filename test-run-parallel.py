@@ -84,6 +84,7 @@ class TaskOutput(TaskResultListener):
 
     def __init__(self):
         self.buffer = dict()
+        self.report_at_timeout = True
 
     @staticmethod
     def _write(output, worker_name):
@@ -118,6 +119,8 @@ class TaskOutput(TaskResultListener):
             self.buffer[obj.worker_id] = bufferized + obj.output
 
     def process_timeout(self):
+        if not self.report_at_timeout:
+            return
         color_stdout("No output during 2 seconds. List of workers don\'t reported its done: %s\n" % \
             str(self.buffer.keys()), schema='test_var')
 
@@ -270,28 +273,46 @@ class Manager:
 
     def wait(self):
         while self.workers_cnt > 0:
-            inputs = [q._reader for q in self.result_queues]
-            ready_inputs, _, _ = select.select(inputs, [], [], self.report_timeout)
-
-            if not ready_inputs:
+            try:
+                inputs = [q._reader for q in self.result_queues]
+                ready_inputs, _, _ = select.select(
+                    inputs, [], [], self.report_timeout)
+            except KeyboardInterrupt:
+                # write output from workers to stdout
                 for listener in self.listeners:
-                    listener.process_timeout()
+                    if isinstance(listener, TaskOutput):
+                        listener.report_at_timeout = False
+                    else:
+                        self.listeners.remove(listener)
+                # TODO: wait for all workers even after SIGINT hit us?
+                import time
+                time.sleep(0.1)
+                ready_inputs, _, _ = select.select(inputs, [], [], 0)
+                self.invoke_listeners(inputs, ready_inputs)
+                raise
 
-            for ready_input in ready_inputs:
-                result_queue = self.result_queues[inputs.index(ready_input)]
-                objs = []
-                while not result_queue.empty():
-                    objs.append(result_queue.get())
-                for obj in objs:
-                    for listener in self.listeners:
-                        listener.process_result(obj)
-                    if isinstance(obj, WorkerDone):
-                        self.del_worker(obj.worker_id)
-                        break
+            self.invoke_listeners(inputs, ready_inputs)
 
             new_workers_cnt = self.max_workers_cnt - self.workers_cnt
             for _ in range(new_workers_cnt):
                 self.add_worker()
+
+    def invoke_listeners(self, inputs, ready_inputs):
+        if not ready_inputs:
+            for listener in self.listeners:
+                listener.process_timeout()
+
+        for ready_input in ready_inputs:
+            result_queue = self.result_queues[inputs.index(ready_input)]
+            objs = []
+            while not result_queue.empty():
+                objs.append(result_queue.get())
+            for obj in objs:
+                for listener in self.listeners:
+                    listener.process_result(obj)
+                if isinstance(obj, WorkerDone):
+                    self.del_worker(obj.worker_id)
+                    break
 
     def wait_processes(self):
         for process in self.processes:
