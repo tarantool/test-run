@@ -13,7 +13,7 @@ import copy
 
 
 import lib
-from lib import WorkerOutput, WorkerDone, TaskResult
+from lib.worker import WorkerOutput, WorkerDone, TaskResult
 from lib.colorer import Colorer
 
 
@@ -357,7 +357,7 @@ def main_loop():
         # faster result I got was with 2 * cpu_count
         jobs = 2 * multiprocessing.cpu_count()
 
-    buckets = lib.task_buckets()
+    buckets = lib.worker.task_buckets()
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
         jobs = 1

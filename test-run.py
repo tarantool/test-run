@@ -28,6 +28,7 @@ import sys
 import time
 
 import lib
+import lib.worker
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
@@ -42,7 +43,7 @@ color_stdout = Colorer()
 
 
 def main_loop(failed_test_ids):
-    for bucket in lib.task_buckets().values():
+    for bucket in lib.worker.task_buckets().values():
         task_ids = bucket['task_ids']
         if not task_ids:
             continue
