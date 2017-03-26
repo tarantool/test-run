@@ -1,5 +1,15 @@
 #!/usr/bin/env python2
 
+
+# TODOs:
+# * Fix current bad effects caused by hitting Ctrl+C:
+#   * Commands for tarantool can be written to a terminal.
+#   * Tarantool servers can hang at waiting the commands.
+# * SIGTERM non-default tarantools at Ctrl+C (as part of above).
+# * Investigate flaky hang w/ the autobootstrap test.
+# * Save output for failed tests and give it at the end.
+
+
 import os
 import signal
 import re
