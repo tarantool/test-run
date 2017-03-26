@@ -2,7 +2,7 @@ import glob
 import os
 import shutil
 from itertools import product
-from lib.server_mixins import ValgrindMixin, GdbMixin, LLdbMixin
+from lib.server_mixins import ValgrindMixin, StraceMixin, GdbMixin, LLdbMixin
 
 
 class Server(object):
@@ -29,7 +29,7 @@ class Server(object):
         if ini is None:
             return cls
 
-        conflict_options = ('valgrind', 'gdb', 'lldb')
+        conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
         for op1, op2 in product(conflict_options, repeat=2):
             if op1 != op2 and \
                     (op1 in ini and ini[op1]) and \
@@ -38,17 +38,20 @@ class Server(object):
                 raise OSError(format_str.format(op1, op2))
 
         lname = cls.__name__.lower()
-        if not ('tarantoolserver' in lname) and ini.get('gdb') or ini.get('lldb'):
-            # Only TarantoolServer supports running under gdb/lldb for now
+        if ('tarantoolserver' not in lname) and (ini.get('gdb')
+                or ini.get('lldb') or ini.get('strace')):
+            # Only TarantoolServer supports running under gdb/lldb/strace for now
             # TODO: support AppServer and UnittestServer
             return cls
 
         if ini.get('valgrind') and not 'valgrind' in lname:
-                cls = type('Valgrind' + cls.__name__, (ValgrindMixin, cls), {})
+            cls = type('Valgrind' + cls.__name__, (ValgrindMixin, cls), {})
         elif ini.get('gdb') and not 'gdb' in lname:
             cls = type('Gdb' + cls.__name__, (GdbMixin, cls), {})
         elif ini.get('lldb') and not 'lldb' in lname:
             cls = type('LLdb' + cls.__name__, (LLdbMixin, cls), {})
+        elif 'strace' in ini and ini['strace']:
+            cls = type('Strace' + cls.__name__, (StraceMixin, cls), {})
 
         return cls
 

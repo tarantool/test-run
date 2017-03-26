@@ -75,6 +75,13 @@ class Options:
                 help = "Run the server under 'valgrind'. Default: false.")
 
         parser.add_argument(
+                "--strace",
+                dest = "strace",
+                action = "store_true",
+                default = False,
+                help = "Run the server under 'strace'. Default: false.")
+
+        parser.add_argument(
                 "--builddir",
                 dest = "builddir",
                 default = "..",

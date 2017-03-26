@@ -73,6 +73,10 @@ class TestSuite:
         self.ini.update(self.args.__dict__)
         self.multi_run = self.get_multirun_conf(suite_path)
 
+        # list of long running tests
+        if 'long_run' not in self.ini:
+            self.ini['long_run'] = []
+
         for i in ["script"]:
             self.ini[i] = os.path.join(suite_path, self.ini[i]) if i in self.ini else None
         for i in ["disabled", "valgrind_disabled", "release_disabled"]:
@@ -112,6 +116,21 @@ class TestSuite:
                                self.ini["core"]))
         return server
 
+    def is_test_enabled(self, test, conf, server):
+        test_name = os.path.basename(test.name)
+        tconf = '%s:%s' % (test_name, conf)
+        checks = [
+            (True, self.ini["disabled"]),
+            (not server.debug, self.ini["release_disabled"]),
+            (self.args.valgrind, self.ini["valgrind_disabled"]),
+            (not self.args.long, self.ini["long_run"])]
+        for check in checks:
+            check_enabled, disabled_tests = check
+            if check_enabled and (test_name in disabled_tests
+                    or tconf in disabled_tests):
+                return False
+        return True
+
     def start_server(self, server):
         # create inspectpor daemon for cluster tests
         inspector = TarantoolInspector(
@@ -145,11 +164,9 @@ class TestSuite:
             conf = test.conf_name
         color_stdout("%s" % conf.ljust(16), schema='test_var')
         test_name = os.path.basename(test.name)
-        if (test_name in self.ini["disabled"]
-            or not server.debug and test_name in self.ini["release_disabled"]
-            or self.args.valgrind and test_name in self.ini["valgrind_disabled"]
-            or not self.args.long and test_name in self.ini.get("long_run", [])):
+
+        if self.is_test_enabled(test, conf, server):
+            return test.run(server)
+        else:
             color_stdout("[ disabled ]\n", schema='t_name')
             return 'disabled'
-        else:
-            return test.run(server)

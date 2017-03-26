@@ -112,6 +112,25 @@ class ValgrindMixin(Mixin):
         print_tail_n(self.valgrind_log, 50)
 
 
+class StraceMixin(Mixin):
+    @property
+    def strace_log(self):
+        # TODO: don't overwrite log, like in the 'valgrind_log' property above
+        return os.path.join(self.vardir, 'strace.log')
+
+    def prepare_args(self):
+        if not find_in_path('strace'):
+            raise OSError('`strace` executables not found in PATH')
+        return shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
+            bin=' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
+            log=self.strace_log
+        ))
+
+    def wait_stop(self):
+        self.kill_old_server()
+        return self.process.wait()
+
+
 class DebugMixin(Mixin):
     debugger_args = {
         "name": None,
