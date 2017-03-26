@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
 
+import os
+import signal
 import re
 import sys
 import time
@@ -16,27 +18,6 @@ from lib.colorer import Colorer
 
 
 color_stdout = Colorer()
-
-
-# Helpers
-#########
-
-
-def terminate_all_workers(processes):
-    for process in processes:
-        if process.is_alive():
-            process.terminate()
-
-
-def kill_all_workers(pids):
-    import os
-    import signal
-    for pid in pids:
-        os.kill(pid, signal.SIGKILL)
-
-
-#########
-#########
 
 
 class TaskResultListener(object):
@@ -75,8 +56,8 @@ class TaskStatistics(TaskResultListener):
 
         color_stdout('Failed tasks:\n', schema='test_var')
         for task_id, worker_name in self.failed_tasks:
-            color_stdout('* %s on worker "%s"\n' % (str(task_id),
-                worker_name), schema='test_var')
+            color_stdout('* %s on worker "%s"\n' % (str(task_id), worker_name),
+                         schema='test_var')
 
 
 class TaskOutput(TaskResultListener):
@@ -88,11 +69,11 @@ class TaskOutput(TaskResultListener):
 
     @staticmethod
     def _write(output, worker_name):
-        #prefix_max_len = len('[Worker "xx_replication-py"] ')
-        #prefix = ('[Worker "%s"] ' % name).ljust(prefix_max_len)
-        #output = output.rstrip('\n')
-        #lines = [(line + '\n') for line in output.split('\n')]
-        #output = prefix + prefix.join(lines)
+        # prefix_max_len = len('[Worker "xx_replication-py"] ')
+        # prefix = ('[Worker "%s"] ' % name).ljust(prefix_max_len)
+        # output = output.rstrip('\n')
+        # lines = [(line + '\n') for line in output.split('\n')]
+        # output = prefix + prefix.join(lines)
         sys.stdout.write(output)
 
     @staticmethod
@@ -121,8 +102,9 @@ class TaskOutput(TaskResultListener):
     def process_timeout(self):
         if not self.report_at_timeout:
             return
-        color_stdout("No output during 2 seconds. List of workers don\'t reported its done: %s\n" % \
-            str(self.buffer.keys()), schema='test_var')
+        color_stdout("No output during 2 seconds. List of workers don't"
+                     " reported its done: %s\n" % str(self.buffer.keys()),
+                     schema='test_var')
 
 
 class FailWatcher(TaskResultListener):
@@ -135,8 +117,9 @@ class FailWatcher(TaskResultListener):
             return
 
         if obj.short_status == 'fail':
-            color_stdout('[Main process] Got failed test; gently terminate all workers...\n',
-                schema='test_var')
+            color_stdout('[Main process] Got failed test; '
+                         'gently terminate all workers...\n',
+                         schema='test_var')
             self.got_fail = True
             self.terminate_all_workers()
 
@@ -160,45 +143,15 @@ class HangWatcher(TaskResultListener):
         self.cur_times += 1
         if self.cur_times < self.no_output_times:
             return
-        color_stdout('\n[Main process] Not output from workers. ' \
-                     'It seems that we hang. Send SIGKILL to workers; ' \
+        color_stdout('\n[Main process] Not output from workers. '
+                     'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n',
                      schema='test_var')
         self.kill_all_workers()
         raise HangError()
 
 
-def run_worker(gen_worker, task_queue, result_queue, worker_id):
-    color_stdout.queue = result_queue
-    worker = gen_worker(worker_id)
-    worker.run_all(task_queue, result_queue)
-
-
-def reproduce_buckets(reproduce, all_buckets):
-    # check test list and find a bucket
-    found_bucket_ids = []
-    if not lib.reproduce:
-        raise ValueError('[reproduce] Tests list cannot be empty')
-    for i, task_id in enumerate(lib.reproduce):
-        for bucket_id, bucket in all_buckets.items():
-            if task_id in bucket['task_ids']:
-                found_bucket_ids.append(bucket_id)
-                break
-        if len(found_bucket_ids) != i + 1:
-            raise ValueError('[reproduce] Cannot find test "%s"' % str(task_id))
-    found_bucket_ids = list(set(found_bucket_ids))
-    if len(found_bucket_ids) < 1:
-        raise ValueError('[reproduce] Cannot find any suite for given tests')
-    elif len(found_bucket_ids) > 1:
-        raise ValueError('[reproduce] Given tests contained by different suites')
-
-    key = found_bucket_ids[0]
-    bucket = copy.deepcopy(all_buckets[key])
-    bucket['task_ids'] = lib.reproduce
-    return { key: bucket }
-
-
-class Manager:
+class WorkersManager:
     def __init__(self, buckets, max_workers_cnt):
         self.pids = []
         self.processes = []
@@ -207,12 +160,12 @@ class Manager:
         self.workers_cnt = 0
         self.worker_next_id = 1
 
-        self.bucket_managers = dict()
+        self.workers_bucket_managers = dict()
         for key, bucket in buckets.items():
-            bucket_manager = BucketManager(key, bucket)
-            self.bucket_managers[key] = bucket_manager
-            self.result_queues.append(bucket_manager.result_queue)
-            self.task_queues.append(bucket_manager.task_queue)
+            workers_bucket_manager = WorkersBucketManager(key, bucket)
+            self.workers_bucket_managers[key] = workers_bucket_manager
+            self.result_queues.append(workers_bucket_manager.result_queue)
+            self.task_queues.append(workers_bucket_manager.task_queue)
 
         self.report_timeout = 2.0
         self.kill_after_report_cnt = 5
@@ -224,15 +177,26 @@ class Manager:
 
         self.max_workers_cnt = max_workers_cnt
 
+    def terminate_all_workers(self):
+        for process in self.processes:
+            if process.is_alive():
+                process.terminate()
+
+    def kill_all_workers(self):
+        for pid in self.pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+
     def init_listeners(self):
         self.statistics = TaskStatistics()
         self.listeners = [self.statistics, TaskOutput()]
-        term_callback = lambda x=self.processes: terminate_all_workers(x)
-        kill_callback = lambda x=self.pids: kill_all_workers(x)
         if not lib.options.args.is_force:
-            self.fail_watcher = FailWatcher(term_callback)
+            self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
-        hang_watcher = HangWatcher(self.kill_after_report_cnt, kill_callback)
+        hang_watcher = HangWatcher(self.kill_after_report_cnt,
+                                   self.kill_all_workers)
         self.listeners.append(hang_watcher)
 
     def start(self):
@@ -240,35 +204,36 @@ class Manager:
             self.add_worker()
 
     def find_nonempty_bucket_manager(self):
-        bucket_managers_rnd = list(self.bucket_managers.values())
-        random.shuffle(bucket_managers_rnd)
-        for bucket_manager in bucket_managers_rnd:
-            if not bucket_manager.done:
-                return bucket_manager
+        workers_bucket_managers_rnd = list(
+            self.workers_bucket_managers.values())
+        random.shuffle(workers_bucket_managers_rnd)
+        for workers_bucket_manager in workers_bucket_managers_rnd:
+            if not workers_bucket_manager.done:
+                return workers_bucket_manager
         return None
 
-    def get_bucket_manager(self, worker_id):
-        for bucket_manager in self.bucket_managers.values():
-            if worker_id in bucket_manager.worker_ids:
-                return bucket_manager
+    def get_workers_bucket_manager(self, worker_id):
+        for workers_bucket_manager in self.workers_bucket_managers.values():
+            if worker_id in workers_bucket_manager.worker_ids:
+                return workers_bucket_manager
         return None
 
     def add_worker(self):
         # don't add new workers if fail occured and --force not passed
         if self.fail_watcher and self.fail_watcher.got_fail:
             return
-        bucket_manager = self.find_nonempty_bucket_manager()
-        if not bucket_manager:
+        workers_bucket_manager = self.find_nonempty_bucket_manager()
+        if not workers_bucket_manager:
             return
-        process = bucket_manager.add_worker(self.worker_next_id)
+        process = workers_bucket_manager.add_worker(self.worker_next_id)
         self.processes.append(process)
         self.pids.append(process.pid)
         self.workers_cnt += 1
         self.worker_next_id += 1
 
     def del_worker(self, worker_id):
-        bucket_manager = self.get_bucket_manager(worker_id)
-        bucket_manager.del_worker(worker_id)
+        workers_bucket_manager = self.get_workers_bucket_manager(worker_id)
+        workers_bucket_manager.del_worker(worker_id)
         self.workers_cnt -= 1
 
     def wait(self):
@@ -285,7 +250,6 @@ class Manager:
                     else:
                         self.listeners.remove(listener)
                 # TODO: wait for all workers even after SIGINT hit us?
-                import time
                 time.sleep(0.1)
                 ready_inputs, _, _ = select.select(inputs, [], [], 0)
                 self.invoke_listeners(inputs, ready_inputs)
@@ -320,7 +284,7 @@ class Manager:
             self.processes.remove(process)
 
 
-class BucketManager:
+class WorkersBucketManager:
     def __init__(self, key, bucket):
         self.key = key
         self.gen_worker = bucket['gen_worker']
@@ -333,16 +297,18 @@ class BucketManager:
         self.worker_ids = set()
         self.done = False
 
+    def _run_worker(self, worker_id):
+        """ for running in child process """
+        color_stdout.queue = self.result_queue
+        worker = self.gen_worker(worker_id)
+        worker.run_all(self.task_queue, self.result_queue)
+
     def add_worker(self, worker_id):
         # Note: each of our workers can consume only one None, but it would
         # be good to prevent locking in case of 'bad' worker.
         self.task_queue.put(None)  # 'stop worker' marker
 
-        # It's python-style closure; XXX: prettify
-        entry = lambda gen_worker=self.gen_worker, \
-                task_queue=self.task_queue, result_queue=self.result_queue, \
-                worker_id=worker_id: \
-            run_worker(gen_worker, task_queue, result_queue, worker_id)
+        entry = lambda x=self, worker_id=worker_id: x._run_worker(worker_id)
 
         self.worker_ids.add(worker_id)
         process = multiprocessing.Process(target=entry)
@@ -355,6 +321,33 @@ class BucketManager:
         # mark bucket as done when the first worker done to prevent cycling
         # with add-del workers
         self.done = True
+
+
+def reproduce_buckets(reproduce, all_buckets):
+    # check test list and find a bucket
+    found_bucket_ids = []
+    if not lib.reproduce:
+        raise ValueError('[reproduce] Tests list cannot be empty')
+    for i, task_id in enumerate(lib.reproduce):
+        for bucket_id, bucket in all_buckets.items():
+            if task_id in bucket['task_ids']:
+                found_bucket_ids.append(bucket_id)
+                break
+        if len(found_bucket_ids) != i + 1:
+            raise ValueError('[reproduce] Cannot find test "%s"' %
+                             str(task_id))
+    found_bucket_ids = list(set(found_bucket_ids))
+    if len(found_bucket_ids) < 1:
+        raise ValueError('[reproduce] Cannot find any suite for given tests')
+    elif len(found_bucket_ids) > 1:
+        raise ValueError(
+            '[reproduce] Given tests contained by different suites')
+
+    key = found_bucket_ids[0]
+    bucket = copy.deepcopy(all_buckets[key])
+    bucket['task_ids'] = lib.reproduce
+    return {key: bucket}
+
 
 def main_loop():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
@@ -369,25 +362,26 @@ def main_loop():
         buckets = reproduce_buckets(lib.reproduce, buckets)
         jobs = 1
 
-    manager = Manager(buckets, jobs)
-    manager.start()
+    workers_manager = WorkersManager(buckets, jobs)
+    workers_manager.start()
     try:
-        manager.wait()
+        workers_manager.wait()
     except KeyboardInterrupt:
-        manager.statistics.print_statistics()
+        workers_manager.statistics.print_statistics()
         raise
     except HangError:
         pass
-    manager.statistics.print_statistics()
-    manager.wait_processes()
+    workers_manager.statistics.print_statistics()
+    workers_manager.wait_processes()
 
 
 def main():
     try:
         main_loop()
     except KeyboardInterrupt as e:
-        color_stdout('\n[Main process] Caught keyboard interrupt;' \
-            ' waiting for processes for doing its clean up\n', schema='test_var')
+        color_stdout('\n[Main process] Caught keyboard interrupt;'
+                     ' waiting for processes for doing its clean up\n',
+                     schema='test_var')
 
 
 if __name__ == "__main__":
