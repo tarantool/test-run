@@ -221,14 +221,6 @@ class Test:
                             "Test failed! Last 10 lines of {}:\n".format(
                                 log_file))
                 where = ": there were warnings in the valgrind log file(s)"
-
-            # XXX: make it works
-            #if not self.args.is_force:
-            #    # gh-1026
-            #    # stop and cleanup tarantool instance for incorrect tests
-            #    server.stop()
-            #    server.cleanup()
-            #    raise RuntimeError("Failed to run test " + self.name + where)
         return short_status
 
     def print_diagnostics(self, logfile, message):

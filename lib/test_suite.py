@@ -122,7 +122,6 @@ class TestSuite:
         return inspector
 
     def stop_server(self, server, inspector, silent=False):
-        #color_stdout(shortsep, "\n", schema='separator') # XXX
         server.stop(silent=silent)
         # don't delete core files or state of the data dir
         # in case of exception, which is raised when the
@@ -133,15 +132,6 @@ class TestSuite:
     def run_test(self, test, server, inspector):
         # fixme: remove this string if we fix all legacy tests
         server.cls = test.__class__
-
-# TODO: move it to somewhere
-#        longsep = '='*80
-#        shortsep = '-'*75
-#        color_stdout(longsep, "\n", schema='separator')
-#        color_stdout("TEST".ljust(48), schema='t_name')
-#        color_stdout("PARAMS\t\t", schema='test_var')
-#        color_stdout("RESULT\n", schema='test_pass')
-#        color_stdout(shortsep, "\n", schema='separator')
 
         test.inspector = inspector
         color_stdout(os.path.join(
@@ -163,22 +153,3 @@ class TestSuite:
             return 'disabled'
         else:
             return test.run(server)
-
-# TODO: return TaskStatus(...)
-#        if failed_tests:
-#            color_stdout("Failed {0} tests: {1}.\n".format(len(failed_tests),
-#                                                ", ".join(failed_tests)),
-#                                                schema='error')
-
-# XXX: maybe we already handle all valgrind cases in test.py?
-#        if self.args.valgrind:
-#            non_empty_logs = non_empty_valgrind_logs(
-#                self.server.current_valgrind_logs(for_suite=True))
-#            for log_file in non_empty_logs:
-#                color_stdout(shortsep, "\n", schema='separator')
-#                color_stdout("  Error! There were warnings/errors in valgrind log file [%s]:\n" % log_file, schema='error')
-#                print_tail_n(log_file, 20)
-#                color_stdout(shortsep, "\n", schema='separator')
-#            if bool(non_empty_logs):
-#                return ['valgrind error in ' + self.suite_path]
-#        return failed_tests
