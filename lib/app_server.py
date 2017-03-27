@@ -12,12 +12,13 @@ from lib.preprocessor import TestState
 from lib.utils import find_port
 from test import TestRunGreenlet
 
-def run_server(execs, cwd):
-    proc = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
-    stdout, stderr = proc.communicate()
+def run_server(execs, cwd, server):
+    server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    stdout, stderr = server.process.communicate()
     sys.stdout.write(stdout)
-    if proc.wait() != 0:
+    if server.process.wait() != 0:
         sys.stdout.write(stderr)
+    server.process = None
 
 class AppTest(Test):
     def execute(self, server):
@@ -27,7 +28,7 @@ class AppTest(Test):
         self.inspector.set_parser(ts)
 
         execs = server.prepare_args()
-        tarantool = TestRunGreenlet(run_server, execs, server.vardir)
+        tarantool = TestRunGreenlet(run_server, execs, server.vardir, server)
         self.current_test_greenlet = tarantool
         tarantool.start()
 
@@ -56,6 +57,7 @@ class AppServer(Server):
         self.debug = False
         self.lua_libs = ini['lua_libs']
         self.name = 'app_server'
+        self.process = None
 
     def prepare_args(self):
         return [os.path.join(os.getcwd(), self.current_test.name)]
@@ -78,6 +80,15 @@ class AppServer(Server):
             os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
             self.vardir
         )
+
+    def stop(self, silent):
+        if not self.process:
+            return
+        try:
+            pid = self.process.pid
+            self.process.terminate()
+        except OSError:
+            pass
 
     @classmethod
     def find_exe(cls, builddir):
