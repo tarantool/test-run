@@ -81,6 +81,11 @@ class AppServer(Server):
             self.vardir
         )
 
+    # 'app-tap/tarantoolctl' test creating tarantool instances for scripts
+    # created by 'create_script' function and it seems that TarantoolInspector
+    # know nothing about it and cannot kill its.
+    # XXX: Can we make smth with these instances from test-run?
+    #      Maybe send SIGTERM entire process group?
     def stop(self, silent):
         if not self.process:
             return
