@@ -17,10 +17,10 @@ import sys
 import time
 import select
 import random
-import multiprocessing
-from multiprocessing.queues import SimpleQueue
 import copy
 
+import multiprocessing
+from multiprocessing.queues import SimpleQueue
 
 import lib
 from lib.worker import WorkerOutput, WorkerDone, TaskResult
@@ -153,7 +153,7 @@ class HangWatcher(TaskResultListener):
         self.cur_times += 1
         if self.cur_times < self.no_output_times:
             return
-        color_stdout('\n[Main process] Not output from workers. '
+        color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n',
                      schema='test_var')
@@ -186,6 +186,8 @@ class WorkersManager:
         self.init_listeners()
 
         self.max_workers_cnt = max_workers_cnt
+
+        self.pid_to_worker_id = dict()
 
     def terminate_all_workers(self):
         for process in self.processes:
@@ -238,6 +240,7 @@ class WorkersManager:
         process = workers_bucket_manager.add_worker(self.worker_next_id)
         self.processes.append(process)
         self.pids.append(process.pid)
+        self.pid_to_worker_id[process.pid] = self.worker_next_id
         self.workers_cnt += 1
         self.worker_next_id += 1
 
@@ -254,11 +257,12 @@ class WorkersManager:
                     inputs, [], [], self.report_timeout)
             except KeyboardInterrupt:
                 # write output from workers to stdout
+                new_listeners = []
                 for listener in self.listeners:
                     if isinstance(listener, TaskOutput):
                         listener.report_at_timeout = False
-                    else:
-                        self.listeners.remove(listener)
+                        new_listeners.append(listener)
+                self.listeners = new_listeners
                 # TODO: wait for all workers even after SIGINT hit us?
                 time.sleep(0.1)
                 ready_inputs, _, _ = select.select(inputs, [], [], 0)
@@ -275,6 +279,7 @@ class WorkersManager:
         if not ready_inputs:
             for listener in self.listeners:
                 listener.process_timeout()
+            self.check_for_dead_processes()
 
         for ready_input in ready_inputs:
             result_queue = self.result_queues[inputs.index(ready_input)]
@@ -286,12 +291,33 @@ class WorkersManager:
                     listener.process_result(obj)
                 if isinstance(obj, WorkerDone):
                     self.del_worker(obj.worker_id)
-                    break
+
+    def check_for_dead_processes(self):
+        for pid in self.pids[:]:
+            exited = False
+            try:
+                os.waitpid(pid, os.WNOHANG)
+            except OSError:
+                exited = True
+            if exited:
+                worker_id = self.pid_to_worker_id[pid]
+                workers_bucket_manager = \
+                    self.get_workers_bucket_manager(worker_id)
+                if not workers_bucket_manager:
+                    continue
+                result_queue = workers_bucket_manager.result_queue
+                result_queue.put(WorkerDone(worker_id, 'unknown'))
+                color_stdout(
+                    "[Main process] Worker %d don't reported work "
+                    "done using results queue, but the corresponding "
+                    "process seems dead. Sending fake WorkerDone marker.\n"
+                        % worker_id, schema='test_var')
+                self.pids.remove(pid)  # XXX: sync it w/ self.processes
 
     def wait_processes(self):
         for process in self.processes:
             process.join()
-            self.processes.remove(process)
+        self.processes = []
 
 
 class WorkersBucketManager:
