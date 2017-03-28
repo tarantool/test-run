@@ -3,8 +3,7 @@
 
 # TODOs:
 # * Fix current bad effects caused by hitting Ctrl+C:
-#   * Commands for tarantool can be written to a terminal (fixed?)
-#   * Tarantool servers can hang after Ctrl+C (its worker doesn't blocked):
+#   * Tarantool servers can hang after Ctrl+C (its worker doesn't wait for it):
 #     * default (case: app/??? 'app.lua')
 #     * non-default (okay?)
 #     * unknown (only in app-tap/tarantoolctl.test.lua, e.g. 'good_script.lua'):
@@ -12,12 +11,14 @@
 #       * daemons -- nothing can be done from test-run side.
 # * Save output for failed tests and give it at the end.
 # * Limit workers count by tests count at max.
-# * 'debug_worker' schema in Colorer (yellow); output all regular (non-warning,
-#    non-error) workers info only at '--debug-worker'.
+# * Prettify output: extract build lines into log file like var/*/worker.log.
+#   * Shows in on the screen only when the option '--debug' passed (separate
+#     schema in Colorer).
+# * Log file for inspector (useful for debugging).
 # * Document how workers-task-buckets interacts and works; and possible
 #   non-obvious code parts.
 #   * Comment each Worker's results_queue classes.
-#   * Describe how we wait workers, what
+#   * Describe how we wait workers, when exits, how select results/output from workers.
 # * Can we remove globals in lib/__init__.py?
 # * Raise in tarantool_connection.py in addition to unix sockets warning in __init__.py?
 # * JSON for var/reproduce/*.tests.txt (s/.txt/.json).
