@@ -338,7 +338,7 @@ class TestState(object):
     def cleanup(self):
         sys.stdout.clear_all_filters()
         # don't stop the default server
-        self.servers.pop('default')
+        self.servers.pop('default', None)
         for k, v in self.servers.iteritems():
             v.stop(silent=True)
             v.cleanup()
