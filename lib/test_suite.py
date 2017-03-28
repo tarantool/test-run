@@ -132,7 +132,7 @@ class TestSuite:
         return True
 
     def start_server(self, server):
-        # create inspectpor daemon for cluster tests
+        # create inspector daemon for cluster tests
         inspector = TarantoolInspector(
             'localhost', server.inspector_port
         )

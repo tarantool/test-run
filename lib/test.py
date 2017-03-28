@@ -12,8 +12,9 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from lib.colorer import Colorer
 from lib.utils import non_empty_valgrind_logs, print_tail_n
+
+from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
@@ -167,7 +168,8 @@ class Test:
         except TestExecutionError:
             self.is_executed_ok = False
         except Exception as e:
-            traceback.print_exc(e)
+            color_stdout('Test.run() received the following error:\n' +
+                traceback.format_exc() + '\n', schema='error')
             diagnostics = str(e)
         finally:
             if sys.stdout and sys.stdout != save_stdout:

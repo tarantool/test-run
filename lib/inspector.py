@@ -1,9 +1,13 @@
 import os
-
 import yaml
+import traceback
+
 import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
+
+from lib.colorer import Colorer
+color_stdout = Colorer()
 
 
 # don't print backtraces when Ctrl+C hit the process when the active greenlet
@@ -65,11 +69,9 @@ class TarantoolInspector(StreamServer):
             except KeyboardInterrupt:
                 # propagate to the main greenlet
                 raise
-            except Exception, e:
-                print('error', e)
-                # XXX: colorize to make printing the trace looks intentinal
-                import traceback
-                traceback.print_exc()
+            except Exception as e:
+                color_stdout('\nTarantoolInpector.handle() received the following error:\n' +
+                    traceback.format_exc() + '\n', schema='error')
                 result = { "error": repr(e) }
             if result == None:
                 result = True
