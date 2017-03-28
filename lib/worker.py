@@ -167,7 +167,6 @@ class Worker:
                 return cur_task
         raise ValueError('Cannot find test: %s' % str(task_id))
 
-    # TODO: timeout for task
     # Note: it's not exception safe
     def run_task(self, task_id):
         if not self.initialized:

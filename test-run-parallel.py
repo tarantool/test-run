@@ -7,9 +7,28 @@
 #   * Tarantool servers can hang after Ctrl+C (its worker doesn't blocked):
 #     * default (case: app/??? 'app.lua')
 #     * non-default (okay?)
-#     * unknown (case: app-tap/tarantoolctl.test.lua 'good_script.lua') -- SIGTERM group?
+#     * unknown (only in app-tap/tarantoolctl.test.lua, e.g. 'good_script.lua'):
+#       * in group -- SIGTERM group (except the main process).
+#       * daemons -- nothing can be done from test-run side.
 # * Save output for failed tests and give it at the end.
 # * Limit workers count by tests count at max.
+# * 'debug_worker' schema in Colorer (yellow); output all regular (non-warning,
+#    non-error) workers info only at '--debug-worker'.
+# * Document how workers-task-buckets interacts and works; and possible
+#   non-obvious code parts.
+#   * Comment each Worker's results_queue classes.
+#   * Describe how we wait workers, what
+# * Can we remove globals in lib/__init__.py?
+# * Raise in tarantool_connection.py in addition to unix sockets warning in __init__.py?
+# * JSON for var/reproduce/*.tests.txt (s/.txt/.json).
+# * Do out-of-source build work?
+# * Remove parallel.py and '--stress' option.
+#   * Simplify TestSuite.get_server().
+# * Extract parts of this file into workers_managers.py and listeners.py.
+# * Disable HangWatcher if one of '--long', '--valgrind', '--gdb', '--lldb'
+#   options passed.
+#   * Add the '--no-output-timeout' option that enables HangWatcher and set
+#     specific time in seconds for it.
 
 
 import os

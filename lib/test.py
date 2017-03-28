@@ -132,12 +132,16 @@ class Test:
         server.current_test = self
 
     def run(self, server):
-        """Execute the test assuming it's a python program.
-        If the test aborts, print its output to stdout, and raise
-        an exception. Else, comprare result and reject files.
-        If there is a difference, print it to stdout and raise an
-        exception. The exception is raised only if is_force flag is
-        not set."""
+        """ Execute the test assuming it's a python program.  If the test
+            aborts, print its output to stdout, and raise an exception. Else,
+            comprare result and reject files.  If there is a difference, print
+            it to stdout.
+
+            Returns short status of the test as a string: 'skip', 'pass',
+            'new', or 'fail'. There is also one possible value for
+            short_status, 'disabled', but it returned in the caller,
+            TestSuite.run_test().
+        """
 
         # Note: test was created before certain worker become known, so we need
         # to update temporary result directory here as it depends on 'vardir'.

@@ -14,6 +14,7 @@ from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
+# TODO: check it also in tarantool_connection.py and raise in the case
 def warn_unix_sockets():
     unix_socket_len_limit = 107
     max_unix_socket_rel = './var/??_replication/autobootstrap_guest3.control'

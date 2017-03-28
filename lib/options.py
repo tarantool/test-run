@@ -140,7 +140,7 @@ class Options:
     def check(self):
         """Check the arguments for correctness."""
         check_error = False
-        conflict_options = ('valgrind', 'gdb', 'lldb')
+        conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
         for op1, op2 in product(conflict_options, repeat=2):
             if op1 != op2 and getattr(self, op1, '') and \
                     getattr(self, op2, ''):

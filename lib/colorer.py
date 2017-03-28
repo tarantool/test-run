@@ -183,7 +183,7 @@ class Colorer(object):
 
         data = ''
         if self.is_term:
-            data += self.begin+';'.join(flags)+self.end
+            data += self.begin + (';'.join(flags)) + self.end
         for i in args:
             data += str(i)
         if self.is_term:

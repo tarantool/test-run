@@ -149,6 +149,9 @@ class TestSuite:
         server.cleanup()
 
     def run_test(self, test, server, inspector):
+        """ Returns short status of the test as a string: 'skip', 'pass',
+            'new', 'fail', or 'disabled'.
+        """
         # fixme: remove this string if we fix all legacy tests
         server.cls = test.__class__
 
