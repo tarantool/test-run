@@ -3,9 +3,11 @@
 
 # TODOs:
 # * Fix current bad effects caused by hitting Ctrl+C:
-#   * Commands for tarantool can be written to a terminal.
-#   * Tarantool servers can hang at waiting the commands.
-# * SIGTERM non-default tarantools at Ctrl+C (as part of above).
+#   * Commands for tarantool can be written to a terminal (fixed?)
+#   * Tarantool servers can hang after Ctrl+C (its worker doesn't blocked):
+#     * default (case: app/??? 'app.lua')
+#     * non-default (okay?)
+#     * unknown (case: app-tap/tarantoolctl.test.lua 'good_script.lua') -- SIGTERM group?
 # * Save output for failed tests and give it at the end.
 # * Limit workers count by tests count at max.
 
@@ -415,6 +417,9 @@ def main():
     try:
         main_loop()
     except KeyboardInterrupt as e:
+        # TODO: SIGTERM all workers (or all processes in our group except
+        #       myself?), then sleep 0.1 sec, then SIGKILL processes that still
+        #       alive.
         color_stdout('\n[Main process] Caught keyboard interrupt;'
                      ' waiting for processes for doing its clean up\n',
                      schema='test_var')

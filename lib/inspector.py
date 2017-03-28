@@ -67,6 +67,7 @@ class TarantoolInspector(StreamServer):
                 raise
             except Exception, e:
                 print('error', e)
+                # XXX: colorize to make printing the trace looks intentinal
                 import traceback
                 traceback.print_exc()
                 result = { "error": repr(e) }

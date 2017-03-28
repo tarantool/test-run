@@ -6,7 +6,6 @@ from collections import deque
 
 import yaml
 from gevent import socket
-from test import FilteredStream
 
 from lib.admin_connection import AdminAsyncConnection
 
@@ -337,11 +336,7 @@ class TestState(object):
         self.parse_preprocessor(string)
 
     def cleanup(self):
-        # SIGINT can somehow lead sys.stdout to be regular stdout here
-        # XXX: as a side effect of this: commands printed to a terminal,
-        #      tarantool server hangs in waiting of the commands
-        if isinstance(sys.stdout, FilteredStream):
-            sys.stdout.clear_all_filters()
+        sys.stdout.clear_all_filters()
         # don't stop the default server
         self.servers.pop('default')
         for k, v in self.servers.iteritems():

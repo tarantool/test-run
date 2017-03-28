@@ -122,11 +122,18 @@ class Worker:
 
         reproduce_dir = os.path.join(main_vardir, 'reproduce')
         if not os.path.isdir(reproduce_dir):
-            os.makedirs(reproduce_dir)
+            # try-except to prevent races btw workers
+            try:
+                os.makedirs(reproduce_dir)
+            except OSError:
+                pass
         self.tests_file = os.path.join(reproduce_dir, '%s.tests.txt' % self.name)
 
         color_stdout.queue_msg_wrapper = \
             lambda output, w=self: w.wrap_output(output)
+
+        self.last_task_done = True
+        self.last_task_id = -1
 
         try:
             self.server = suite.gen_server()
@@ -138,10 +145,21 @@ class Worker:
             color_stdout('Worker "%s" cannot start tarantool server; ignoring tasks...\n' \
                 % self.name, schema='error')
 
+    # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
+    #       worker' marker readed from the queue, but not returned to us?
+    def task_get(self, task_queue):
+        self.last_task_done = False
+        self.last_task_id = task_queue.get()
+        return self.last_task_id
+
     @staticmethod
-    def task_done(task_queue):
-        if 'task_done' in task_queue.__dict__.keys():
+    def is_joinable(task_queue):
+        return 'task_done' in task_queue.__dict__.keys()
+
+    def task_done(self, task_queue):
+        if Worker.is_joinable(task_queue):
             task_queue.task_done()
+        self.last_task_done = True
 
     def find_task(self, task_id):
         for cur_task in self.suite.tests:
@@ -172,13 +190,13 @@ class Worker:
     def run_loop(self, task_queue, result_queue):
         """ called from 'run_all' """
         while True:
-            task_id = task_queue.get()
+            task_id = self.task_get(task_queue)
             # None is 'stop worker' marker
             if task_id is None:
                 color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
                     % self.name, schema='test_var')
                 self.suite.stop_server(self.server, self.inspector)
-                Worker.task_done(task_queue)
+                self.task_done(task_queue)
                 break
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
@@ -190,7 +208,7 @@ class Worker:
                 color_stdout('Worker "%s" got signal to terminate; stopping the server...\n' \
                     % self.name, schema='test_var')
                 raise VoluntaryStopException()
-            Worker.task_done(task_queue)
+            self.task_done(task_queue)
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
@@ -205,17 +223,19 @@ class Worker:
         result_queue.put(self.done_marker())
 
     def stop(self, task_queue, result_queue):
-        # some task was in progress when the exception raised
-        Worker.task_done(task_queue)
-        # unblock task_queue is case it's JoinableQueue
+        if not self.last_task_done:
+            self.task_done(task_queue)
         self.flush_all_tasks(task_queue, result_queue)
         self.suite.stop_server(self.server, self.inspector, silent=True)
 
     def flush_all_tasks(self, task_queue, result_queue):
-        while True:
-            task_id = task_queue.get()
+        """ A queue flusing is necessary only for joinable queue (when runner
+            controlling workers with using join() on task queues), but for
+            unification in reporting 'not_run' status it make sense to leave it
+            enabled for any queue type.
+        """
+        # None is 'stop worker' marker
+        while self.last_task_id:
+            task_id = self.task_get(task_queue)
             result_queue.put(self.wrap_result(task_id, 'not_run'))
-            Worker.task_done(task_queue)
-            # None is 'stop worker' marker
-            if task_id is None:
-                break
+            self.task_done(task_queue)

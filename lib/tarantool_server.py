@@ -95,7 +95,27 @@ class LuaTest(FuncTest):
             # join inspector handler
             self.inspector.sem.wait()
         # stop any servers created by the test, except the default one
-        ts.cleanup()  # XXX: put under finally block?
+        ts.cleanup()
+
+    def killall_servers(self, server, ts, crash_occured):
+        """ kill all servers and crash detectors before stream swap """
+        check_list = ts.servers.values() + [server, ]
+
+        # check that all servers stopped correctly
+        for server in check_list:
+            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
+
+        for server in check_list:
+            server.process.poll()
+
+            if crash_occured:
+                # kill all servers and crash detectors on crash
+                if server.process.returncode is None:
+                    server.process.kill()
+                gevent.kill(server.crash_detector)
+            elif server.process.returncode is not None:
+                # join crash detectors of stopped servers
+                save_join(server.crash_detector)
 
     def execute(self, server):
         server.current_test = self
@@ -117,26 +137,19 @@ class LuaTest(FuncTest):
         lua = TestRunGreenlet(self.exec_loop, ts)
         self.current_test_greenlet = lua
         lua.start()
-        crash_occured = save_join(lua, timeout=self.TIMEOUT)
+        crash_occured = True
+        try:
+            crash_occured = save_join(lua, timeout=self.TIMEOUT)
+            self.killall_servers(server, ts, crash_occured)
+        except KeyboardInterrupt:
+            # prevent tests greenlet from writing to the real stdout
+            lua.kill()
 
-        # kill all servers and crash detectors before stream swap
-        check_list = ts.servers.values() + [server, ]
-
-        # check that all servers stopped correctly
-        for server in check_list:
-            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
-
-        for server in check_list:
-            server.process.poll()
-
-            if crash_occured:
-                # kill all servers and crash detectors on crash
-                if server.process.returncode is None:
-                    server.process.kill()
-                gevent.kill(server.crash_detector)
-            elif server.process.returncode is not None:
-                # join crash detectors of stopped servers
-                save_join(server.crash_detector)
+            # XXX: should we only stop all servers and close all connections,
+            #      but don't make cleanup? killall_servers() doing that work,
+            #      but doesn't close connections.
+            ts.cleanup()
+            raise
 
 class PythonTest(FuncTest):
     def execute(self, server):
@@ -646,7 +659,10 @@ class TarantoolServer(Server):
             color_stdout('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process.returncode is None:
-            self.process.terminate()
+            try:
+                self.process.terminate()
+            except OSError:
+                pass
             if self.crash_detector is not None:
                 save_join(self.crash_detector)
             self.wait_stop()
