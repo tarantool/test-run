@@ -97,7 +97,8 @@ class TestSuite:
         elif self.ini['core'] == 'unittest':
             UnittestServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'stress':
-            return []  # parallel tests are broken and disabled for now
+            # parallel tests are not supported and disabled for now
+            return []
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
@@ -106,15 +107,11 @@ class TestSuite:
 
     def gen_server(self):
         try:
-            if self.ini['core'] in ['tarantool', 'stress']:
-                server = TarantoolServer(self.ini, test_suite=self)
-            else:
-                server = Server(self.ini, test_suite=self)
+            return Server(self.ini, test_suite=self)
         except Exception as e:
             print e
             raise RuntimeError("Unknown server: core = {0}".format(
                                self.ini["core"]))
-        return server
 
     def is_test_enabled(self, test, conf, server):
         test_name = os.path.basename(test.name)

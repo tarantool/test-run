@@ -8,7 +8,6 @@ import traceback
 import lib
 from lib.tarantool_server import TarantoolStartError
 from lib.test_suite       import TestSuite
-from lib.parallel         import Supervisor
 
 
 from lib.colorer import Colorer
@@ -26,11 +25,8 @@ def find_suites():
             if "suite.ini" in names:
                 suite_names.append(os.path.basename(root))
 
-    if lib.options.args.stress is None:
-        suites = [TestSuite(suite_name, lib.options.args) for suite_name in sorted(suite_names)]
-    else:
-        suite_names = [suite_name for suite_name in suite_names if suite_name.find(lib.options.args.stress) != -1]
-        suites = [Supervisor(suite_name, lib.options.args) for suite_name in sorted(suite_names)]
+    suites = [TestSuite(suite_name, lib.options.args)
+              for suite_name in sorted(suite_names)]
     return suites
 
 

@@ -88,12 +88,6 @@ class Options:
                 help = """Path to project build directory. Default: " + "../.""")
 
         parser.add_argument(
-                "--stress",
-                dest = "stress",
-                default = None,
-                help = """Name of stress TestSuite to run""")
-
-        parser.add_argument(
                 "--tarantool-port",
                 dest = "tarantool_port",
                 default = None,
@@ -148,7 +142,6 @@ class Options:
                                 with option --{}"
                 color_stdout(format_str.format(op1, op2), schema='error')
                 check_error = True
-
 
         if check_error:
             exit(-1)
