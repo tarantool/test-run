@@ -1,13 +1,10 @@
 import os
-import sys
-import shutil
-import atexit
 import signal
 import traceback
 
 import lib
 from lib.tarantool_server import TarantoolStartError
-from lib.test_suite       import TestSuite
+from lib.test_suite import TestSuite
 
 
 from lib.colorer import Colorer
@@ -88,8 +85,8 @@ class VoluntaryStopException(Exception):
 
 class Worker:
     def report_keyboard_interrupt(self):
-        color_stdout('\n[Worker "%s"] Caught keyboard interrupt; stopping...\n' \
-            % self.name, schema='test_var')
+        color_stdout('\n[Worker "%s"] Caught keyboard interrupt; stopping...\n'
+                     % self.name, schema='test_var')
 
     def wrap_output(self, output):
         return WorkerOutput(self.id, self.name, output)
@@ -105,8 +102,8 @@ class Worker:
 
     def __init__(self, suite, _id):
         self.sigterm_received = False
-        signal.signal(signal.SIGTERM, lambda x, y, z=self: \
-            z.sigterm_handler(x, y))
+        signal.signal(signal.SIGTERM, lambda x, y, z=self:
+                      z.sigterm_handler(x, y))
 
         self.initialized = False
         self.id = _id
@@ -123,7 +120,8 @@ class Worker:
                 os.makedirs(reproduce_dir)
             except OSError:
                 pass
-        self.tests_file = os.path.join(reproduce_dir, '%s.tests.txt' % self.name)
+        self.tests_file = os.path.join(
+            reproduce_dir, '%s.tests.txt' % self.name)
 
         color_stdout.queue_msg_wrapper = \
             lambda output, w=self: w.wrap_output(output)
@@ -138,8 +136,8 @@ class Worker:
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
         except TarantoolStartError:
-            color_stdout('Worker "%s" cannot start tarantool server; ignoring tasks...\n' \
-                % self.name, schema='error')
+            color_stdout('Worker "%s" cannot start tarantool server; '
+                         'ignoring tasks...\n' % self.name, schema='error')
 
     # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
     #       worker' marker readed from the queue, but not returned to us?
@@ -171,14 +169,15 @@ class Worker:
             task = self.find_task(task_id)
             with open(self.tests_file, 'a') as f:
                 f.write(repr(task.id) + '\n')
-            short_status = self.suite.run_test(task, self.server, self.inspector)
+            short_status = self.suite.run_test(
+                task, self.server, self.inspector)
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
             raise
         except Exception as e:
-            color_stdout('Worker "%s" received the following error; stopping...\n' \
-                % self.name, schema='error')
-            color_stdout(traceback.format_exc() + '\n', schema='error')
+            color_stdout(
+                'Worker "%s" received the following error; stopping...\n'
+                % self.name + traceback.format_exc() + '\n', schema='error')
             raise
         return short_status
 
@@ -188,20 +187,23 @@ class Worker:
             task_id = self.task_get(task_queue)
             # None is 'stop worker' marker
             if task_id is None:
-                color_stdout('Worker "%s" exhaust task queue; stopping the server...\n' \
-                    % self.name, schema='test_var')
+                color_stdout('Worker "%s" exhausted task queue; '
+                             'stopping the server...\n' % self.name,
+                             schema='test_var')
                 self.suite.stop_server(self.server, self.inspector)
                 self.task_done(task_queue)
                 break
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
             if not lib.options.args.is_force and short_status == 'fail':
-                color_stdout('Worker "%s" got failed test; stopping the server...\n' \
+                color_stdout(
+                    'Worker "%s" got failed test; stopping the server...\n'
                     % self.name, schema='test_var')
                 raise VoluntaryStopException()
             if self.sigterm_received:
-                color_stdout('Worker "%s" got signal to terminate; stopping the server...\n' \
-                    % self.name, schema='test_var')
+                color_stdout('Worker "%s" got signal to terminate; '
+                             'stopping the server...\n' % self.name,
+                             schema='test_var')
                 raise VoluntaryStopException()
             self.task_done(task_queue)
 
