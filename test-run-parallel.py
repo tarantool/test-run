@@ -3,6 +3,8 @@
 
 # TODOs:
 # * Save output for failed tests and give it at the end.
+#   * Will eliminated by prettified output?
+#   * Print log files at the end?
 # * Limit workers count by tests count at max.
 # * Prettify output: extract build lines into log file like var/*/worker.log.
 #   * Shows in on the screen only when the option '--debug' passed (separate
@@ -52,7 +54,7 @@ class TaskResultListener(object):
         pass
 
 
-class TaskStatistics(TaskResultListener):
+class StatisticsWatcher(TaskResultListener):
     def __init__(self):
         self.stats = dict()
         self.failed_tasks = []
@@ -83,30 +85,35 @@ class TaskStatistics(TaskResultListener):
                          schema='test_var')
 
 
-class TaskOutput(TaskResultListener):
+class OutputWatcher(TaskResultListener):
     color_re = re.compile('\033' + r'\[\d(?:;\d\d)?m')
 
     def __init__(self):
         self.buffer = dict()
 
     @staticmethod
+    def add_prefix(output, worker_name):
+        prefix_max_len = len('[Worker "xx_replication-py"] ')
+        prefix = ('[Worker "%s"] ' % worker_name).ljust(prefix_max_len)
+        output = output.rstrip('\n')
+        lines = [(line + '\n') for line in output.split('\n')]
+        output = prefix + prefix.join(lines)
+        return output
+
+    @staticmethod
     def _write(output, worker_name):
-        # prefix_max_len = len('[Worker "xx_replication-py"] ')
-        # prefix = ('[Worker "%s"] ' % name).ljust(prefix_max_len)
-        # output = output.rstrip('\n')
-        # lines = [(line + '\n') for line in output.split('\n')]
-        # output = prefix + prefix.join(lines)
+        output = OutputWatcher.add_prefix(output, worker_name)
         sys.stdout.write(output)
 
     @staticmethod
     def _decolor(obj):
-        return TaskOutput.color_re.sub('', obj)
+        return OutputWatcher.color_re.sub('', obj)
 
     def process_result(self, obj):
         if isinstance(obj, WorkerDone):
             bufferized = self.buffer.get(obj.worker_id, '')
             if bufferized:
-                TaskOutput._write(bufferized, obj.worker_name)
+                OutputWatcher._write(bufferized, obj.worker_name)
             if obj.worker_id in self.buffer.keys():
                 del self.buffer[obj.worker_id]
             return
@@ -115,8 +122,8 @@ class TaskOutput(TaskResultListener):
             return
 
         bufferized = self.buffer.get(obj.worker_id, '')
-        if TaskOutput._decolor(obj.output).endswith('\n'):
-            TaskOutput._write(bufferized + obj.output, obj.worker_name)
+        if OutputWatcher._decolor(obj.output).endswith('\n'):
+            OutputWatcher._write(bufferized + obj.output, obj.worker_name)
             self.buffer[obj.worker_id] = ''
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
@@ -225,16 +232,16 @@ class WorkersManager:
             not lib.options.args.long
         watch_fail = not lib.options.args.is_force
 
-        self.statistics = TaskStatistics()
-        task_output = TaskOutput()
-        self.listeners = [self.statistics, task_output]
+        self.statistics = StatisticsWatcher()
+        output_watcher = OutputWatcher()
+        self.listeners = [self.statistics, output_watcher]
         if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
             no_output_timeout = float(lib.options.args.no_output_timeout or 10)
             hang_watcher = HangWatcher(
-                task_output.not_done_worker_ids, self.kill_all_workers,
+                output_watcher.not_done_worker_ids, self.kill_all_workers,
                 no_output_timeout)
             self.listeners.append(hang_watcher)
 
@@ -287,7 +294,7 @@ class WorkersManager:
                 # write output from workers to stdout
                 new_listeners = []
                 for listener in self.listeners:
-                    if isinstance(listener, TaskOutput):
+                    if isinstance(listener, OutputWatcher):
                         listener.report_at_timeout = False
                         new_listeners.append(listener)
                 self.listeners = new_listeners

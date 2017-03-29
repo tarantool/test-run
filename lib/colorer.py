@@ -182,7 +182,7 @@ class Colorer(object):
         flags.append(self.bgcolor[kwargs['bgcolor']]) if 'bgcolor' in kwargs else None
 
         data = ''
-        if self.is_term:
+        if self.is_term and flags:
             data += self.begin + (';'.join(flags)) + self.end
         for i in args:
             data += str(i)
