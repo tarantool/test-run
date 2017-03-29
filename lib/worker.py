@@ -191,8 +191,7 @@ class Worker:
                 color_stdout('Worker "%s" exhausted task queue; '
                              'stopping the server...\n' % self.name,
                              schema='test_var')
-                self.suite.stop_server(self.server, self.inspector)
-                self.task_done(task_queue)
+                self.stop(task_queue, result_queue)
                 break
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
@@ -221,10 +220,13 @@ class Worker:
         result_queue.put(self.done_marker())
 
     def stop(self, task_queue, result_queue):
-        if not self.last_task_done:
-            self.task_done(task_queue)
-        self.flush_all_tasks(task_queue, result_queue)
-        self.suite.stop_server(self.server, self.inspector, silent=True)
+        try:
+            if not self.last_task_done:
+                self.task_done(task_queue)
+            self.flush_all_tasks(task_queue, result_queue)
+            self.suite.stop_server(self.server, self.inspector, silent=True)
+        except (KeyboardInterrupt, Exception):
+            pass
 
     def flush_all_tasks(self, task_queue, result_queue):
         """ A queue flusing is necessary only for joinable queue (when runner
