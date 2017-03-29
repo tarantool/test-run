@@ -1,6 +1,7 @@
 import os
 import signal
 import traceback
+import yaml
 
 import lib
 from lib.tarantool_server import TarantoolStartError
@@ -121,7 +122,7 @@ class Worker:
             except OSError:
                 pass
         self.tests_file = os.path.join(
-            reproduce_dir, '%s.tests.txt' % self.name)
+            reproduce_dir, '%s.list.yaml' % self.name)
 
         color_stdout.queue_msg_wrapper = \
             lambda output, w=self: w.wrap_output(output)
@@ -168,7 +169,7 @@ class Worker:
         try:
             task = self.find_task(task_id)
             with open(self.tests_file, 'a') as f:
-                f.write(repr(task.id) + '\n')
+                f.write('- ' + yaml.safe_dump(task.id))
             short_status = self.suite.run_test(
                 task, self.server, self.inspector)
         except KeyboardInterrupt:

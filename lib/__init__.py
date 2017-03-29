@@ -4,7 +4,7 @@ import shutil
 import atexit
 import signal
 import traceback
-from ast import literal_eval
+import yaml
 
 from options              import Options
 from lib.tarantool_server import TarantoolServer
@@ -28,12 +28,13 @@ def warn_unix_sockets():
 
 def parse_tests_file(tests_file):
     reproduce = []
+    if not tests_file:
+        return reproduce
     try:
-        if tests_file:
-            with open(tests_file, 'r') as f:
-                for line in f:
-                    task_id = literal_eval(line)
-                    reproduce.append(task_id)
+        with open(tests_file, 'r') as f:
+            for task_id in yaml.load(f):
+                task_name, task_conf = task_id
+                reproduce.append((task_name, task_conf))
     except IOError:
         color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
             tests_file, schema='error')

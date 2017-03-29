@@ -23,7 +23,6 @@
 # * Can we remove globals in lib/__init__.py?
 # * Raise in tarantool_connection.py in addition to unix sockets warning in
 #   __init__.py?
-# * JSON for var/reproduce/*.tests.txt (s/.txt/.json).
 # * Do out-of-source build work?
 # * Extract parts of this file into workers_managers.py and listeners.py.
 
