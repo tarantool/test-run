@@ -38,6 +38,9 @@ from test import TestRunGreenlet, TestExecutionError
 from lib.colorer import Colorer
 
 color_stdout = Colorer()
+def color_log(*args, **kwargs):
+    kwargs['log_only'] = True
+    color_stdout(*args, **kwargs)
 
 
 def save_join(green_obj, timeout=None):
@@ -420,8 +423,8 @@ class TarantoolServer(Server):
         builddir = os.path.join(builddir, "src")
         path = builddir + os.pathsep + os.environ["PATH"]
         if not silent:
-            color_stdout("Looking for server binary in ", schema='serv_text')
-            color_stdout(path + ' ...\n', schema='path')
+            color_log("Looking for server binary in ", schema='serv_text')
+            color_log(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
             exe = os.path.join(_dir, cls.default_tarantool["bin"])
             ctl_dir = _dir
@@ -451,18 +454,18 @@ class TarantoolServer(Server):
             self._admin = int(self._start_against_running) + 1
             return
         if not silent:
-            color_stdout('Installing the server ...\n', schema='serv_text')
-            color_stdout('    Found executable at ', schema='serv_text')
-            color_stdout(self.binary + '\n', schema='path')
-            color_stdout('    Found tarantoolctl at  ', schema='serv_text')
-            color_stdout(self.ctl_path + '\n', schema='path')
-            color_stdout('    Creating and populating working directory in ', schema='serv_text')
-            color_stdout(self.vardir + ' ...\n', schema='path')
+            color_log('Installing the server ...\n', schema='serv_text')
+            color_log('    Found executable at ', schema='serv_text')
+            color_log(self.binary + '\n', schema='path')
+            color_log('    Found tarantoolctl at  ', schema='serv_text')
+            color_log(self.ctl_path + '\n', schema='path')
+            color_log('    Creating and populating working directory in ', schema='serv_text')
+            color_log(self.vardir + ' ...\n', schema='path')
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
             if not silent:
-                color_stdout('    Found old vardir, deleting ...\n', schema='serv_text')
+                log_stdout('    Found old vardir, deleting ...\n', schema='serv_text')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
@@ -513,10 +516,12 @@ class TarantoolServer(Server):
         self.logfile = '%s.log' % self.name
 
         if not silent:
-            color_stdout("Starting the server ...\n", schema='serv_text')
-            color_stdout("Starting ", schema='serv_text')
-            color_stdout((os.path.basename(self.binary) if not self.script else self.script_dst) + " \n", schema='path')
-            color_stdout(self.version() + "\n", schema='version')
+            path = self.script_dst if self.script else \
+                os.path.basename(self.binary)
+            color_log("Starting the server ...\n", schema='serv_text')
+            color_log("Starting ", schema='serv_text')
+            color_log(path + " \n", schema='path')
+            color_log(self.version() + "\n", schema='version')
 
         check_port(self.admin.port)
         os.putenv("LISTEN", self.iproto.uri)
@@ -656,7 +661,7 @@ class TarantoolServer(Server):
                 raise Exception('Server is not started')
             return
         if not silent:
-            color_stdout('Stopping the server ...\n', schema='serv_text')
+            log_stdout('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process.returncode is None:
             try:

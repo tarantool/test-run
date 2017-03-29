@@ -159,10 +159,10 @@ class Colorer(object):
     def ret_stdout(self):
         sys.stdout = self.stdout
 
-    def _write(self, obj):
+    def _write(self, obj, log_only):
         if self.queue:
             if self.queue_msg_wrapper:
-                obj = self.queue_msg_wrapper(obj)
+                obj = self.queue_msg_wrapper(obj, log_only)
             self.queue.put(obj)
         else:
             self.stdout.write(obj)
@@ -194,7 +194,7 @@ class Colorer(object):
             else:
                 data += self.disable
         if data:
-            self._write(data)
+            self._write(data, kwargs.get('log_only', False))
         self._flush()
 
     def __call__(self, *args, **kwargs):

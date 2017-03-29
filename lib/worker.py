@@ -10,6 +10,9 @@ from lib.test_suite import TestSuite
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
+def color_log(*args, **kwargs):
+    kwargs['log_only'] = True
+    color_stdout(*args, **kwargs)
 
 
 # Utils
@@ -66,9 +69,10 @@ class TaskResult(BaseWorkerResult):
 
 
 class WorkerOutput(BaseWorkerResult):
-    def __init__(self, worker_id, worker_name, output):
+    def __init__(self, worker_id, worker_name, output, log_only):
         super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
+        self.log_only = log_only
 
 
 class WorkerDone(BaseWorkerResult):
@@ -89,8 +93,8 @@ class Worker:
         color_stdout('\n[Worker "%s"] Caught keyboard interrupt; stopping...\n'
                      % self.name, schema='test_var')
 
-    def wrap_output(self, output):
-        return WorkerOutput(self.id, self.name, output)
+    def wrap_output(self, output, log_only):
+        return WorkerOutput(self.id, self.name, output, log_only)
 
     def done_marker(self):
         return WorkerDone(self.id, self.name)
@@ -124,8 +128,7 @@ class Worker:
         self.tests_file = os.path.join(
             reproduce_dir, '%s.list.yaml' % self.name)
 
-        color_stdout.queue_msg_wrapper = \
-            lambda output, w=self: w.wrap_output(output)
+        color_stdout.queue_msg_wrapper = self.wrap_output
 
         self.last_task_done = True
         self.last_task_id = -1
@@ -188,7 +191,7 @@ class Worker:
             task_id = self.task_get(task_queue)
             # None is 'stop worker' marker
             if task_id is None:
-                color_stdout('Worker "%s" exhausted task queue; '
+                color_log('Worker "%s" exhausted task queue; '
                              'stopping the server...\n' % self.name,
                              schema='test_var')
                 self.stop(task_queue, result_queue)

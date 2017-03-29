@@ -2,20 +2,17 @@
 
 
 # TODOs:
-# * Save output for failed tests and give it at the end.
-#   * Will eliminated by prettified output?
-#   * Print log files at the end?
 # * Limit workers count by tests count at max.
-# * Prettify output: extract build lines into log file like var/*/worker.log.
-#   * Shows in on the screen only when the option '--debug' passed (separate
-#     schema in Colorer).
 # * Log file for inspector (useful for debugging).
+#   * Just use color_log in it?
 # * Document how workers-task-buckets interacts and works; and possible
 #   non-obvious code parts.
 #   * Comment each Worker's results_queue classes.
 #   * Describe how we wait workers, when exits, how select results/output from
 #     workers, how and what doing listeners.
 # * Can we remove globals in lib/__init__.py?
+#   * Options as a singleton.
+#   * Don't need chdir before exit?
 # * Raise in tarantool_connection.py in addition to unix sockets warning in
 #   __init__.py?
 # * Do out-of-source build work?
@@ -34,6 +31,7 @@ import time
 import select
 import random
 import copy
+import yaml
 
 import subprocess
 import multiprocessing
@@ -59,9 +57,10 @@ class TaskResultListener(object):
 
 
 class StatisticsWatcher(TaskResultListener):
-    def __init__(self):
+    def __init__(self, get_logfile):
         self.stats = dict()
         self.failed_tasks = []
+        self.get_logfile = get_logfile
 
     def process_result(self, obj):
         if not isinstance(obj, TaskResult):
@@ -85,8 +84,9 @@ class StatisticsWatcher(TaskResultListener):
 
         color_stdout('Failed tasks:\n', schema='test_var')
         for task_id, worker_name in self.failed_tasks:
-            color_stdout('* %s on worker "%s"\n' % (str(task_id), worker_name),
-                         schema='test_var')
+            # TODO: output path to reproduce file
+            color_stdout('- %s# logfile: %s\n' % (yaml.safe_dump(task_id),
+                self.get_logfile(worker_name)), schema='test_var')
 
 
 class LogOutputWatcher(TaskResultListener):
@@ -98,6 +98,11 @@ class LogOutputWatcher(TaskResultListener):
         except OSError:
             pass
 
+    def get_logfile(self, worker_name):
+        filename = '%s.log' % worker_name
+        filepath = os.path.join(self.logdir, filename)
+        return os.path.realpath(filepath)
+
     def process_result(self, obj):
         if isinstance(obj, WorkerDone):
             self.fds[obj.worker_id].close()
@@ -107,8 +112,7 @@ class LogOutputWatcher(TaskResultListener):
             return
 
         if obj.worker_id not in self.fds.keys():
-            filename = '%s.log' % obj.worker_name
-            filepath = os.path.join(self.logdir, filename)
+            filepath = self.get_logfile(obj.worker_name)
             self.fds[obj.worker_id] = open(filepath, 'w')
         fd = self.fds[obj.worker_id]
         fd.write(obj.output)
@@ -155,7 +159,7 @@ class OutputWatcher(TaskResultListener):
                 del self.buffer[obj.worker_id]
             return
 
-        if not isinstance(obj, WorkerOutput):
+        if not isinstance(obj, WorkerOutput) or obj.log_only:
             return
 
         bufferized = self.buffer.get(obj.worker_id, '')
@@ -269,9 +273,9 @@ class WorkersManager:
             not lib.options.args.long
         watch_fail = not lib.options.args.is_force
 
-        self.statistics = StatisticsWatcher()
-        output_watcher = OutputWatcher()
         log_output_watcher = LogOutputWatcher()
+        self.statistics = StatisticsWatcher(log_output_watcher.get_logfile)
+        output_watcher = OutputWatcher()
         self.listeners = [self.statistics, log_output_watcher, output_watcher]
         if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
