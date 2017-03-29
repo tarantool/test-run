@@ -18,16 +18,14 @@
 # * Document how workers-task-buckets interacts and works; and possible
 #   non-obvious code parts.
 #   * Comment each Worker's results_queue classes.
-#   * Describe how we wait workers, when exits, how select results/output from workers.
+#   * Describe how we wait workers, when exits, how select results/output from
+#     workers, how and what doing listeners.
 # * Can we remove globals in lib/__init__.py?
-# * Raise in tarantool_connection.py in addition to unix sockets warning in __init__.py?
+# * Raise in tarantool_connection.py in addition to unix sockets warning in
+#   __init__.py?
 # * JSON for var/reproduce/*.tests.txt (s/.txt/.json).
 # * Do out-of-source build work?
 # * Extract parts of this file into workers_managers.py and listeners.py.
-# * Disable HangWatcher if one of '--long', '--valgrind', '--gdb', '--lldb'
-#   options passed.
-#   * Add the '--no-output-timeout' option that enables HangWatcher and set
-#     specific time in seconds for it.
 
 
 import os
@@ -51,10 +49,11 @@ color_stdout = Colorer()
 
 
 class TaskResultListener(object):
-    def process_result(self, *args, **kwargs):
+    def process_result(self, obj):
         raise ValueError('override me')
 
-    def process_timeout(self, *args, **kwargs):
+    def process_timeout(self, delta_seconds):
+        """ Called after delta_seconds time of inactivity """
         # optionally override
         pass
 
@@ -95,7 +94,6 @@ class TaskOutput(TaskResultListener):
 
     def __init__(self):
         self.buffer = dict()
-        self.report_at_timeout = True
 
     @staticmethod
     def _write(output, worker_name):
@@ -129,12 +127,8 @@ class TaskOutput(TaskResultListener):
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
 
-    def process_timeout(self):
-        if not self.report_at_timeout:
-            return
-        color_stdout("No output during 2 seconds. List of workers don't"
-                     " reported its done: %s\n" % str(self.buffer.keys()),
-                     schema='test_var')
+    def not_done_worker_ids(self):
+        return self.buffer.keys()
 
 
 class FailWatcher(TaskResultListener):
@@ -161,17 +155,23 @@ class HangError(Exception):
 class HangWatcher(TaskResultListener):
     """ Terminate all workers if no output received 'no_output_times' time """
 
-    def __init__(self, no_output_times, kill_all_workers):
-        self.no_output_times = no_output_times
+    def __init__(self, get_not_done_worker_ids, kill_all_workers, timeout):
+        self.get_not_done_worker_ids = get_not_done_worker_ids
         self.kill_all_workers = kill_all_workers
-        self.cur_times = 0
+        self.timeout = timeout
+        self.inactivity = 0.0
 
     def process_result(self, obj):
-        self.cur_times = 0
+        self.inactivity = 0.0
 
-    def process_timeout(self):
-        self.cur_times += 1
-        if self.cur_times < self.no_output_times:
+    def process_timeout(self, delta_seconds):
+        self.inactivity += delta_seconds
+        worker_ids = self.get_not_done_worker_ids()
+        color_stdout("No output during %d seconds. List of workers don't"
+                     " reported its done: %s; We will exit after %d seconds"
+                     " w/o output.\n" % (self.inactivity, worker_ids,
+                     self.timeout), schema='test_var')
+        if self.inactivity < self.timeout:
             return
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
@@ -198,7 +198,6 @@ class WorkersManager:
             self.task_queues.append(workers_bucket_manager.task_queue)
 
         self.report_timeout = 2.0
-        self.kill_after_report_cnt = 5
 
         self.statistics = None
         self.fail_watcher = None
@@ -222,14 +221,25 @@ class WorkersManager:
                 pass
 
     def init_listeners(self):
+        watch_hang = lib.options.args.no_output_timeout >= 0 and \
+            not lib.options.args.gdb and \
+            not lib.options.args.lldb and \
+            not lib.options.args.valgrind and \
+            not lib.options.args.long
+        watch_fail = not lib.options.args.is_force
+
         self.statistics = TaskStatistics()
-        self.listeners = [self.statistics, TaskOutput()]
-        if not lib.options.args.is_force:
+        task_output = TaskOutput()
+        self.listeners = [self.statistics, task_output]
+        if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
-        hang_watcher = HangWatcher(self.kill_after_report_cnt,
-                                   self.kill_all_workers)
-        self.listeners.append(hang_watcher)
+        if watch_hang:
+            no_output_timeout = float(lib.options.args.no_output_timeout or 10)
+            hang_watcher = HangWatcher(
+                task_output.not_done_worker_ids, self.kill_all_workers,
+                no_output_timeout)
+            self.listeners.append(hang_watcher)
 
     def start(self):
         for _ in range(self.max_workers_cnt):
@@ -298,7 +308,7 @@ class WorkersManager:
     def invoke_listeners(self, inputs, ready_inputs):
         if not ready_inputs:
             for listener in self.listeners:
-                listener.process_timeout()
+                listener.process_timeout(self.report_timeout)
             self.check_for_dead_processes()
 
         for ready_input in ready_inputs:

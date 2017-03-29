@@ -128,6 +128,17 @@ class Options:
                 help="""Workers count. Default: CPUs count x 2.
                 Note: The option works now only with test-run-parallel.py.""")
 
+        parser.add_argument(
+                "--no-output-timeout",
+                dest="no_output_timeout",
+                default=0,
+                type=int,
+                help="""Exit if there was no output from workers during this
+                amount of seconds. Set it to -1 to disable hang detection.
+                Default: 10 [seconds] (but disabled when one of --gdb, --llgb,
+                --valgrind, --long options is passed).
+                Note: The option works now only with test-run-parallel.py.""")
+
         self.args = parser.parse_args()
         self.check()
 
