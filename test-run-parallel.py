@@ -182,7 +182,7 @@ class HangWatcher(TaskResultListener):
 
 
 class WorkersManager:
-    def __init__(self, buckets, max_workers_cnt):
+    def __init__(self, buckets, max_workers_cnt, randomize):
         self.pids = []
         self.processes = []
         self.result_queues = []
@@ -192,7 +192,8 @@ class WorkersManager:
 
         self.workers_bucket_managers = dict()
         for key, bucket in buckets.items():
-            workers_bucket_manager = WorkersBucketManager(key, bucket)
+            workers_bucket_manager = WorkersBucketManager(
+                key, bucket, randomize)
             self.workers_bucket_managers[key] = workers_bucket_manager
             self.result_queues.append(workers_bucket_manager.result_queue)
             self.task_queues.append(workers_bucket_manager.task_queue)
@@ -207,6 +208,8 @@ class WorkersManager:
         self.max_workers_cnt = max_workers_cnt
 
         self.pid_to_worker_id = dict()
+
+        self.randomize = randomize
 
     def terminate_all_workers(self):
         for process in self.processes:
@@ -248,7 +251,8 @@ class WorkersManager:
     def find_nonempty_bucket_manager(self):
         workers_bucket_managers_rnd = list(
             self.workers_bucket_managers.values())
-        random.shuffle(workers_bucket_managers_rnd)
+        if self.randomize:
+            random.shuffle(workers_bucket_managers_rnd)
         for workers_bucket_manager in workers_bucket_managers_rnd:
             if not workers_bucket_manager.done:
                 return workers_bucket_manager
@@ -351,11 +355,13 @@ class WorkersManager:
 
 
 class WorkersBucketManager:
-    def __init__(self, key, bucket):
+    def __init__(self, key, bucket, randomize):
         self.key = key
         self.gen_worker = bucket['gen_worker']
         self.task_ids = bucket['task_ids']
-        random.shuffle(self.task_ids)
+        self.randomize = randomize
+        if self.randomize:
+            random.shuffle(self.task_ids)
         self.result_queue = SimpleQueue()
         self.task_queue = SimpleQueue()
         for task_id in self.task_ids:
@@ -422,13 +428,15 @@ def main_loop():
     if jobs == 0:
         # faster result I got was with 2 * cpu_count
         jobs = 2 * multiprocessing.cpu_count()
+    randomize = True
 
     buckets = lib.worker.task_buckets()
     if lib.reproduce:
         buckets = reproduce_buckets(lib.reproduce, buckets)
         jobs = 1
+        randomize = False
 
-    workers_manager = WorkersManager(buckets, jobs)
+    workers_manager = WorkersManager(buckets, jobs, randomize)
     workers_manager.start()
     try:
         workers_manager.wait()
