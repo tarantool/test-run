@@ -20,6 +20,10 @@
 #   __init__.py?
 # * Do out-of-source build work?
 # * Extract parts of this file into workers_managers.py and listeners.py.
+# * Count tests that are 'not_run' due to worker hang (compare received tasks
+#   results w/ sent tasks).
+#   * Non-zero exit code in this case (in the case when we have any 'fail' or
+#     'not_run').
 
 
 import os
@@ -83,6 +87,39 @@ class StatisticsWatcher(TaskResultListener):
         for task_id, worker_name in self.failed_tasks:
             color_stdout('* %s on worker "%s"\n' % (str(task_id), worker_name),
                          schema='test_var')
+
+
+class LogOutputWatcher(TaskResultListener):
+    def __init__(self):
+        self.fds = dict()
+        self.logdir = os.path.join(lib.options.args.vardir, 'log')
+        try:
+            os.makedirs(self.logdir)
+        except OSError:
+            pass
+
+    def process_result(self, obj):
+        if isinstance(obj, WorkerDone):
+            self.fds[obj.worker_id].close()
+            del self.fds[obj.worker_id]
+
+        if not isinstance(obj, WorkerOutput):
+            return
+
+        if obj.worker_id not in self.fds.keys():
+            filename = '%s.log' % obj.worker_name
+            filepath = os.path.join(self.logdir, filename)
+            self.fds[obj.worker_id] = open(filepath, 'w')
+        fd = self.fds[obj.worker_id]
+        fd.write(obj.output)
+        fd.flush()
+
+    def __del__(self):
+        for fd in self.fds.values():
+            try:
+                fd.close()
+            except IOError:
+                pass
 
 
 class OutputWatcher(TaskResultListener):
@@ -234,7 +271,8 @@ class WorkersManager:
 
         self.statistics = StatisticsWatcher()
         output_watcher = OutputWatcher()
-        self.listeners = [self.statistics, output_watcher]
+        log_output_watcher = LogOutputWatcher()
+        self.listeners = [self.statistics, log_output_watcher, output_watcher]
         if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
@@ -294,7 +332,7 @@ class WorkersManager:
                 # write output from workers to stdout
                 new_listeners = []
                 for listener in self.listeners:
-                    if isinstance(listener, OutputWatcher):
+                    if isinstance(listener, (LogOutputWatcher, OutputWatcher)):
                         listener.report_at_timeout = False
                         new_listeners.append(listener)
                 self.listeners = new_listeners
