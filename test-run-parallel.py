@@ -2,13 +2,6 @@
 
 
 # TODOs:
-# * Fix current bad effects caused by hitting Ctrl+C:
-#   * Tarantool servers can hang after Ctrl+C (its worker doesn't wait for it):
-#     * default (case: app/??? 'app.lua')
-#     * non-default (okay?)
-#     * unknown (only in app-tap/tarantoolctl.test.lua, e.g. 'good_script.lua'):
-#       * in group -- SIGTERM group (except the main process).
-#       * daemons -- nothing can be done from test-run side.
 # * Save output for failed tests and give it at the end.
 # * Limit workers count by tests count at max.
 # * Prettify output: extract build lines into log file like var/*/worker.log.
@@ -36,12 +29,14 @@ import select
 import random
 import copy
 
+import subprocess
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
 
 import lib
 from lib.worker import WorkerOutput, WorkerDone, TaskResult
 from lib.colorer import Colorer
+from lib.utils import signame
 
 
 color_stdout = Colorer()
@@ -448,16 +443,85 @@ def main_loop():
     workers_manager.wait_processes()
 
 
+def kill_our_group():
+    def pids_in_group(group_id=0):
+        """ PIDs of processes the process group except my PID.
+            Note: Unix only. """
+        pids = []
+        cmd = ['pgrep', '-g', str(group_id)]
+        p = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
+        for line in p.stdout:
+            line = line.strip()
+            if line:
+                pids.append(int(line))
+        pgrep_pid = p.pid
+        my_pid = os.getpid()
+        p.wait()
+        if pgrep_pid in pids:
+            pids.remove(pgrep_pid)
+        if my_pid in pids:
+            pids.remove(my_pid)
+        return pids
+
+    def remove_zombies(pids):
+        """ Works only for childs; don't for all group's processes """
+        if not pids:
+            return
+        color_stdout('Collecting zombies...\n', schema='test_var')
+        for pid in pids:
+            try:
+                wpid, wstatus = os.waitpid(pid, os.WNOHANG)
+                if wpid == pid and (os.WIFEXITED(wstatus)
+                        or os.WIFSIGNALED(wstatus)):
+                    pids.remove(pid)
+            except OSError:
+                pass
+
+    def process_str(pid):
+        cmdline = 'unknown'
+        try:
+            with open('/proc/%d/cmdline' % pid, 'r') as f:
+                cmdline = ' '.join(f.read().split('\0')).strip() or cmdline
+        except (OSError, IOError):
+            pass
+        status = 'unknown'
+        try:
+            with open('/proc/%d/status' % pid, 'r') as f:
+                for line in f:
+                    key, value = line.split(':', 1)
+                    if key == 'State':
+                       status = value.strip()
+        except (OSError, IOError):
+            pass
+        return 'process %d [%s; %s]' % (pid, status, cmdline)
+
+    def kill_pids(pids, sig):
+        for pid in pids:
+            color_stdout('Killing %s by %s\n' % (process_str(pid),
+                signame(sig)))
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                pass
+
+    for sig in [signal.SIGTERM, signal.SIGKILL]:
+        time.sleep(0.1)
+        pids = pids_in_group()
+        remove_zombies(pids)
+        if pids:
+            color_stdout(
+                '[Main process] Sending %s to processes in our process '
+                'group...\n' % signame(sig), schema='test_var')
+            kill_pids(pids, sig)
+
+
 def main():
     try:
         main_loop()
     except KeyboardInterrupt as e:
-        # TODO: SIGTERM all workers (or all processes in our group except
-        #       myself?), then sleep 0.1 sec, then SIGKILL processes that still
-        #       alive.
-        color_stdout('\n[Main process] Caught keyboard interrupt;'
-                     ' waiting for processes for doing its clean up\n',
+        color_stdout('\n[Main process] Caught keyboard interrupt\n',
                      schema='test_var')
+    kill_our_group()
 
 
 if __name__ == "__main__":
