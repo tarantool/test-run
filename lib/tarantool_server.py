@@ -468,7 +468,7 @@ class TarantoolServer(Server):
             os.makedirs(self.vardir)
         else:
             if not silent:
-                log_stdout('    Found old vardir, deleting ...\n', schema='serv_text')
+                color_log('    Found old vardir, deleting ...\n', schema='serv_text')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
@@ -668,7 +668,7 @@ class TarantoolServer(Server):
                 raise Exception('Server is not started')
             return
         if not silent:
-            log_stdout('Stopping the server ...\n', schema='serv_text')
+            color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process.returncode is None:
             try:
