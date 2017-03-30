@@ -10,9 +10,6 @@
 #   * Comment each Worker's results_queue classes.
 #   * Describe how we wait workers, when exits, how select results/output from
 #     workers, how and what doing listeners.
-# * Can we remove globals in lib/__init__.py?
-#   * Options as a singleton.
-#   * Don't need chdir before exit?
 # * Raise in tarantool_connection.py in addition to unix sockets warning in
 #   __init__.py?
 # * Do out-of-source build work?
@@ -41,44 +38,18 @@ from workers_manager import WorkersManager
 color_stdout = Colorer()
 
 
-def reproduce_buckets(reproduce, all_buckets):
-    # check test list and find a bucket
-    found_bucket_ids = []
-    if not lib.reproduce:
-        raise ValueError('[reproduce] Tests list cannot be empty')
-    for i, task_id in enumerate(lib.reproduce):
-        for bucket_id, bucket in all_buckets.items():
-            if task_id in bucket['task_ids']:
-                found_bucket_ids.append(bucket_id)
-                break
-        if len(found_bucket_ids) != i + 1:
-            raise ValueError('[reproduce] Cannot find test "%s"' %
-                             str(task_id))
-    found_bucket_ids = list(set(found_bucket_ids))
-    if len(found_bucket_ids) < 1:
-        raise ValueError('[reproduce] Cannot find any suite for given tests')
-    elif len(found_bucket_ids) > 1:
-        raise ValueError(
-            '[reproduce] Given tests contained by different suites')
-
-    key = found_bucket_ids[0]
-    bucket = copy.deepcopy(all_buckets[key])
-    bucket['task_ids'] = lib.reproduce
-    return {key: bucket}
-
-
 def main_loop():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
-    jobs = lib.options.args.jobs
+    jobs = lib.Options().args.jobs
     if jobs == 0:
         # faster result I got was with 2 * cpu_count
         jobs = 2 * multiprocessing.cpu_count()
     randomize = True
 
     buckets = lib.worker.task_buckets()
-    if lib.reproduce:
-        buckets = reproduce_buckets(lib.reproduce, buckets)
+    if lib.Options().args.reproduce:
+        buckets = lib.worker.reproduce_buckets(buckets)
         jobs = 1
         randomize = False
 

@@ -53,7 +53,7 @@ def main_loop(failed_test_ids):
             short_status = worker.run_task(task_id)
             if short_status == 'fail':
                 failed_test_ids.append(task_id)
-                if not lib.options.args.is_force:
+                if not lib.Options().args.is_force:
                     return
 
 
@@ -67,11 +67,11 @@ def main():
         color_stdout('[Main loop] Caught keyboard interrupt\n', schema='test_var')
     except RuntimeError as e:
         color_stdout("\nFatal error: %s. Execution aborted.\n" % e, schema='error')
-        if lib.options.args.gdb:
+        if lib.Options().args.gdb:
             time.sleep(100)
         return (-1)
 
-    if failed_test_ids and lib.options.args.is_force:
+    if failed_test_ids and lib.Options().args.is_force:
         color_stdout("\n===== %d tests failed:\n" % len(failed_test_ids),
                      schema='error')
         for test_id in failed_test_ids:

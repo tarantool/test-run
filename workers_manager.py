@@ -60,12 +60,13 @@ class WorkersManager:
                 pass
 
     def init_listeners(self):
-        watch_hang = lib.options.args.no_output_timeout >= 0 and \
-            not lib.options.args.gdb and \
-            not lib.options.args.lldb and \
-            not lib.options.args.valgrind and \
-            not lib.options.args.long
-        watch_fail = not lib.options.args.is_force
+        args = lib.Options().args
+        watch_hang = args.no_output_timeout >= 0 and \
+            not args.gdb and \
+            not args.lldb and \
+            not args.valgrind and \
+            not args.long
+        watch_fail = not lib.Options().args.is_force
 
         log_output_watcher = listeners.LogOutputWatcher()
         self.statistics = listeners.StatisticsWatcher(
@@ -77,7 +78,7 @@ class WorkersManager:
                 self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
-            no_output_timeout = float(lib.options.args.no_output_timeout or 10)
+            no_output_timeout = float(args.no_output_timeout or 10)
             hang_watcher = listeners.HangWatcher(
                 output_watcher.not_done_worker_ids, self.kill_all_workers,
                 no_output_timeout)

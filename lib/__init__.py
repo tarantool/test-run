@@ -1,17 +1,16 @@
 import os
 import sys
 import shutil
-import atexit
-import signal
-import traceback
-import yaml
 
-from options              import Options
+from lib.options import Options
 from lib.tarantool_server import TarantoolServer
-from lib.unittest_server  import UnittestServer
+from lib.unittest_server import UnittestServer
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
+
+
+__all__ = ['Options']
 
 
 # TODO: check it also in tarantool_connection.py and raise in the case
@@ -20,26 +19,12 @@ def warn_unix_sockets():
     max_unix_socket_rel = './var/??_replication/autobootstrap_guest3.control'
     max_unix_socket_abs = os.path.realpath(max_unix_socket_rel)
     if len(max_unix_socket_abs) > unix_socket_len_limit:
-        color_stdout('WARGING: unix sockets can become longer than 107 symbols:\n',
+        color_stdout(
+            'WARGING: unix sockets can become longer than 107 symbols:\n',
+            schema='error')
+        color_stdout('WARNING: for example: "%s" has length %d\n' %
+                     (max_unix_socket_abs, len(max_unix_socket_abs)),
                      schema='error')
-        color_stdout('WARNING: for example: "%s" has length %d\n' % \
-            (max_unix_socket_abs, len(max_unix_socket_abs)), schema='error')
-
-
-def parse_tests_file(tests_file):
-    reproduce = []
-    if not tests_file:
-        return reproduce
-    try:
-        with open(tests_file, 'r') as f:
-            for task_id in yaml.load(f):
-                task_name, task_conf = task_id
-                reproduce.append((task_name, task_conf))
-    except IOError:
-        color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
-            tests_file, schema='error')
-        exit(1)
-    return reproduce
 
 
 def setenv():
@@ -55,8 +40,7 @@ def setenv():
 
 def module_init():
     """ Called at import """
-    options = Options()
-    oldcwd = os.getcwd()
+    args = Options().args
     # Change the current working directory to where all test
     # collections are supposed to reside
     # If script executed with (python test-run.py) dirname is ''
@@ -68,32 +52,23 @@ def module_init():
     setenv()
 
     warn_unix_sockets()
-    reproduce = parse_tests_file(options.args.reproduce)
 
     # always run with clean (non-existent) 'var' directory
     try:
-        shutil.rmtree(options.args.vardir)
+        shutil.rmtree(args.vardir)
     except OSError:
         pass
 
-    options.args.builddir = os.path.abspath(os.path.expanduser(options.args.builddir))
+    args.builddir = os.path.abspath(os.path.expanduser(args.builddir))
     os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
-    os.environ["BUILDDIR"] = os.path.abspath(options.args.builddir)
+    os.environ["BUILDDIR"] = os.path.abspath(args.builddir)
 
-    TarantoolServer.find_exe(options.args.builddir) # XXX: can raise
-    UnittestServer.find_exe(options.args.builddir)
-
-    return (options, oldcwd, reproduce)
-
-@atexit.register
-def module_del():
-    """ Called before the module exit """
-    if 'oldcwd' in globals().keys() and oldcwd:
-        os.chdir(oldcwd)
+    TarantoolServer.find_exe(args.builddir)  # XXX: can raise
+    UnittestServer.find_exe(args.builddir)
 
 
-# Globals
-#########
+# Init
+######
 
 
-options, oldcwd, reproduce = module_init()
+module_init()

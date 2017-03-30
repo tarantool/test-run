@@ -20,15 +20,31 @@ def color_log(*args, **kwargs):
 
 
 def find_suites():
-    suite_names = lib.options.args.suites
+    suite_names = lib.Options().args.suites
     if suite_names == []:
         for root, dirs, names in os.walk(os.getcwd(), followlinks=True):
             if "suite.ini" in names:
                 suite_names.append(os.path.basename(root))
 
-    suites = [TestSuite(suite_name, lib.options.args)
+    suites = [TestSuite(suite_name, lib.Options().args)
               for suite_name in sorted(suite_names)]
     return suites
+
+
+def parse_reproduce_file(filepath):
+    reproduce = []
+    if not filepath:
+        return reproduce
+    try:
+        with open(filepath, 'r') as f:
+            for task_id in yaml.load(f):
+                task_name, task_conf = task_id
+                reproduce.append((task_name, task_conf))
+    except IOError:
+        color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
+            filepath, schema='error')
+        exit(1)
+    return reproduce
 
 
 # Get tasks and worker generators
@@ -48,6 +64,33 @@ def task_buckets():
                 'task_ids': task_ids,
             }
     return res
+
+
+def reproduce_buckets(all_buckets):
+    # check test list and find a bucket
+    found_bucket_ids = []
+    reproduce = parse_reproduce_file(lib.Options().args.reproduce)
+    if not reproduce:
+        raise ValueError('[reproduce] Tests list cannot be empty')
+    for i, task_id in enumerate(lib.reproduce):
+        for bucket_id, bucket in all_buckets.items():
+            if task_id in bucket['task_ids']:
+                found_bucket_ids.append(bucket_id)
+                break
+        if len(found_bucket_ids) != i + 1:
+            raise ValueError('[reproduce] Cannot find test "%s"' %
+                             str(task_id))
+    found_bucket_ids = list(set(found_bucket_ids))
+    if len(found_bucket_ids) < 1:
+        raise ValueError('[reproduce] Cannot find any suite for given tests')
+    elif len(found_bucket_ids) > 1:
+        raise ValueError(
+            '[reproduce] Given tests contained by different suites')
+
+    key = found_bucket_ids[0]
+    bucket = copy.deepcopy(all_buckets[key])
+    bucket['task_ids'] = reproduce
+    return {key: bucket}
 
 
 # Worker results
@@ -198,7 +241,7 @@ class Worker:
                 break
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
-            if not lib.options.args.is_force and short_status == 'fail':
+            if not lib.Options().args.is_force and short_status == 'fail':
                 color_stdout(
                     'Worker "%s" got failed test; stopping the server...\n'
                     % self.name, schema='test_var')

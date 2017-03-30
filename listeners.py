@@ -57,7 +57,7 @@ class StatisticsWatcher(TaskResultListener):
 class LogOutputWatcher(TaskResultListener):
     def __init__(self):
         self.fds = dict()
-        self.logdir = os.path.join(lib.options.args.vardir, 'log')
+        self.logdir = os.path.join(lib.Options().args.vardir, 'log')
         try:
             os.makedirs(self.logdir)
         except OSError:

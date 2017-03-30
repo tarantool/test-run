@@ -5,10 +5,18 @@ import signal
 from gevent import socket
 
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
 
 def check_libs():
+    from lib.colorer import Colorer
+    color_stdout = Colorer()
+
     deps = [
         ('msgpack', 'msgpack-python'),
         ('tarantool', 'tarantool-python')
@@ -38,6 +46,10 @@ def non_empty_valgrind_logs(paths_to_log):
 
 def print_tail_n(filename, num_lines):
     """Print N last lines of a file."""
+
+    from lib.colorer import Colorer
+    color_stdout = Colorer()
+
     with open(filename, "r+") as logfile:
         tail_n = collections.deque(logfile, num_lines)
         for line in tail_n:

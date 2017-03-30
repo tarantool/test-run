@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 from itertools import product
+from lib.utils import Singleton
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
@@ -9,6 +10,9 @@ color_stdout = Colorer()
 
 class Options:
     """Handle options of test-runner"""
+
+    __metaclass__ = Singleton
+
     def __init__(self):
         """Add all program options, with their defaults."""
 
