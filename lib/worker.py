@@ -2,14 +2,17 @@ import os
 import signal
 import traceback
 import yaml
+import copy
+import functools
 
 import lib
-from lib.tarantool_server import TarantoolStartError
 from lib.test_suite import TestSuite
 
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
+
+
 def color_log(*args, **kwargs):
     kwargs['log_only'] = True
     color_stdout(*args, **kwargs)
@@ -42,7 +45,7 @@ def parse_reproduce_file(filepath):
                 reproduce.append((task_name, task_conf))
     except IOError:
         color_stdout('Cannot read "%s" passed as --reproduce argument\n' %
-            filepath, schema='error')
+                     filepath, schema='error')
         exit(1)
     return reproduce
 
@@ -56,7 +59,7 @@ def task_buckets():
     res = {}
     for suite in suites:
         key = os.path.basename(suite.suite_path)
-        gen_worker = lambda _id, suite=suite: Worker(suite, _id)
+        gen_worker = functools.partial(Worker, suite)  # get _id as an arg
         task_ids = [task.id for task in suite.find_tests()]
         if task_ids:
             res[key] = {
@@ -72,7 +75,7 @@ def reproduce_buckets(all_buckets):
     reproduce = parse_reproduce_file(lib.Options().args.reproduce)
     if not reproduce:
         raise ValueError('[reproduce] Tests list cannot be empty')
-    for i, task_id in enumerate(lib.reproduce):
+    for i, task_id in enumerate(reproduce):
         for bucket_id, bucket in all_buckets.items():
             if task_id in bucket['task_ids']:
                 found_bucket_ids.append(bucket_id)
@@ -186,12 +189,11 @@ class Worker:
             color_stdout('Worker "%s" cannot start tarantool server; '
                          'the tasks will be ignored...\n' % self.name,
                          schema='error')
-            color_stdout("The raised exception is '%s' of type '%s'. "
-                         "Check worker's log file for more information.\n"
+            color_stdout("The raised exception is '%s' of type '%s'.\n"
                          % (str(e), str(type(e))), schema='error')
-            color_log(
-                'Worker "%s" received the following error:\n'
-                % self.name + traceback.format_exc() + '\n', schema='error')
+            color_stdout('Worker "%s" received the following error:\n'
+                         % self.name + traceback.format_exc() + '\n',
+                         schema='error')
 
 
     # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
@@ -243,8 +245,8 @@ class Worker:
             # None is 'stop worker' marker
             if task_id is None:
                 color_log('Worker "%s" exhausted task queue; '
-                             'stopping the server...\n' % self.name,
-                             schema='test_var')
+                          'stopping the server...\n' % self.name,
+                          schema='test_var')
                 self.stop(task_queue, result_queue)
                 break
             short_status = self.run_task(task_id)

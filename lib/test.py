@@ -168,7 +168,7 @@ class Test:
         except TestExecutionError:
             self.is_executed_ok = False
         except Exception as e:
-            color_stdout('Test.run() received the following error:\n' +
+            color_stdout('\nTest.run() received the following error:\n' +
                 traceback.format_exc() + '\n', schema='error')
             diagnostics = str(e)
         finally:
