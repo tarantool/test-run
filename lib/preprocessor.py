@@ -9,6 +9,13 @@ from gevent import socket
 
 from lib.admin_connection import AdminAsyncConnection
 
+from lib.colorer import Colorer
+color_stdout = Colorer()
+def color_log(*args, **kwargs):
+    kwargs['log_only'] = True
+    color_stdout(*args, **kwargs)
+
+
 class Namespace(object):
     pass
 
@@ -149,6 +156,9 @@ class TestState(object):
             raise LuaPreprocessorException("Wrong option: "+repr(key))
 
     def server_start(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_start(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)),
+            schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
         self.servers[sname].start(silent=True)
@@ -159,6 +169,8 @@ class TestState(object):
             LuaPreprocessorException('Can\'t start server '+repr(sname))
 
     def server_stop(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)), schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t stop nonexistent server '+repr(sname))
         self.connections[sname].disconnect()
@@ -166,6 +178,9 @@ class TestState(object):
         self.servers[sname].stop()
 
     def server_create(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_create(%s, %s, %s)\n' % (
+            hex(id(self)), str(ctype), str(sname), str(opts)),
+            schema='test_var')
         if sname in self.servers:
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
@@ -336,6 +351,8 @@ class TestState(object):
         self.parse_preprocessor(string)
 
     def cleanup(self):
+        color_log('\nDEBUG: TestState[%s].cleanup()\n' % hex(id(self)),
+            schema='test_var')
         sys.stdout.clear_all_filters()
         # don't stop the default server
         self.servers.pop('default', None)

@@ -3,8 +3,6 @@
 
 # TODOs:
 # * Limit workers count by tests count at max.
-# * Log file for inspector (useful for debugging).
-#   * Just use color_log in it?
 # * Document how workers-task-buckets interacts and works; and possible
 #   non-obvious code parts.
 #   * Comment each Worker's results_queue classes.
