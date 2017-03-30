@@ -182,9 +182,17 @@ class Worker:
             self.initialized = True
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
-        except TarantoolStartError:
+        except Exception as e:
             color_stdout('Worker "%s" cannot start tarantool server; '
-                         'ignoring tasks...\n' % self.name, schema='error')
+                         'the tasks will be ignored...\n' % self.name,
+                         schema='error')
+            color_stdout("The raised exception is '%s' of type '%s'. "
+                         "Check worker's log file for more information.\n"
+                         % (str(e), str(type(e))), schema='error')
+            color_log(
+                'Worker "%s" received the following error:\n'
+                % self.name + traceback.format_exc() + '\n', schema='error')
+
 
     # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
     #       worker' marker readed from the queue, but not returned to us?
@@ -255,6 +263,7 @@ class Worker:
 
     def run_all(self, task_queue, result_queue):
         if not self.initialized:
+            self.flush_all_tasks(task_queue, result_queue)
             result_queue.put(self.done_marker())
             return
 

@@ -12,6 +12,11 @@
 #   results w/ sent tasks).
 #   * Non-zero exit code in this case (in the case when we have any 'fail' or
 #     'not_run').
+# * Don't restart a server per test, fix admin connections (and maybe update
+#   properly other fields) w/o server restarting; check 0b586f55.
+# * Found workers failed at the initialization (starting server) -- via
+#   result_queue -- then print path to worker's log file and give non-zero exit
+#   status.
 
 import os
 import signal
