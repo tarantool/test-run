@@ -79,6 +79,8 @@ class LuaTest(FuncTest):
             return result
 
         for line in open(self.name, 'r'):
+            if not line.endswith('\n'):
+                line += '\n'
             # context switch for inspector after each line
             if not cmd:
                 cmd = StringIO()
