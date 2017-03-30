@@ -2,21 +2,34 @@
 
 
 # TODOs:
-# * Document how workers-task-buckets interacts and works; and possible
-#   non-obvious code parts.
-#   * Comment each Worker's results_queue classes.
-#   * Describe how we wait workers, when exits, how select results/output from
-#     workers, how and what doing listeners.
-# * Do out-of-source build work?
-# * Count tests that are 'not_run' due to worker hang (compare received tasks
-#   results w/ sent tasks).
-#   * Non-zero exit code in this case (in the case when we have any 'fail' or
-#     'not_run').
-# * Don't restart a server per test, fix admin connections (and maybe update
-#   properly other fields) w/o server restarting; check 0b586f55.
-# * Found workers failed at the initialization (starting server) -- via
-#   result_queue -- then print path to worker's log file and give non-zero exit
-#   status.
+# ! * Rename: Dispatcher (WorkersManager), DispatcherData (buckets).
+# ! * Document how workers-task-buckets interacts and works; and possible
+#     non-obvious code parts.
+#     * Comment each Worker's results_queue classes.
+#     * Describe how we wait workers, when exits, how select results/output
+#       from workers, how and what doing listeners.
+# ! * Count tests that are 'not_run' due to worker hang (compare received tasks
+#     results w/ sent tasks).
+#     * Non-zero exit code in this case (in the case when we have any 'fail' or
+#       'not_run').
+# ! * Do out-of-source build work?
+# ? * Don't restart a server per test, fix admin connections (and maybe update
+#     properly other fields) w/o server restarting; check 0b586f55.
+#     * Add Server's function like setup_for_test_type().
+#   * Found workers failed at the initialization (starting server) -- via
+#     result_queue -- then print path to worker's log file and give non-zero
+#     exit status.
+#   * Make color_stdout and color_log functions in colorer.py. Give
+#     comment/docstring about usage of color_log and intention to use it only
+#     for regular, non-error output that appears every run and mostly not
+#     needed for a user. Don't hide errors and backtraces (or any other details
+#     of an exceptional circumstances) from the screen, because such details
+#     especially useful with CI bots.
+#   * Add '--no-kill-group' option to run test-run in a shell pipeline. With
+#     this option test-run will kill only its direct childrens (workers).
+#   * Investigate why tarantool can be don't killed by workers, but only by
+#     main process by pgrp. Seems that default servers is affected.
+#   * Investigate new failing tests.
 
 import os
 import signal
