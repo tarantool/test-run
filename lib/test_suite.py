@@ -150,7 +150,12 @@ class TestSuite:
             'new', 'fail', or 'disabled'.
         """
         # fixme: remove this string if we fix all legacy tests
+        server.stop(silent=False)
+        # XXX: remove when start() below will be removed
         server.cls = test.__class__
+        # update .cls and possibly other fields; XXX: find better way to do so,
+        # like prepare_test_run method.
+        server.deploy(silent=False)
 
         test.inspector = inspector
         color_stdout(os.path.join(
