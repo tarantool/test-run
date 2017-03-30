@@ -32,6 +32,7 @@ import select
 import random
 import copy
 import yaml
+import functools
 
 import subprocess
 import multiprocessing
@@ -86,7 +87,7 @@ class StatisticsWatcher(TaskResultListener):
         for task_id, worker_name in self.failed_tasks:
             # TODO: output path to reproduce file
             color_stdout('- %s# logfile: %s\n' % (yaml.safe_dump(task_id),
-                self.get_logfile(worker_name)), schema='test_var')
+                         self.get_logfile(worker_name)), schema='test_var')
 
 
 class LogOutputWatcher(TaskResultListener):
@@ -212,7 +213,7 @@ class HangWatcher(TaskResultListener):
         color_stdout("No output during %d seconds. List of workers don't"
                      " reported its done: %s; We will exit after %d seconds"
                      " w/o output.\n" % (self.inactivity, worker_ids,
-                     self.timeout), schema='test_var')
+                                         self.timeout), schema='test_var')
         if self.inactivity < self.timeout:
             return
         color_stdout('\n[Main process] No output from workers. '
@@ -388,7 +389,7 @@ class WorkersManager:
                     "[Main process] Worker %d don't reported work "
                     "done using results queue, but the corresponding "
                     "process seems dead. Sending fake WorkerDone marker.\n"
-                        % worker_id, schema='test_var')
+                    % worker_id, schema='test_var')
                 self.pids.remove(pid)  # XXX: sync it w/ self.processes
 
     def wait_processes(self):
@@ -423,7 +424,7 @@ class WorkersBucketManager:
         # be good to prevent locking in case of 'bad' worker.
         self.task_queue.put(None)  # 'stop worker' marker
 
-        entry = lambda x=self, worker_id=worker_id: x._run_worker(worker_id)
+        entry = functools.partial(self._run_worker, worker_id)
 
         self.worker_ids.add(worker_id)
         process = multiprocessing.Process(target=entry)
@@ -520,8 +521,8 @@ def kill_our_group():
         for pid in pids:
             try:
                 wpid, wstatus = os.waitpid(pid, os.WNOHANG)
-                if wpid == pid and (os.WIFEXITED(wstatus)
-                        or os.WIFSIGNALED(wstatus)):
+                if wpid == pid and (os.WIFEXITED(wstatus) or
+                                    os.WIFSIGNALED(wstatus)):
                     pids.remove(pid)
             except OSError:
                 pass
@@ -539,7 +540,7 @@ def kill_our_group():
                 for line in f:
                     key, value = line.split(':', 1)
                     if key == 'State':
-                       status = value.strip()
+                        status = value.strip()
         except (OSError, IOError):
             pass
         return 'process %d [%s; %s]' % (pid, status, cmdline)
@@ -547,7 +548,7 @@ def kill_our_group():
     def kill_pids(pids, sig):
         for pid in pids:
             color_stdout('Killing %s by %s\n' % (process_str(pid),
-                signame(sig)))
+                                                 signame(sig)))
             try:
                 os.kill(pid, sig)
             except OSError:
