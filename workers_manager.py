@@ -26,8 +26,10 @@ class WorkersManager:
         self.workers_cnt = 0
         self.worker_next_id = 1
 
+        tasks_cnt = 0
         self.workers_bucket_managers = dict()
         for key, bucket in buckets.items():
+            tasks_cnt += len(bucket['task_ids'])
             workers_bucket_manager = WorkersBucketManager(
                 key, bucket, randomize)
             self.workers_bucket_managers[key] = workers_bucket_manager
@@ -41,7 +43,7 @@ class WorkersManager:
         self.listeners = None
         self.init_listeners()
 
-        self.max_workers_cnt = max_workers_cnt
+        self.max_workers_cnt = min(max_workers_cnt, tasks_cnt)
 
         self.pid_to_worker_id = dict()
 
