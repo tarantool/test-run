@@ -7,8 +7,6 @@
 #   * Comment each Worker's results_queue classes.
 #   * Describe how we wait workers, when exits, how select results/output from
 #     workers, how and what doing listeners.
-# * Raise in tarantool_connection.py in addition to unix sockets warning in
-#   __init__.py?
 # * Do out-of-source build work?
 # * Count tests that are 'not_run' due to worker hang (compare received tasks
 #   results w/ sent tasks).

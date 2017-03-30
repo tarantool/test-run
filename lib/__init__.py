@@ -5,26 +5,13 @@ import shutil
 from lib.options import Options
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
+from utils import warn_unix_sockets_at_start
 
 from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
 __all__ = ['Options']
-
-
-# TODO: check it also in tarantool_connection.py and raise in the case
-def warn_unix_sockets():
-    unix_socket_len_limit = 107
-    max_unix_socket_rel = './var/??_replication/autobootstrap_guest3.control'
-    max_unix_socket_abs = os.path.realpath(max_unix_socket_rel)
-    if len(max_unix_socket_abs) > unix_socket_len_limit:
-        color_stdout(
-            'WARGING: unix sockets can become longer than 107 symbols:\n',
-            schema='error')
-        color_stdout('WARNING: for example: "%s" has length %d\n' %
-                     (max_unix_socket_abs, len(max_unix_socket_abs)),
-                     schema='error')
 
 
 def setenv():
@@ -51,7 +38,7 @@ def module_init():
     os.chdir(path)
     setenv()
 
-    warn_unix_sockets()
+    warn_unix_sockets_at_start(args.vardir)
 
     # always run with clean (non-existent) 'var' directory
     try:

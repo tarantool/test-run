@@ -31,6 +31,7 @@ from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
 from lib.utils import check_port
 from lib.utils import signame
+from lib.utils import warn_unix_socket
 
 from greenlet import greenlet, GreenletExit
 from test import TestRunGreenlet, TestExecutionError
@@ -480,6 +481,10 @@ class TarantoolServer(Server):
             port = self._admin.port + 1
 
         self._iproto = find_port(port)
+
+        # these sockets will be created by tarantool itself
+        path = os.path.join(self.vardir, self.name + '.control')
+        warn_unix_socket(path)
 
     def deploy(self, silent=True, **kwargs):
         self.install(silent)

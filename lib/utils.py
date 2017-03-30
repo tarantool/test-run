@@ -5,6 +5,9 @@ import signal
 from gevent import socket
 
 
+UNIX_SOCKET_LEN_LIMIT = 107
+
+
 class Singleton(type):
     _instances = {}
     def __call__(cls, *args, **kwargs):
@@ -103,3 +106,39 @@ SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
     if k.startswith('SIG') and not k.startswith('SIG_'))
 def signame(signum):
     return SIGNAMES[signum]
+
+
+def warn_unix_sockets_at_start(vardir):
+    from colorer import Colorer
+    color_stdout = Colorer()
+
+    max_unix_socket_rel = '??_replication/autobootstrap_guest3.control'
+    real_vardir = os.path.realpath(vardir)
+    max_unix_socket_abs = os.path.join(real_vardir, max_unix_socket_rel)
+    max_unix_socket_real = os.path.realpath(max_unix_socket_abs)
+    if len(max_unix_socket_real) > UNIX_SOCKET_LEN_LIMIT:
+        color_stdout(
+            'WARGING: unix sockets can become longer than %d symbols:\n'
+            % UNIX_SOCKET_LEN_LIMIT,
+            schema='error')
+        color_stdout('WARNING: for example: "%s" has length %d\n' %
+                     (max_unix_socket_real, len(max_unix_socket_real)),
+                     schema='error')
+
+
+def warn_unix_socket(path):
+    from colorer import Colorer
+    color_stdout = Colorer()
+
+    real_path = os.path.realpath(path)
+    if len(real_path) <= UNIX_SOCKET_LEN_LIMIT or \
+            real_path in warn_unix_socket.warned:
+        return
+    color_stdout(
+        '\nWARGING: unix socket\'s "%s" path has length %d symbols that is '
+        'longer than %d. That likely will cause failing of tests.\n' %
+        (real_path, len(real_path), UNIX_SOCKET_LEN_LIMIT), schema='error')
+    warn_unix_socket.warned.add(real_path)
+
+
+warn_unix_socket.warned = set()

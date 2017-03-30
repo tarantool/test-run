@@ -81,6 +81,10 @@ class AppServer(Server):
             self.vardir
         )
 
+        # Note: we don't know the instance name of the tarantool server, so
+        # cannot check length of path of *.control unix socket created by it.
+        # So for 'app' tests type we don't check *.control unix sockets paths.
+
     def stop(self, silent):
         if not self.process:
             return
