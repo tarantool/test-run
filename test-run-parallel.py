@@ -19,7 +19,6 @@ import os
 import signal
 import sys
 import time
-import copy
 
 import subprocess
 import multiprocessing
@@ -138,10 +137,15 @@ def kill_our_group():
 def main():
     try:
         main_loop()
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         color_stdout('\n[Main process] Caught keyboard interrupt\n',
                      schema='test_var')
-    kill_our_group()
+    try:
+        kill_our_group()
+    except KeyboardInterrupt:
+        color_stdout(
+            '\n[Main process] Caught keyboard interrupt; killing processes '
+            'in our process group possibly not done\n', schema='test_var')
 
 
 if __name__ == "__main__":
