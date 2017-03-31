@@ -142,3 +142,13 @@ def warn_unix_socket(path):
 
 
 warn_unix_socket.warned = set()
+
+
+def safe_makedirs(directory):
+    if os.path.isdir(directory):
+        return
+    # try-except to prevent races btw processes
+    try:
+        os.makedirs(directory)
+    except OSError:
+        pass

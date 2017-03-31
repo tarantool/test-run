@@ -6,6 +6,7 @@ import copy
 import functools
 
 import lib
+from lib.utils import safe_makedirs
 from lib.test_suite import TestSuite
 
 
@@ -48,6 +49,12 @@ def parse_reproduce_file(filepath):
                      filepath, schema='error')
         exit(1)
     return reproduce
+
+
+def get_reproduce_file(worker_name):
+    main_vardir = os.path.realpath(lib.Options().args.vardir)
+    reproduce_dir = os.path.join(main_vardir, 'reproduce')
+    return os.path.join(reproduce_dir, '%s.list.yaml' % worker_name)
 
 
 # Get tasks and worker generators
@@ -190,15 +197,8 @@ class Worker:
         main_vardir = self.suite.ini['vardir']
         self.suite.ini['vardir'] = os.path.join(main_vardir, self.name)
 
-        reproduce_dir = os.path.join(main_vardir, 'reproduce')
-        if not os.path.isdir(reproduce_dir):
-            # try-except to prevent races btw workers
-            try:
-                os.makedirs(reproduce_dir)
-            except OSError:
-                pass
-        self.tests_file = os.path.join(
-            reproduce_dir, '%s.list.yaml' % self.name)
+        self.reproduce_file = get_reproduce_file(self.name)
+        safe_makedirs(os.path.dirname(self.reproduce_file))
 
         color_stdout.queue_msg_wrapper = self.wrap_output
 
@@ -251,7 +251,7 @@ class Worker:
             return self.done_marker()
         try:
             task = self.find_task(task_id)
-            with open(self.tests_file, 'a') as f:
+            with open(self.reproduce_file, 'a') as f:
                 f.write('- ' + yaml.safe_dump(task.id))
             short_status = self.suite.run_test(
                 task, self.server, self.inspector)

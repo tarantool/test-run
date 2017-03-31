@@ -2,6 +2,7 @@ import ConfigParser
 import json
 import os
 
+import lib
 from lib.colorer import Colorer
 from lib.inspector import TarantoolInspector
 from lib.server import Server
@@ -86,9 +87,11 @@ class TestSuite:
                     dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
 
     def find_tests(self):
-        color_stdout("Collecting tests in ", schema='ts_text')
-        color_stdout(repr(self.suite_path), schema='path')
-        color_stdout(": ", self.ini["description"], ".\n", schema='ts_text')
+        if not lib.Options().args.reproduce:
+            color_stdout("Collecting tests in ", schema='ts_text')
+            color_stdout(repr(self.suite_path), schema='path')
+            color_stdout(": ", self.ini["description"], ".\n",
+                         schema='ts_text')
 
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
@@ -102,7 +105,9 @@ class TestSuite:
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
-        color_stdout("Found ", str(len(self.tests)), " tests.\n", schema='path')
+        if not lib.Options().args.reproduce:
+            color_stdout("Found ", str(len(self.tests)), " tests.\n",
+                         schema='path')
         return self.tests
 
     def gen_server(self):

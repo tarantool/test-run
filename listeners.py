@@ -4,6 +4,7 @@ import sys
 import yaml
 
 import lib
+from lib.worker import get_reproduce_file
 from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult
 from lib.colorer import Colorer
 
@@ -52,9 +53,11 @@ class StatisticsWatcher(BaseWatcher):
 
         color_stdout('Failed tasks:\n', schema='test_var')
         for task_id, worker_name in self.failed_tasks:
-            # TODO: output path to reproduce file
-            color_stdout('- %s# logfile: %s\n' % (yaml.safe_dump(task_id),
-                         self.get_logfile(worker_name)), schema='test_var')
+            logfile = self.get_logfile(worker_name)
+            reproduce_file = get_reproduce_file(worker_name)
+            color_stdout('- %s' % yaml.safe_dump(task_id), schema='test_var')
+            color_stdout('# logfile:        %s\n' % logfile)
+            color_stdout('# reproduce file: %s\n' % reproduce_file)
 
 
 class LogOutputWatcher(BaseWatcher):
