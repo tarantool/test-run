@@ -168,18 +168,7 @@ class Dispatcher:
                 ready_inputs, _, _ = select.select(
                     inputs, [], [], self.report_timeout)
             except KeyboardInterrupt:
-                # write output from workers to stdout
-                new_listeners = []
-                for listener in self.listeners:
-                    if isinstance(listener, (listeners.LogOutputWatcher,
-                                             listeners.OutputWatcher)):
-                        listener.report_at_timeout = False
-                        new_listeners.append(listener)
-                self.listeners = new_listeners
-                # TODO: wait for all workers even after SIGINT hit us?
-                time.sleep(0.1)
-                ready_inputs, _, _ = select.select(inputs, [], [], 0)
-                self.invoke_listeners(inputs, ready_inputs)
+                self.flush_ready(inputs)
                 raise
 
             self.invoke_listeners(inputs, ready_inputs)
@@ -204,6 +193,24 @@ class Dispatcher:
                     listener.process_result(obj)
                 if isinstance(obj, WorkerDone):
                     self.del_worker(obj.worker_id)
+
+    def flush_ready(self, inputs):
+        """Write output from workers to stdout."""
+        # leave only output listeners in self.listeners
+        save_listeners = self.listeners
+        new_listeners = []
+        for listener in self.listeners:
+            if isinstance(listener, (listeners.LogOutputWatcher,
+                                     listeners.OutputWatcher)):
+                listener.report_at_timeout = False
+                new_listeners.append(listener)
+        self.listeners = new_listeners
+        # wait until processes in our group process its SIGINTs
+        # TODO: wait for all workers even after SIGINT hit us?
+        time.sleep(0.1)
+        # collect and process ready inputs
+        ready_inputs, _, _ = select.select(inputs, [], [], 0)
+        self.invoke_listeners(inputs, ready_inputs)
 
     def check_for_dead_processes(self):
         for pid in self.pids[:]:
