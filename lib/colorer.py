@@ -158,7 +158,7 @@ class Colorer(object):
             if self.queue_msg_wrapper:
                 obj = self.queue_msg_wrapper(obj, log_only)
             self.queue.put(obj)
-        else:
+        elif not log_only:
             self.stdout.write(obj)
 
     def _flush(self):
