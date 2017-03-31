@@ -43,13 +43,14 @@ class StatisticsWatcher(BaseWatcher):
             self.failed_tasks.append((obj.task_id, obj.worker_name))
 
     def print_statistics(self):
+        """Returns are there failed tasks."""
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
             color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
         if not self.failed_tasks:
-            return
+            return False
 
         color_stdout('Failed tasks:\n', schema='test_var')
         for task_id, worker_name in self.failed_tasks:
@@ -58,6 +59,8 @@ class StatisticsWatcher(BaseWatcher):
             color_stdout('- %s' % yaml.safe_dump(task_id), schema='test_var')
             color_stdout('# logfile:        %s\n' % logfile)
             color_stdout('# reproduce file: %s\n' % reproduce_file)
+
+        return True
 
 
 class LogOutputWatcher(BaseWatcher):

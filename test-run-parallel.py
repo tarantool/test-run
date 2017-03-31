@@ -2,12 +2,8 @@
 
 
 # TODOs:
-# ! * Count tests that are 'not_run' due to worker hang (compare received tasks
-#     results w/ sent tasks).
-#     * Non-zero exit code in this case (in the case when we have any 'fail' or
-#       'not_run').
-# ! * Do out-of-source build work?
-# ? * Don't restart a server per test, fix admin connections (and maybe update
+# ! * Does out-of-source build work?
+# ! * Don't restart a server per test, fix admin connections (and maybe update
 #     properly other fields) w/o server restarting; check 0b586f55.
 #     * Add Server's function like setup_for_test_type().
 #   * Found workers failed at the initialization (starting server) -- via
@@ -21,7 +17,7 @@
 #     especially useful with CI bots.
 #   * Add '--no-kill-group' option to run test-run in a shell pipeline. With
 #     this option test-run will kill only its direct childrens (workers).
-#   * Investigate why tarantool can be don't killed by workers, but only by
+# ! * Investigate why tarantool can be don't killed by workers, but only by
 #     main process by pgrp. Seems that default servers is affected.
 #   * Investigate new failing tests.
 
@@ -74,6 +70,8 @@ color_stdout = Colorer()
 EXIT_SUCCESS = 0
 EXIT_HANG = 1
 EXIT_INTERRUPTED = 2
+EXIT_FAILED_TEST = 3
+EXIT_NOTDONE_TEST = 4
 EXIT_UNKNOWN_ERROR = 50
 
 
@@ -167,14 +165,23 @@ def main_loop():
     dispatcher = Dispatcher(task_groups, jobs, randomize)
     dispatcher.start()
     try:
+        is_force = lib.Options().args.is_force
         dispatcher.wait()
+        dispatcher.wait_processes()
+        has_failed = dispatcher.statistics.print_statistics()
+        has_undone = dispatcher.report_undone(verbose=is_force)
+        if has_failed:
+            return EXIT_FAILED_TEST
+        if is_force and has_undone:
+            return EXIT_NOTDONE_TEST
     except KeyboardInterrupt:
         dispatcher.statistics.print_statistics()
+        dispatcher.report_undone(verbose=is_force)
         raise
     except HangError:
+        dispatcher.statistics.print_statistics()
+        dispatcher.report_undone(verbose=is_force)
         return EXIT_HANG
-    dispatcher.statistics.print_statistics()
-    dispatcher.wait_processes()
     return EXIT_SUCCESS
 
 

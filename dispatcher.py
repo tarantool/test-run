@@ -4,13 +4,14 @@ import time
 import select
 import random
 import functools
+import yaml
 
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
 
 import listeners
 import lib
-from lib.worker import WorkerDone
+from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import Colorer
 
 
@@ -157,6 +158,32 @@ class Dispatcher:
         task_queue_disp.del_worker(worker_id)
         self.workers_cnt -= 1
 
+    def mark_task_done(self, worker_id, task_id):
+        task_queue_disp = self.get_task_queue_disp(worker_id)
+        task_queue_disp.mark_task_done(task_id)
+
+    def undone_tasks(self):
+        res = []
+        for task_queue_disp in self.task_queue_disps.values():
+            res.extend(task_queue_disp.undone_tasks())
+        return res
+
+    def report_undone(self, verbose):
+        undone = self.undone_tasks()
+        if not bool(undone):
+            return False
+        if verbose:
+            color_stdout(
+                'The following tasks were dispatched on some worker task '
+                'queue, but were not reported as done (does not matters '
+                'success or fail):\n', schema='test_var')
+            for task_id in undone:
+                color_stdout('- %s' % yaml.safe_dump(task_id))
+        else:
+            color_stdout("Count of didn't processed tasks: %d\n"
+                         % len(undone), schema='test_var')
+        return True
+
     def wait(self):
         """Wait all workers reported its done via result_queues. But in the
         case when some worker process terminated prematurely 'invoke_listeners'
@@ -171,28 +198,41 @@ class Dispatcher:
                 self.flush_ready(inputs)
                 raise
 
-            self.invoke_listeners(inputs, ready_inputs)
+            objs = self.invoke_listeners(inputs, ready_inputs)
+            for obj in objs:
+                if isinstance(obj, WorkerTaskResult):
+                    self.mark_task_done(obj.worker_id, obj.task_id)
+                elif isinstance(obj, WorkerDone):
+                    self.del_worker(obj.worker_id)
 
             new_workers_cnt = self.max_workers_cnt - self.workers_cnt
             for _ in range(new_workers_cnt):
                 self.add_worker()
 
     def invoke_listeners(self, inputs, ready_inputs):
+        """Returns received objects from result queue to allow Dispatcher
+        update its structures.
+        """
+        # process timeout
         if not ready_inputs:
             for listener in self.listeners:
                 listener.process_timeout(self.report_timeout)
             self.check_for_dead_processes()
+            return []
 
+        # collect received objects
+        objs = []
         for ready_input in ready_inputs:
             result_queue = self.result_queues[inputs.index(ready_input)]
-            objs = []
             while not result_queue.empty():
                 objs.append(result_queue.get())
-            for obj in objs:
-                for listener in self.listeners:
-                    listener.process_result(obj)
-                if isinstance(obj, WorkerDone):
-                    self.del_worker(obj.worker_id)
+
+        # process received objects
+        for obj in objs:
+            for listener in self.listeners:
+                listener.process_result(obj)
+
+        return objs
 
     def flush_ready(self, inputs):
         """Write output from workers to stdout."""
@@ -205,8 +245,8 @@ class Dispatcher:
                 listener.report_at_timeout = False
                 new_listeners.append(listener)
         self.listeners = new_listeners
-        # wait until processes in our group process its SIGINTs
-        # TODO: wait for all workers even after SIGINT hit us?
+        # wait some time until processes in our group get its SIGINTs and give
+        # us some last output
         time.sleep(0.1)
         # collect and process ready inputs
         ready_inputs, _, _ = select.select(inputs, [], [], 0)
@@ -256,6 +296,7 @@ class TaskQueueDispatcher:
             self.task_queue.put(task_id)
         self.worker_ids = set()
         self.done = False
+        self.done_task_ids = set()
 
     def _run_worker(self, worker_id):
         """Entry function for worker processes."""
@@ -283,3 +324,14 @@ class TaskQueueDispatcher:
         # mark task queue as done when the first worker done to prevent cycling
         # with add-del workers
         self.done = True
+
+    def mark_task_done(self, task_id):
+        self.done_task_ids.add(task_id)
+
+    def undone_tasks(self):
+        # keeps an original order
+        res = []
+        for task_id in self.task_ids:
+            if task_id not in self.done_task_ids:
+                res.append(task_id)
+        return res

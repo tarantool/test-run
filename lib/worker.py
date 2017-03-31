@@ -314,12 +314,14 @@ class Worker:
 
     def flush_all_tasks(self, task_queue, result_queue):
         """ A queue flusing is necessary only for joinable queue (when runner
-            controlling workers with using join() on task queues), but for
-            unification in reporting 'not_run' status it make sense to leave it
-            enabled for any queue type.
+            controlling workers with using join() on task queues), so doesn't
+            used in the current test-run implementation.
         """
+        if not Worker.is_joinable(task_queue):
+            return
+
         # None is 'stop worker' marker
-        while self.last_task_id:
+        while self.last_task_id is not None:
             task_id = self.task_get(task_queue)
             result_queue.put(self.wrap_result(task_id, 'not_run'))
             self.task_done(task_queue)
