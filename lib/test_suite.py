@@ -142,7 +142,8 @@ class TestSuite:
         # don't delete core files or state of the data dir
         # in case of exception, which is raised when the
         # server crashes
-        inspector.stop()
+        if inspector:
+            inspector.stop()
         server.cleanup()
 
     def run_test(self, test, server, inspector):

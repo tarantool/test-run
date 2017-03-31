@@ -670,7 +670,7 @@ class TarantoolServer(Server):
         if not silent:
             color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
-        if self.process.returncode is None:
+        if self.process is not None and self.process.returncode is None:
             try:
                 self.process.terminate()
             except OSError:

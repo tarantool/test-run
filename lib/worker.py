@@ -157,6 +157,9 @@ class Worker:
                       z.sigterm_handler(x, y))
 
         self.initialized = False
+        self.server = None
+        self.inspector = None
+
         self.id = _id
         self.suite = suite
         self.name = '%02d_%s' % (self.id, self.suite.suite_path)
@@ -185,6 +188,7 @@ class Worker:
             self.initialized = True
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
+            self.suite.stop_server(self.server, self.inspector, silent=True)
         except Exception as e:
             color_stdout('Worker "%s" cannot start tarantool server; '
                          'the tasks will be ignored...\n' % self.name,
@@ -194,7 +198,7 @@ class Worker:
             color_stdout('Worker "%s" received the following error:\n'
                          % self.name + traceback.format_exc() + '\n',
                          schema='error')
-
+            self.suite.stop_server(self.server, self.inspector, silent=True)
 
     # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
     #       worker' marker readed from the queue, but not returned to us?
