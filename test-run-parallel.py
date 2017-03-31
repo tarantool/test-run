@@ -70,33 +70,10 @@ from dispatcher import Dispatcher
 color_stdout = Colorer()
 
 
-def main_loop():
-    color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
-
-    jobs = lib.Options().args.jobs
-    if jobs == 0:
-        # faster result I got was with 2 * cpu_count
-        jobs = 2 * multiprocessing.cpu_count()
-    randomize = True
-
-    task_groups = lib.worker.get_task_groups()
-    if lib.Options().args.reproduce:
-        task_groups = lib.worker.reproduce_task_groups(task_groups)
-        jobs = 1
-        randomize = False
-
-    dispatcher = Dispatcher(task_groups, jobs, randomize)
-    dispatcher.start()
-    try:
-        dispatcher.wait()
-    except KeyboardInterrupt:
-        dispatcher.statistics.print_statistics()
-        raise
-    except HangError:
-        return 1
-    dispatcher.statistics.print_statistics()
-    dispatcher.wait_processes()
-    return 0
+EXIT_SUCCESS = 0
+EXIT_HANG = 1
+EXIT_INTERRUPTED = 2
+EXIT_UNKNOWN_ERROR = 50
 
 
 def kill_our_group():
@@ -171,21 +148,50 @@ def kill_our_group():
             kill_pids(pids, sig)
 
 
+def main_loop():
+    color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
+
+    jobs = lib.Options().args.jobs
+    if jobs == 0:
+        # faster result I got was with 2 * cpu_count
+        jobs = 2 * multiprocessing.cpu_count()
+    randomize = True
+
+    task_groups = lib.worker.get_task_groups()
+    if lib.Options().args.reproduce:
+        task_groups = lib.worker.reproduce_task_groups(task_groups)
+        jobs = 1
+        randomize = False
+
+    dispatcher = Dispatcher(task_groups, jobs, randomize)
+    dispatcher.start()
+    try:
+        dispatcher.wait()
+    except KeyboardInterrupt:
+        dispatcher.statistics.print_statistics()
+        raise
+    except HangError:
+        return EXIT_HANG
+    dispatcher.statistics.print_statistics()
+    dispatcher.wait_processes()
+    return EXIT_SUCCESS
+
+
 def main():
-    res = 1
+    res = EXIT_UNKNOWN_ERROR
     try:
         res = main_loop()
     except KeyboardInterrupt:
         color_stdout('\n[Main process] Caught keyboard interrupt\n',
                      schema='test_var')
-        res = 1
+        res = EXIT_INTERRUPTED
     try:
         kill_our_group()
     except KeyboardInterrupt:
         color_stdout(
             '\n[Main process] Caught keyboard interrupt; killing processes '
             'in our process group possibly not done\n', schema='test_var')
-        res = 1
+        res = EXIT_INTERRUPTED
     return res
 
 
