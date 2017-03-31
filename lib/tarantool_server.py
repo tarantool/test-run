@@ -530,7 +530,8 @@ class TarantoolServer(Server):
             color_log(path + " \n", schema='path')
             color_log(self.version() + "\n", schema='version')
 
-        check_port(self.admin.port)
+        check_port(self.admin.port)  # XXX: prevent races btw processes
+                                     #      use port 0 to autochoose?
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:
