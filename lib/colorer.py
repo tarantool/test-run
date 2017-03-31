@@ -124,10 +124,12 @@ class Colorer(object):
     disable = begin+'0'+end
 
     def __init__(self):
-        # can be filled later
-        # if there is queue we will pass strings to it
+        # These two fields can be filled later. It's for passing output from
+        # workers via result queue. When worker initializes, it set these
+        # fields and just use Colorer as before having multiplexed output.
         self.queue_msg_wrapper = None
         self.queue = None
+
         self.stdout = sys.stdout
         self.is_term = self.stdout.isatty()
         self.colors = None

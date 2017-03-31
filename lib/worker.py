@@ -54,7 +54,11 @@ def parse_reproduce_file(filepath):
 #################################
 
 
-def task_buckets():
+def get_task_groups():
+    """Scan directories where tests files expected to reside, create the list
+    of tests and group it by suites. Create workers generator for each of these
+    group.
+    """
     suites = find_suites()
     res = {}
     for suite in suites:
@@ -69,59 +73,78 @@ def task_buckets():
     return res
 
 
-def reproduce_buckets(all_buckets):
-    # check test list and find a bucket
-    found_bucket_ids = []
+def reproduce_task_groups(task_groups):
+    """Filter provided task_groups down to the one certain group. Sort tests in
+    this group as in the reproduce file.
+    """
+    found_keys = []
     reproduce = parse_reproduce_file(lib.Options().args.reproduce)
     if not reproduce:
         raise ValueError('[reproduce] Tests list cannot be empty')
     for i, task_id in enumerate(reproduce):
-        for bucket_id, bucket in all_buckets.items():
-            if task_id in bucket['task_ids']:
-                found_bucket_ids.append(bucket_id)
+        for key, task_group in task_groups.items():
+            if task_id in task_group['task_ids']:
+                found_keys.append(key)
                 break
-        if len(found_bucket_ids) != i + 1:
+        if len(found_keys) != i + 1:
             raise ValueError('[reproduce] Cannot find test "%s"' %
                              str(task_id))
-    found_bucket_ids = list(set(found_bucket_ids))
-    if len(found_bucket_ids) < 1:
+    found_keys = list(set(found_keys))
+    if len(found_keys) < 1:
         raise ValueError('[reproduce] Cannot find any suite for given tests')
-    elif len(found_bucket_ids) > 1:
+    elif len(found_keys) > 1:
         raise ValueError(
             '[reproduce] Given tests contained by different suites')
 
-    key = found_bucket_ids[0]
-    bucket = copy.deepcopy(all_buckets[key])
-    bucket['task_ids'] = reproduce
-    return {key: bucket}
+    res_key = found_keys[0]
+    res_task_group = copy.deepcopy(task_groups[key])
+    res_task_group['task_ids'] = reproduce
+    return {res_key: res_task_group}
 
 
 # Worker results
 ################
 
 
-class BaseWorkerResult(object):
+class BaseWorkerMessage(object):
+    """Base class for all objects passed via result queues. It holds worker_id
+    (int) and worker_name (string). Used as a structure, i.e. w/o data fields
+    incapsulation.
+    """
     def __init__(self, worker_id, worker_name):
-        super(BaseWorkerResult, self).__init__()
+        super(BaseWorkerMessage, self).__init__()
         self.worker_id = worker_id
         self.worker_name = worker_name
 
 
-class TaskResult(BaseWorkerResult):
+class WorkerTaskResult(BaseWorkerMessage):
+    """ Passed into the result queue when a task processed (done) by the
+    worker. The short_status (string) field intended to give short note whether
+    the task processed successfully or not, but with little more flexibility
+    than binary True/False. The task_id (any hashable object) field hold ID of
+    the processed task.
+    """
     def __init__(self, worker_id, worker_name, task_id, short_status):
-        super(TaskResult, self).__init__(worker_id, worker_name)
+        super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
         self.task_id = task_id
 
 
-class WorkerOutput(BaseWorkerResult):
+class WorkerOutput(BaseWorkerMessage):
+    """The output passed by worker processes via color_stdout/color_log
+    functions. The output wrapped into objects of this class by setting queue
+    and wrapper in the Colorer class (see lib/colorer.py). Check
+    LogOutputWatcher and OutputWatcher classes in listeners.py file to see how
+    the output multiplexed by the main process.
+    """
     def __init__(self, worker_id, worker_name, output, log_only):
         super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
         self.log_only = log_only
 
 
-class WorkerDone(BaseWorkerResult):
+class WorkerDone(BaseWorkerMessage):
+    """Report the worker as done its work."""
     def __init__(self, worker_id, worker_name):
         super(WorkerDone, self).__init__(worker_id, worker_name)
 
@@ -146,7 +169,7 @@ class Worker:
         return WorkerDone(self.id, self.name)
 
     def wrap_result(self, task_id, short_status):
-        return TaskResult(self.id, self.name, task_id, short_status)
+        return WorkerTaskResult(self.id, self.name, task_id, short_status)
 
     def sigterm_handler(self, signum, frame):
         self.sigterm_received = True

@@ -4,31 +4,34 @@ import sys
 import yaml
 
 import lib
-from lib.worker import WorkerOutput, WorkerDone, TaskResult
+from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult
 from lib.colorer import Colorer
 
 
 color_stdout = Colorer()
 
 
-class TaskResultListener(object):
+class BaseWatcher(object):
+    """Base class for all listeners intended to be called when some message
+    arrive to a result queue from some worker.
+    """
     def process_result(self, obj):
         raise ValueError('override me')
 
     def process_timeout(self, delta_seconds):
-        """ Called after delta_seconds time of inactivity """
+        """Called after delta_seconds time of inactivity."""
         # optionally override
         pass
 
 
-class StatisticsWatcher(TaskResultListener):
+class StatisticsWatcher(BaseWatcher):
     def __init__(self, get_logfile):
         self.stats = dict()
         self.failed_tasks = []
         self.get_logfile = get_logfile
 
     def process_result(self, obj):
-        if not isinstance(obj, TaskResult):
+        if not isinstance(obj, WorkerTaskResult):
             return
 
         if obj.short_status not in self.stats:
@@ -54,7 +57,7 @@ class StatisticsWatcher(TaskResultListener):
                          self.get_logfile(worker_name)), schema='test_var')
 
 
-class LogOutputWatcher(TaskResultListener):
+class LogOutputWatcher(BaseWatcher):
     def __init__(self):
         self.fds = dict()
         self.logdir = os.path.join(lib.Options().args.vardir, 'log')
@@ -91,7 +94,7 @@ class LogOutputWatcher(TaskResultListener):
                 pass
 
 
-class OutputWatcher(TaskResultListener):
+class OutputWatcher(BaseWatcher):
     color_re = re.compile('\033' + r'\[\d(?:;\d\d)?m')
 
     def __init__(self):
@@ -138,13 +141,13 @@ class OutputWatcher(TaskResultListener):
         return self.buffer.keys()
 
 
-class FailWatcher(TaskResultListener):
+class FailWatcher(BaseWatcher):
     def __init__(self, terminate_all_workers):
         self.terminate_all_workers = terminate_all_workers
         self.got_fail = False
 
     def process_result(self, obj):
-        if not isinstance(obj, TaskResult):
+        if not isinstance(obj, WorkerTaskResult):
             return
 
         if obj.short_status == 'fail':
@@ -159,9 +162,8 @@ class HangError(Exception):
     pass
 
 
-class HangWatcher(TaskResultListener):
-    """ Terminate all workers if no output received 'no_output_times' time """
-
+class HangWatcher(BaseWatcher):
+    """Terminate all workers if no output received 'no_output_times' time."""
     def __init__(self, get_not_done_worker_ids, kill_all_workers, timeout):
         self.get_not_done_worker_ids = get_not_done_worker_ids
         self.kill_all_workers = kill_all_workers

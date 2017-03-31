@@ -2,12 +2,6 @@
 
 
 # TODOs:
-# ! * Rename: Dispatcher (WorkersManager), DispatcherData (buckets).
-# ! * Document how workers-task-buckets interacts and works; and possible
-#     non-obvious code parts.
-#     * Comment each Worker's results_queue classes.
-#     * Describe how we wait workers, when exits, how select results/output
-#       from workers, how and what doing listeners.
 # ! * Count tests that are 'not_run' due to worker hang (compare received tasks
 #     results w/ sent tasks).
 #     * Non-zero exit code in this case (in the case when we have any 'fail' or
@@ -31,6 +25,32 @@
 #     main process by pgrp. Seems that default servers is affected.
 #   * Investigate new failing tests.
 
+# How it works (briefly, simplified)
+# ##################################
+#
+# * Get task groups; each task group correspond to a test suite; each task
+#   group contains workers generator (factory) and task IDs (test_name +
+#   conf_name).
+# * Put task groups to Dispatcher, which:
+#   * Create task (input) and result (output) queues for each task group.
+#   * Create and run specified count of workers on these queues.
+#   * Wait for results on the result queues and calls registered listeners.
+#   * If some worker done its work, the Dispatcher will run the new one if
+#     there are tasks.
+# * Listeners received messages from workers and timeouts when no messages
+#   received. Its:
+#   * Count results statistics.
+#   * Multiplex screen's output.
+#   * Log output to per worker log files.
+#   * Exit us when some test failed.
+#   * Exit us when no output received from workers during some time.
+# * When all workers reported it's done (or exceptional situation occured) the
+#   main process kill all processes in the same process group as its own to
+#   prevent 'orphan' worker or tarantool servers from flooding an OS.
+# * Exit status is zero (success) when no errors detected and all requested
+#   tests passed. Otherwise non-zero.
+
+
 import os
 import signal
 import sys
@@ -44,7 +64,7 @@ from lib.colorer import Colorer
 from lib.utils import signame
 
 from listeners import HangError
-from workers_manager import WorkersManager
+from dispatcher import Dispatcher
 
 
 color_stdout = Colorer()
@@ -59,23 +79,24 @@ def main_loop():
         jobs = 2 * multiprocessing.cpu_count()
     randomize = True
 
-    buckets = lib.worker.task_buckets()
+    task_groups = lib.worker.get_task_groups()
     if lib.Options().args.reproduce:
-        buckets = lib.worker.reproduce_buckets(buckets)
+        task_groups = lib.worker.reproduce_task_groups(task_groups)
         jobs = 1
         randomize = False
 
-    workers_manager = WorkersManager(buckets, jobs, randomize)
-    workers_manager.start()
+    dispatcher = Dispatcher(task_groups, jobs, randomize)
+    dispatcher.start()
     try:
-        workers_manager.wait()
+        dispatcher.wait()
     except KeyboardInterrupt:
-        workers_manager.statistics.print_statistics()
+        dispatcher.statistics.print_statistics()
         raise
     except HangError:
-        pass
-    workers_manager.statistics.print_statistics()
-    workers_manager.wait_processes()
+        return 1
+    dispatcher.statistics.print_statistics()
+    dispatcher.wait_processes()
+    return 0
 
 
 def kill_our_group():
@@ -151,17 +172,21 @@ def kill_our_group():
 
 
 def main():
+    res = 1
     try:
-        main_loop()
+        res = main_loop()
     except KeyboardInterrupt:
         color_stdout('\n[Main process] Caught keyboard interrupt\n',
                      schema='test_var')
+        res = 1
     try:
         kill_our_group()
     except KeyboardInterrupt:
         color_stdout(
             '\n[Main process] Caught keyboard interrupt; killing processes '
             'in our process group possibly not done\n', schema='test_var')
+        res = 1
+    return res
 
 
 if __name__ == "__main__":

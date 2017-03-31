@@ -43,12 +43,12 @@ color_stdout = Colorer()
 
 
 def main_loop(failed_test_ids):
-    for bucket in lib.worker.task_buckets().values():
-        task_ids = bucket['task_ids']
+    for task_group in lib.worker.get_task_groups().values():
+        task_ids = task_group['task_ids']
         if not task_ids:
             continue
         worker_id = 1
-        worker = bucket['gen_worker'](worker_id)
+        worker = task_group['gen_worker'](worker_id)
         for task_id in task_ids:
             short_status = worker.run_task(task_id)
             if short_status == 'fail':

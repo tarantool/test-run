@@ -17,8 +17,35 @@ from lib.colorer import Colorer
 color_stdout = Colorer()
 
 
-class WorkersManager:
-    def __init__(self, buckets, max_workers_cnt, randomize):
+class Dispatcher:
+    """Run specified count of worker processes ('max_workers_cnt' arg), pass
+    task IDs (via 'task_queue'), receive results and output (via
+    'result_queue') and pass it to listeners. Workers as well as tasks have
+    types and certain task can be run only on worker of that type. To being
+    abstract we get 'task_groups' argument contains worker generators (the
+    callable working as factory of workers) and IDs of task that can be
+    executed on such workers. The structure of this argument is the following:
+    ```
+    task_groups = {
+        'some_key_1': {
+            'gen_worker': gen_worker_1,
+            'task_ids': task_ids_1,
+        }
+        ...
+    }
+
+    ```
+    Usage (simplified and w/o exception catching):
+    ```
+    task_groups = ...
+    dispatcher = Dispatcher(task_groups, max_workers_count=8, randomize=True)
+    dispatcher.start()
+    dispatcher.wait()
+    dispatcher.statistics.print_statistics()
+    dispatcher.wait_processes()
+    ```
+    """
+    def __init__(self, task_groups, max_workers_cnt, randomize):
         self.pids = []
         self.processes = []
         self.result_queues = []
@@ -27,14 +54,13 @@ class WorkersManager:
         self.worker_next_id = 1
 
         tasks_cnt = 0
-        self.workers_bucket_managers = dict()
-        for key, bucket in buckets.items():
-            tasks_cnt += len(bucket['task_ids'])
-            workers_bucket_manager = WorkersBucketManager(
-                key, bucket, randomize)
-            self.workers_bucket_managers[key] = workers_bucket_manager
-            self.result_queues.append(workers_bucket_manager.result_queue)
-            self.task_queues.append(workers_bucket_manager.task_queue)
+        self.task_queue_disps = dict()
+        for key, task_group in task_groups.items():
+            tasks_cnt += len(task_group['task_ids'])
+            task_queue_disp = TaskQueueDispatcher(key, task_group, randomize)
+            self.task_queue_disps[key] = task_queue_disp
+            self.result_queues.append(task_queue_disp.result_queue)
+            self.task_queues.append(task_queue_disp.task_queue)
 
         self.report_timeout = 2.0
 
@@ -90,30 +116,36 @@ class WorkersManager:
         for _ in range(self.max_workers_cnt):
             self.add_worker()
 
-    def find_nonempty_bucket_manager(self):
-        workers_bucket_managers_rnd = list(
-            self.workers_bucket_managers.values())
+    def find_nonempty_task_queue_disp(self):
+        """Find TaskQueueDispatcher that doesn't reported it's 'done' (don't
+        want more workers created for working on its task queue).
+        """
+        task_queue_disps_rnd = list(
+            self.task_queue_disps.values())
         if self.randomize:
-            random.shuffle(workers_bucket_managers_rnd)
-        for workers_bucket_manager in workers_bucket_managers_rnd:
-            if not workers_bucket_manager.done:
-                return workers_bucket_manager
+            random.shuffle(task_queue_disps_rnd)
+        for task_queue_disp in task_queue_disps_rnd:
+            if not task_queue_disp.done:
+                return task_queue_disp
         return None
 
-    def get_workers_bucket_manager(self, worker_id):
-        for workers_bucket_manager in self.workers_bucket_managers.values():
-            if worker_id in workers_bucket_manager.worker_ids:
-                return workers_bucket_manager
+    def get_task_queue_disp(self, worker_id):
+        """Get TaskQueueDispatcher instance which contains certain worker by
+        worker_id.
+        """
+        for task_queue_disp in self.task_queue_disps.values():
+            if worker_id in task_queue_disp.worker_ids:
+                return task_queue_disp
         return None
 
     def add_worker(self):
         # don't add new workers if fail occured and --force not passed
         if self.fail_watcher and self.fail_watcher.got_fail:
             return
-        workers_bucket_manager = self.find_nonempty_bucket_manager()
-        if not workers_bucket_manager:
+        task_queue_disp = self.find_nonempty_task_queue_disp()
+        if not task_queue_disp:
             return
-        process = workers_bucket_manager.add_worker(self.worker_next_id)
+        process = task_queue_disp.add_worker(self.worker_next_id)
         self.processes.append(process)
         self.pids.append(process.pid)
         self.pid_to_worker_id[process.pid] = self.worker_next_id
@@ -121,11 +153,15 @@ class WorkersManager:
         self.worker_next_id += 1
 
     def del_worker(self, worker_id):
-        workers_bucket_manager = self.get_workers_bucket_manager(worker_id)
-        workers_bucket_manager.del_worker(worker_id)
+        task_queue_disp = self.get_task_queue_disp(worker_id)
+        task_queue_disp.del_worker(worker_id)
         self.workers_cnt -= 1
 
     def wait(self):
+        """Wait all workers reported its done via result_queues. But in the
+        case when some worker process terminated prematurely 'invoke_listeners'
+        can add fake WorkerDone markers (see also 'check_for_dead_processes').
+        """
         while self.workers_cnt > 0:
             try:
                 inputs = [q._reader for q in self.result_queues]
@@ -178,11 +214,10 @@ class WorkersManager:
                 exited = True
             if exited:
                 worker_id = self.pid_to_worker_id[pid]
-                workers_bucket_manager = \
-                    self.get_workers_bucket_manager(worker_id)
-                if not workers_bucket_manager:
+                task_queue_disp = self.get_task_queue_disp(worker_id)
+                if not task_queue_disp:
                     continue
-                result_queue = workers_bucket_manager.result_queue
+                result_queue = task_queue_disp.result_queue
                 result_queue.put(WorkerDone(worker_id, 'unknown'))
                 color_stdout(
                     "[Main process] Worker %d don't reported work "
@@ -197,11 +232,14 @@ class WorkersManager:
         self.processes = []
 
 
-class WorkersBucketManager:
-    def __init__(self, key, bucket, randomize):
+class TaskQueueDispatcher:
+    """Incapsulate data structures necessary for dispatching workers working on
+    the one task queue.
+    """
+    def __init__(self, key, task_group, randomize):
         self.key = key
-        self.gen_worker = bucket['gen_worker']
-        self.task_ids = bucket['task_ids']
+        self.gen_worker = task_group['gen_worker']
+        self.task_ids = task_group['task_ids']
         self.randomize = randomize
         if self.randomize:
             random.shuffle(self.task_ids)
@@ -213,14 +251,16 @@ class WorkersBucketManager:
         self.done = False
 
     def _run_worker(self, worker_id):
-        """ for running in child process """
+        """Entry function for worker processes."""
         color_stdout.queue = self.result_queue
         worker = self.gen_worker(worker_id)
         worker.run_all(self.task_queue, self.result_queue)
 
     def add_worker(self, worker_id):
-        # Note: each of our workers can consume only one None, but it would
-        # be good to prevent locking in case of 'bad' worker.
+        # Note: each of our workers should consume only one None, but for the
+        # case of abnormal circumstances we listen for processes termination
+        # (method 'check_for_dead_processes') and for time w/o output from
+        # workers (class 'HangWatcher').
         self.task_queue.put(None)  # 'stop worker' marker
 
         entry = functools.partial(self._run_worker, worker_id)
@@ -233,6 +273,6 @@ class WorkersBucketManager:
     def del_worker(self, worker_id):
         # TODO: join on process, remove pid from pids
         self.worker_ids.remove(worker_id)
-        # mark bucket as done when the first worker done to prevent cycling
+        # mark task queue as done when the first worker done to prevent cycling
         # with add-del workers
         self.done = True
