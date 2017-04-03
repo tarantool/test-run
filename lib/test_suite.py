@@ -3,7 +3,7 @@ import json
 import os
 
 import lib
-from lib.colorer import Colorer
+from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
 from lib.server import Server
 from lib.tarantool_server import TarantoolServer
@@ -11,7 +11,6 @@ from lib.app_server import AppServer
 from lib.unittest_server import UnittestServer
 from lib.utils import non_empty_valgrind_logs, print_tail_n
 
-color_stdout = Colorer()
 try:
     from cStringIO import StringIO
 except ImportError:

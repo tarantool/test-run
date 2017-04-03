@@ -17,8 +17,7 @@ class Singleton(type):
 
 
 def check_libs():
-    from lib.colorer import Colorer
-    color_stdout = Colorer()
+    from lib.colorer import color_stdout
 
     deps = [
         ('msgpack', 'msgpack-python'),
@@ -50,8 +49,7 @@ def non_empty_valgrind_logs(paths_to_log):
 def print_tail_n(filename, num_lines):
     """Print N last lines of a file."""
 
-    from lib.colorer import Colorer
-    color_stdout = Colorer()
+    from lib.colorer import color_stdout
 
     with open(filename, "r+") as logfile:
         tail_n = collections.deque(logfile, num_lines)
@@ -109,8 +107,7 @@ def signame(signum):
 
 
 def warn_unix_sockets_at_start(vardir):
-    from colorer import Colorer
-    color_stdout = Colorer()
+    from lib.colorer import color_stdout
 
     max_unix_socket_rel = '??_replication/autobootstrap_guest3.control'
     real_vardir = os.path.realpath(vardir)
@@ -127,8 +124,7 @@ def warn_unix_sockets_at_start(vardir):
 
 
 def warn_unix_socket(path):
-    from colorer import Colorer
-    color_stdout = Colorer()
+    from lib.colorer import color_stdout
 
     real_path = os.path.realpath(path)
     if len(real_path) <= UNIX_SOCKET_LEN_LIMIT or \

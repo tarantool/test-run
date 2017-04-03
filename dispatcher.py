@@ -12,10 +12,7 @@ from multiprocessing.queues import SimpleQueue
 import listeners
 import lib
 from lib.worker import WorkerTaskResult, WorkerDone
-from lib.colorer import Colorer
-
-
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 class Dispatcher:

@@ -9,14 +9,7 @@ import lib
 from lib.utils import safe_makedirs
 from lib.test_suite import TestSuite
 
-
-from lib.colorer import Colorer
-color_stdout = Colorer()
-
-
-def color_log(*args, **kwargs):
-    kwargs['log_only'] = True
-    color_stdout(*args, **kwargs)
+from lib.colorer import color_stdout, color_log
 
 
 # Utils

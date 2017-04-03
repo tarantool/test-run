@@ -14,8 +14,7 @@ except ImportError:
 
 from lib.utils import non_empty_valgrind_logs, print_tail_n
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 class TestExecutionError(OSError):

@@ -9,12 +9,7 @@ from gevent import socket
 
 from lib.admin_connection import AdminAsyncConnection
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
-def color_log(*args, **kwargs):
-    kwargs['log_only'] = True
-    color_stdout(*args, **kwargs)
-
+from lib.colorer import color_stdout, color_log
 
 class Namespace(object):
     pass

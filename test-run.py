@@ -30,8 +30,7 @@ import time
 import lib
 import lib.worker
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 #
 # Run a collection of tests.

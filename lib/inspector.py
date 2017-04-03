@@ -6,8 +6,7 @@ import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 # don't print backtraces when Ctrl+C hit the process when the active greenlet

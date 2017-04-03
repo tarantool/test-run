@@ -6,10 +6,7 @@ import yaml
 import lib
 from lib.worker import get_reproduce_file
 from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult
-from lib.colorer import Colorer
-
-
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 class BaseWatcher(object):

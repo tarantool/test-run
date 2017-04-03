@@ -4,8 +4,7 @@ import argparse
 from itertools import product
 from lib.utils import Singleton
 
-from lib.colorer import Colorer
-color_stdout = Colorer()
+from lib.colorer import color_stdout
 
 
 class Options:

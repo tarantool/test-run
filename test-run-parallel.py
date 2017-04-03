@@ -9,12 +9,6 @@
 #   * Found workers failed at the initialization (starting server) -- via
 #     result_queue -- then print path to worker's log file and give non-zero
 #     exit status.
-#   * Make color_stdout and color_log functions in colorer.py. Give
-#     comment/docstring about usage of color_log and intention to use it only
-#     for regular, non-error output that appears every run and mostly not
-#     needed for a user. Don't hide errors and backtraces (or any other details
-#     of an exceptional circumstances) from the screen, because such details
-#     especially useful with CI bots.
 #   * Add '--no-kill-group' option to run test-run in a shell pipeline. With
 #     this option test-run will kill only its direct childrens (workers).
 # ! * Investigate why tarantool can be don't killed by workers, but only by
@@ -57,14 +51,11 @@ import subprocess
 import multiprocessing
 
 import lib
-from lib.colorer import Colorer
+from lib.colorer import color_stdout
 from lib.utils import signame
 
 from listeners import HangError
 from dispatcher import Dispatcher
-
-
-color_stdout = Colorer()
 
 
 EXIT_SUCCESS = 0

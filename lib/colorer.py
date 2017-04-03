@@ -2,6 +2,23 @@ import os
 import sys
 from lib.utils import Singleton
 
+
+# Use it to print messages on the screen and to the worker's log.
+color_stdout = None  # = Colorer(); below the class definition
+
+
+def color_log(*args, **kwargs):
+    """ Print the message only to log file, not on the screen. The intention is
+    use this function only for regular, non-error output that appears every run
+    and mostly not needed for a user (but useful when investigating occured
+    problem). Don't hide errors and backtraces (or any other details of an
+    exceptional circumstances) from the screen, because such details especially
+    useful with CI bots.
+    """
+    kwargs['log_only'] = True
+    color_stdout(*args, **kwargs)
+
+
 class CSchema(object):
     objects = {}
 
@@ -215,3 +232,10 @@ class Colorer(object):
 
     def isatty(self):
         return self.is_term
+
+
+# Globals
+#########
+
+
+color_stdout = Colorer()
