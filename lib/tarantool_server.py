@@ -425,9 +425,8 @@ class TarantoolServer(Server):
         cls.builddir = os.path.abspath(builddir)
         builddir = os.path.join(builddir, "src")
         path = builddir + os.pathsep + os.environ["PATH"]
-        if not silent:
-            color_log("Looking for server binary in ", schema='serv_text')
-            color_log(path + ' ...\n', schema='path')
+        color_log("Looking for server binary in ", schema='serv_text')
+        color_log(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
             exe = os.path.join(_dir, cls.default_tarantool["bin"])
             ctl_dir = _dir
@@ -456,19 +455,17 @@ class TarantoolServer(Server):
             self._iproto = self._start_against_running
             self._admin = int(self._start_against_running) + 1
             return
-        if not silent:
-            color_log('Installing the server ...\n', schema='serv_text')
-            color_log('    Found executable at ', schema='serv_text')
-            color_log(self.binary + '\n', schema='path')
-            color_log('    Found tarantoolctl at  ', schema='serv_text')
-            color_log(self.ctl_path + '\n', schema='path')
-            color_log('    Creating and populating working directory in ', schema='serv_text')
-            color_log(self.vardir + ' ...\n', schema='path')
+        color_log('Installing the server ...\n', schema='serv_text')
+        color_log('    Found executable at ', schema='serv_text')
+        color_log(self.binary + '\n', schema='path')
+        color_log('    Found tarantoolctl at  ', schema='serv_text')
+        color_log(self.ctl_path + '\n', schema='path')
+        color_log('    Creating and populating working directory in ', schema='serv_text')
+        color_log(self.vardir + ' ...\n', schema='path')
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
-            if not silent:
-                color_log('    Found old vardir, deleting ...\n', schema='serv_text')
+            color_log('    Found old vardir, deleting ...\n', schema='serv_text')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
@@ -522,13 +519,12 @@ class TarantoolServer(Server):
         self.pidfile = '%s.pid' % self.name
         self.logfile = '%s.log' % self.name
 
-        if not silent:
-            path = self.script_dst if self.script else \
-                os.path.basename(self.binary)
-            color_log("Starting the server ...\n", schema='serv_text')
-            color_log("Starting ", schema='serv_text')
-            color_log(path + " \n", schema='path')
-            color_log(self.version() + "\n", schema='version')
+        path = self.script_dst if self.script else \
+            os.path.basename(self.binary)
+        color_log("Starting the server ...\n", schema='serv_text')
+        color_log("Starting ", schema='serv_text')
+        color_log(path + " \n", schema='path')
+        color_log(self.version() + "\n", schema='version')
 
         check_port(self.admin.port)  # XXX: prevent races btw processes
                                      #      use port 0 to autochoose?
@@ -668,8 +664,7 @@ class TarantoolServer(Server):
             if not silent:
                 raise Exception('Server is not started')
             return
-        if not silent:
-            color_log('Stopping the server ...\n', schema='serv_text')
+        color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
             try:
