@@ -382,7 +382,7 @@ class TarantoolServer(Server):
         self.sourcedir = os.path.abspath(os.path.join(os.path.basename(
             sys.argv[0]), "..", ".."))
         self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.xctl", "*.inprogress",
+            "*.snap", "*.xlog", "*.vylog", "*.inprogress",
             "*.sup", "*.lua", "*.pid", "[0-9]*/"]
         self.name = "default"
         self.conf = {}
