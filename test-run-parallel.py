@@ -2,18 +2,12 @@
 
 
 # TODOs:
-# ! * Does out-of-source build work?
-# ! * Don't restart a server per test, fix admin connections (and maybe update
-#     properly other fields) w/o server restarting; check 0b586f55.
-#     * Add Server's function like setup_for_test_type().
-#   * Found workers failed at the initialization (starting server) -- via
-#     result_queue -- then print path to worker's log file and give non-zero
-#     exit status.
-#   * Add '--no-kill-group' option to run test-run in a shell pipeline. With
-#     this option test-run will kill only its direct childrens (workers).
-# ! * Investigate why tarantool can be don't killed by workers, but only by
-#     main process by pgrp. Seems that default servers is affected.
-#   * Investigate new failing tests.
+# * Don't restart a server per test, fix admin connections (and maybe update
+#   properly other fields) w/o server restarting; check 0b586f55.
+#   * Add Server's function like setup_for_test_type().
+# * Investigate why tarantool can be don't killed by workers, but only by
+#   main process by pgrp. Seems that default servers is affected.
+# * Investigate new failing tests.
 
 
 # How it works (briefly, simplified)
@@ -67,60 +61,6 @@ EXIT_NOTDONE_TEST = 4
 EXIT_UNKNOWN_ERROR = 50
 
 
-def kill_our_group():
-    def pids_in_group(group_id=0):
-        """ PIDs of processes the process group except my PID.
-            Note: Unix only. """
-        pids = []
-        cmd = ['pgrep', '-g', str(group_id)]
-        p = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
-        for line in p.stdout:
-            line = line.strip()
-            if line:
-                pids.append(int(line))
-        pgrep_pid = p.pid
-        my_pid = os.getpid()
-        p.wait()
-        if pgrep_pid in pids:
-            pids.remove(pgrep_pid)
-        if my_pid in pids:
-            pids.remove(my_pid)
-        return pids
-
-    def remove_zombies(pids):
-        """ Works only for childs; don't for all group's processes """
-        if not pids:
-            return
-        color_stdout('Collecting zombies...\n', schema='test_var')
-        for pid in pids:
-            try:
-                wpid, wstatus = os.waitpid(pid, os.WNOHANG)
-                if wpid == pid and (os.WIFEXITED(wstatus) or
-                                    os.WIFSIGNALED(wstatus)):
-                    pids.remove(pid)
-            except OSError:
-                pass
-
-    def kill_pids(pids, sig):
-        for pid in pids:
-            color_stdout('Killing %s by %s\n' % (format_process(pid),
-                                                 signame(sig)))
-            try:
-                os.kill(pid, sig)
-            except OSError:
-                pass
-
-    for sig in [signal.SIGTERM, signal.SIGKILL]:
-        time.sleep(0.1)
-        pids = pids_in_group()
-        remove_zombies(pids)
-        if pids:
-            color_stdout(
-                '[Main process] Sending %s to processes in our process '
-                'group...\n' % signame(sig), schema='test_var')
-            kill_pids(pids, sig)
-
-
 def main_loop():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
@@ -166,13 +106,6 @@ def main():
     except KeyboardInterrupt:
         color_stdout('\n[Main process] Caught keyboard interrupt\n',
                      schema='test_var')
-        res = EXIT_INTERRUPTED
-    try:
-        kill_our_group()
-    except KeyboardInterrupt:
-        color_stdout(
-            '\n[Main process] Caught keyboard interrupt; killing processes '
-            'in our process group possibly not done\n', schema='test_var')
         res = EXIT_INTERRUPTED
     return res
 
