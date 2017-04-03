@@ -185,7 +185,7 @@ class Worker:
 
         self.id = _id
         self.suite = suite
-        self.name = '%02d_%s' % (self.id, self.suite.suite_path)
+        self.name = '%03d_%s' % (self.id, self.suite.suite_path)
 
         main_vardir = self.suite.ini['vardir']
         self.suite.ini['vardir'] = os.path.join(main_vardir, self.name)

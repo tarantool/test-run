@@ -105,8 +105,8 @@ class OutputWatcher(BaseWatcher):
 
     @staticmethod
     def add_prefix(output, worker_name):
-        prefix_max_len = len('[Worker "xx_replication-py"] ')
-        prefix = ('[Worker "%s"] ' % worker_name).ljust(prefix_max_len)
+        prefix_max_len = len('[xxx_replication-py] ')
+        prefix = ('[%s] ' % worker_name).ljust(prefix_max_len)
         output = output.rstrip('\n')
         lines = [(line + '\n') for line in output.split('\n')]
         output = prefix + prefix.join(lines)
