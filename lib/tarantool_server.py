@@ -32,6 +32,7 @@ from lib.utils import find_port
 from lib.utils import check_port
 from lib.utils import signame
 from lib.utils import warn_unix_socket
+from lib.utils import format_process
 
 from greenlet import greenlet, GreenletExit
 from test import TestRunGreenlet, TestExecutionError
@@ -662,6 +663,8 @@ class TarantoolServer(Server):
         color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
+            color_log('TarantoolServer.stop(): stopping the %s\n'
+                % format_process(self.process.pid), schema='test_var')
             try:
                 self.process.terminate()
             except OSError:

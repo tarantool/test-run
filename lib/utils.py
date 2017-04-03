@@ -148,3 +148,22 @@ def safe_makedirs(directory):
         os.makedirs(directory)
     except OSError:
         pass
+
+
+def format_process(pid):
+    cmdline = 'unknown'
+    try:
+        with open('/proc/%d/cmdline' % pid, 'r') as f:
+            cmdline = ' '.join(f.read().split('\0')).strip() or cmdline
+    except (OSError, IOError):
+        pass
+    status = 'unknown'
+    try:
+        with open('/proc/%d/status' % pid, 'r') as f:
+            for line in f:
+                key, value = line.split(':', 1)
+                if key == 'State':
+                    status = value.strip()
+    except (OSError, IOError):
+        pass
+    return 'process %d [%s; %s]' % (pid, status, cmdline)

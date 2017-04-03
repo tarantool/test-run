@@ -53,6 +53,7 @@ import multiprocessing
 import lib
 from lib.colorer import color_stdout
 from lib.utils import signame
+from lib.utils import format_process
 
 from listeners import HangError
 from dispatcher import Dispatcher
@@ -100,27 +101,9 @@ def kill_our_group():
             except OSError:
                 pass
 
-    def process_str(pid):
-        cmdline = 'unknown'
-        try:
-            with open('/proc/%d/cmdline' % pid, 'r') as f:
-                cmdline = ' '.join(f.read().split('\0')).strip() or cmdline
-        except (OSError, IOError):
-            pass
-        status = 'unknown'
-        try:
-            with open('/proc/%d/status' % pid, 'r') as f:
-                for line in f:
-                    key, value = line.split(':', 1)
-                    if key == 'State':
-                        status = value.strip()
-        except (OSError, IOError):
-            pass
-        return 'process %d [%s; %s]' % (pid, status, cmdline)
-
     def kill_pids(pids, sig):
         for pid in pids:
-            color_stdout('Killing %s by %s\n' % (process_str(pid),
+            color_stdout('Killing %s by %s\n' % (format_process(pid),
                                                  signame(sig)))
             try:
                 os.kill(pid, sig)

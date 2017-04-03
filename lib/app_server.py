@@ -88,8 +88,9 @@ class AppServer(Server):
     def stop(self, silent):
         if not self.process:
             return
+        color_log('AppServer.stop(): stopping the %s\n'
+            % format_process(self.process.pid), schema='test_var')
         try:
-            pid = self.process.pid
             self.process.terminate()
         except OSError:
             pass
