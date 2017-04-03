@@ -163,8 +163,8 @@ class PythonTest(FuncTest):
             raise TestExecutionError
 
 CON_SWITCH = {
-    LuaTest: AdminAsyncConnection,
-    PythonTest: AdminConnection
+    'lua': AdminAsyncConnection,
+    'python': AdminConnection
 }
 
 
@@ -313,9 +313,9 @@ class TarantoolServer(Server):
     def _admin(self, port):
         if hasattr(self, 'admin'):
             del self.admin
-        if not hasattr(self, 'cls'):
-            self.cls = LuaTest
-        self.admin = CON_SWITCH[self.cls]('localhost', port)
+        if not hasattr(self, 'tests_type'):
+            self.tests_type = 'lua'
+        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
 
     @property
     def _iproto(self):
@@ -565,7 +565,7 @@ class TarantoolServer(Server):
 
         port = self.admin.port
         self.admin.disconnect()
-        self.admin = CON_SWITCH[self.cls]('localhost', port)
+        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
         self.status = 'started'
 
     def crash_detect(self):

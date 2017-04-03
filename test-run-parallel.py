@@ -2,9 +2,6 @@
 
 
 # TODOs:
-# * Don't restart a server per test, fix admin connections (and maybe update
-#   properly other fields) w/o server restarting; check 0b586f55.
-#   * Add Server's function like setup_for_test_type().
 # * Give each worker 1000 unique ports for TCP sockets and let find_port from
 #   utils.py works only inside them.
 # * Investigate new failing tests.

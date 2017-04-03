@@ -138,6 +138,9 @@ class TestSuite:
             'localhost', server.inspector_port
         )
         inspector.start()
+        # fixme: remove this string if we fix all legacy tests
+        suite_name = os.path.basename(self.suite_path)
+        server.tests_type = 'python' if suite_name.endswith('-py') else 'lua'
         server.deploy(silent=False)
         return inspector
 
@@ -154,14 +157,6 @@ class TestSuite:
         """ Returns short status of the test as a string: 'skip', 'pass',
             'new', 'fail', or 'disabled'.
         """
-        # fixme: remove this string if we fix all legacy tests
-        server.stop(silent=False)
-        # XXX: remove when start() below will be removed
-        server.cls = test.__class__
-        # update .cls and possibly other fields; XXX: find better way to do so,
-        # like prepare_test_run method.
-        server.deploy(silent=False)
-
         test.inspector = inspector
         color_stdout(os.path.join(
             self.ini['suite'], os.path.basename(test.name)).ljust(48),
