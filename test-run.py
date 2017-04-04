@@ -53,7 +53,9 @@ def main_loop(failed_test_ids):
             if short_status == 'fail':
                 failed_test_ids.append(task_id)
                 if not lib.Options().args.is_force:
+                    worker.stop_server()
                     return
+        worker.stop_server()
 
 
 def main():
