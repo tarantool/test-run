@@ -113,7 +113,9 @@ local function wait_fullmesh(self, servers)
                 while true do
                     local info = self:eval(server2,
                         "box.info.replication["..server_id.."]")[1]
-                    if info ~= nil and info.status == 'follow' then
+                    if info ~= nil and
+                       (info.status == 'follow' or info.upstream ~= nil and
+                        info.upstream.status == 'follow') then
                         log.info("%s -> %s: connected", server2, server)
                         break
                     end
