@@ -345,16 +345,25 @@ class TestState(object):
         string = string[3:].strip()
         self.parse_preprocessor(string)
 
-    def cleanup(self):
-        color_log('\nDEBUG: TestState[%s].cleanup()\n' % hex(id(self)),
-            schema='test_var')
+    def stop_nondefault(self):
+        color_log('\nDEBUG: TestState[%s].stop_nondefault()\n'
+                  % hex(id(self)), schema='test_var')
         sys.stdout.clear_all_filters()
-        # don't stop the default server
-        self.servers.pop('default', None)
         for k, v in self.servers.iteritems():
+            # don't stop the default server
+            if k == 'default':
+                continue
             v.stop(silent=True)
             v.cleanup()
             if k in self.connections:
                 self.connections[k].disconnect()
                 self.connections.pop(k)
 
+    def cleanup_nondefault(self):
+        color_log('\nDEBUG: TestState[%s].cleanup()\n' % hex(id(self)),
+                  schema='test_var')
+        for k, v in self.servers.iteritems():
+            # don't cleanup the default server
+            if k == 'default':
+                continue
+            v.cleanup()

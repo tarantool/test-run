@@ -151,7 +151,6 @@ class TestSuite:
         # server crashes
         if inspector:
             inspector.stop()
-        server.cleanup()
 
     def run_test(self, test, server, inspector):
         """ Returns short status of the test as a string: 'skip', 'pass',
@@ -171,7 +170,14 @@ class TestSuite:
         test_name = os.path.basename(test.name)
 
         if self.is_test_enabled(test, conf, server):
-            return test.run(server)
+            short_status = test.run(server)
         else:
             color_stdout("[ disabled ]\n", schema='t_name')
-            return 'disabled'
+            short_status = 'disabled'
+
+        # cleanup only if test passed or if --force mode enabled
+        if lib.Options().args.is_force or short_status == 'pass':
+            server.cleanup()
+            inspector.cleanup_nondefault()
+
+        return short_status

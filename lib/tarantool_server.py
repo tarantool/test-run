@@ -97,7 +97,7 @@ class LuaTest(FuncTest):
             # join inspector handler
             self.inspector.sem.wait()
         # stop any servers created by the test, except the default one
-        ts.cleanup()
+        ts.stop_nondefault()
 
     def killall_servers(self, server, ts, crash_occured):
         """ kill all servers and crash detectors before stream swap """
@@ -147,10 +147,7 @@ class LuaTest(FuncTest):
             # prevent tests greenlet from writing to the real stdout
             lua.kill()
 
-            # XXX: should we only stop all servers and close all connections,
-            #      but don't make cleanup? killall_servers() doing that work,
-            #      but doesn't close connections.
-            ts.cleanup()
+            ts.stop_nondefault()
             raise
 
 class PythonTest(FuncTest):

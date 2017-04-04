@@ -81,3 +81,6 @@ class TarantoolInspector(StreamServer):
 
         self.sem.release()
 
+    def cleanup_nondefault(self):
+        if self.parser:
+            self.parser.cleanup_nondefault()
