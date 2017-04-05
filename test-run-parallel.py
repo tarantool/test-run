@@ -4,7 +4,6 @@
 # TODOs:
 # * Give each worker 1000 unique ports for TCP sockets and let find_port from
 #   utils.py works only inside them.
-# * Investigate new failing tests.
 
 
 # How it works (briefly, simplified)
