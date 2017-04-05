@@ -156,7 +156,7 @@ class TestState(object):
             schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
-        self.servers[sname].start(silent=True)
+        self.servers[sname].start(silent=True, rais=True)
         self.connections[sname] = self.servers[sname].admin
         try:
             self.connections[sname]('return true', silent=True)
@@ -348,7 +348,8 @@ class TestState(object):
     def stop_nondefault(self):
         color_log('\nDEBUG: TestState[%s].stop_nondefault()\n'
                   % hex(id(self)), schema='test_var')
-        sys.stdout.clear_all_filters()
+        if sys.stdout.__class__.__name__ == 'FilteredStream':
+            sys.stdout.clear_all_filters()
         for k, v in self.servers.iteritems():
             # don't stop the default server
             if k == 'default':

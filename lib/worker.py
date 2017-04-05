@@ -300,11 +300,11 @@ class Worker:
         try:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
-            self.stop(task_queue, result_queue, cleanup=False)
+            self.stop_worker(task_queue, result_queue, cleanup=False)
 
         result_queue.put(self.done_marker())
 
-    def stop(self, task_queue, result_queue, cleanup=True):
+    def stop_worker(self, task_queue, result_queue, cleanup=True):
         try:
             if not self.last_task_done:
                 self.task_done(task_queue)

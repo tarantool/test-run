@@ -8,11 +8,31 @@ from gevent.server import StreamServer
 
 from lib.colorer import color_stdout
 
+from lib.tarantool_server import TarantoolStartError
 
-# don't print backtraces when Ctrl+C hit the process when the active greenlet
-# is one of the StreamServer owned
-if KeyboardInterrupt not in gevent.get_hub().NOT_ERROR:
-    gevent.get_hub().NOT_ERROR = gevent.get_hub().NOT_ERROR + (KeyboardInterrupt,)
+
+# Module initialization
+#######################
+
+
+def gevent_propagate_exc():
+    """Don't print backtraces and propagate the exception to the parent
+    greenlet when Ctrl+C or startup fail hit the process when the active
+    greenlet is one of the StreamServer owned.
+    """
+    ghub = gevent.get_hub()
+    for exc_t in [KeyboardInterrupt, TarantoolStartError]:
+        if exc_t not in ghub.NOT_ERROR:
+            ghub.NOT_ERROR = ghub.NOT_ERROR + (exc_t,)
+        if exc_t not in ghub.SYSTEM_ERROR:
+            ghub.SYSTEM_ERROR = ghub.SYSTEM_ERROR + (exc_t,)
+
+
+gevent_propagate_exc()
+
+
+# TarantoolInspector
+####################
 
 
 class TarantoolInspector(StreamServer):
@@ -65,7 +85,7 @@ class TarantoolInspector(StreamServer):
         for line in self.readline(socket):
             try:
                 result = self.parser.parse_preprocessor(line)
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, TarantoolStartError):
                 # propagate to the main greenlet
                 raise
             except Exception as e:

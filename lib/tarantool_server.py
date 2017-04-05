@@ -500,7 +500,8 @@ class TarantoolServer(Server):
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
 
-    def start(self, silent=True, wait=True, wait_load=True, **kwargs):
+    def start(self, silent=True, wait=True, wait_load=True, rais=True,
+              **kwargs):
         if self._start_against_running:
             return
         if self.status == 'started':
@@ -544,6 +545,10 @@ class TarantoolServer(Server):
             try:
                 self.wait_until_started(wait_load)
             except TarantoolStartError:
+                # Raise exception when caller ask for it (e.g. in case of
+                # non-default servers)
+                if rais:
+                    raise
                 # Python tests expect we raise an exception when non-default
                 # server fails
                 if self.crash_expected:
