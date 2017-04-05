@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 from itertools import product
-from lib.utils import Singleton
+from lib.singleton import Singleton
 
 from lib.colorer import color_stdout
 

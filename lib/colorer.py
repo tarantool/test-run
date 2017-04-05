@@ -1,6 +1,6 @@
 import os
 import sys
-from lib.utils import Singleton
+from lib.singleton import Singleton
 
 
 # Use it to print messages on the screen and to the worker's log.
