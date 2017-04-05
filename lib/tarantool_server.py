@@ -578,13 +578,14 @@ class TarantoolServer(Server):
         if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
            return
 
+        self.kill_current_test()
+
         if not os.path.exists(self.logfile):
             return
 
         if not self.current_test.is_crash_reported:
             self.current_test.is_crash_reported = True
             self.crash_grep()
-        self.kill_current_test()
 
     def crash_grep(self):
         print_log_lines = 15

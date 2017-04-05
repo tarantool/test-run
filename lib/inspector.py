@@ -94,6 +94,7 @@ class TarantoolInspector(StreamServer):
                 # propagate to the main greenlet
                 raise
             except Exception as e:
+                self.parser.kill_current_test()
                 color_stdout('\nTarantoolInpector.handle() received the following error:\n' +
                     traceback.format_exc() + '\n', schema='error')
                 result = { "error": repr(e) }
