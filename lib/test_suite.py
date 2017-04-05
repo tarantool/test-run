@@ -144,13 +144,16 @@ class TestSuite:
         server.deploy(silent=False)
         return inspector
 
-    def stop_server(self, server, inspector, silent=False):
+    def stop_server(self, server, inspector, silent=False, cleanup=True):
         server.stop(silent=silent)
         # don't delete core files or state of the data dir
         # in case of exception, which is raised when the
         # server crashes
         if inspector:
             inspector.stop()
+        if cleanup:
+            inspector.cleanup_nondefault()
+            server.cleanup()
 
     def run_test(self, test, server, inspector):
         """ Returns short status of the test as a string: 'skip', 'pass',
@@ -177,7 +180,6 @@ class TestSuite:
 
         # cleanup only if test passed or if --force mode enabled
         if lib.Options().args.is_force or short_status == 'pass':
-            server.cleanup()
             inspector.cleanup_nondefault()
 
         return short_status

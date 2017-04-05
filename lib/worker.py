@@ -204,7 +204,7 @@ class Worker:
             self.initialized = True
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
-            self.stop_server()
+            self.stop_server(cleanup=False)
         except Exception as e:
             color_stdout('Worker "%s" cannot start tarantool server; '
                          'the tasks will be ignored...\n' % self.name,
@@ -214,11 +214,12 @@ class Worker:
             color_stdout('Worker "%s" received the following error:\n'
                          % self.name + traceback.format_exc() + '\n',
                          schema='error')
-            self.stop_server()
+            self.stop_server(cleanup=False)
 
-    def stop_server(self, rais=True):
+    def stop_server(self, rais=True, cleanup=True):
         try:
-            self.suite.stop_server(self.server, self.inspector, silent=True)
+            self.suite.stop_server(self.server, self.inspector, silent=True,
+                                   cleanup=cleanup)
         except (KeyboardInterrupt, Exception):
             if rais:
                 raise
@@ -299,16 +300,16 @@ class Worker:
         try:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception):
-            self.stop(task_queue, result_queue)
+            self.stop(task_queue, result_queue, cleanup=False)
 
         result_queue.put(self.done_marker())
 
-    def stop(self, task_queue, result_queue):
+    def stop(self, task_queue, result_queue, cleanup=True):
         try:
             if not self.last_task_done:
                 self.task_done(task_queue)
             self.flush_all_tasks(task_queue, result_queue)
-            self.stop_server()
+            self.stop_server(cleanup=cleanup)
         except (KeyboardInterrupt, Exception):
             pass
 
