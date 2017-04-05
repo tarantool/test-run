@@ -354,7 +354,6 @@ class TestState(object):
             if k == 'default':
                 continue
             v.stop(silent=True)
-            v.cleanup()
             if k in self.connections:
                 self.connections[k].disconnect()
                 self.connections.pop(k)
