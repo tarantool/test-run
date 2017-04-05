@@ -462,15 +462,13 @@ class TarantoolServer(Server):
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
-        port = random.randrange(3300, 9999)
 
         if self.use_unix_sockets:
             self._admin = os.path.join(self.vardir, "socket-admin")
         else:
-            self._admin = find_port(port)
-            port = self._admin.port + 1
+            self._admin = find_port()
 
-        self._iproto = find_port(port)
+        self._iproto = find_port()
 
         # these sockets will be created by tarantool itself
         path = os.path.join(self.vardir, self.name + '.control')
@@ -520,8 +518,6 @@ class TarantoolServer(Server):
         color_log(path + " \n", schema='path')
         color_log(self.version() + "\n", schema='version')
 
-        check_port(self.admin.port)  # XXX: prevent races btw processes
-                                     #      use port 0 to autochoose?
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:

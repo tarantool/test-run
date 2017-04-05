@@ -75,7 +75,7 @@ class AppServer(Server):
                     if (e.errno == errno.ENOENT):
                         continue
                     raise
-        os.putenv("LISTEN", str(find_port(34000)))
+        os.putenv("LISTEN", str(find_port()))
         shutil.copy(
             os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
             self.vardir

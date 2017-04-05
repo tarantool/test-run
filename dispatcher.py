@@ -15,6 +15,32 @@ from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
 
 
+class TcpPortDispatcher:
+    """ Helper class holds available and occupied TCP port ranges. This ranges
+    intended to distributes between workers.
+    """
+    def __init__(self):
+        self.range_size = 1000
+        self.ranges_cnt = 60
+        self.lowest_port = 3000
+        self.available_ranges = set()
+        for i in range(self.ranges_cnt):
+            start_port = self.lowest_port + i * self.range_size
+            end_port = start_port + self.range_size - 1
+            tcp_port_range = (start_port, end_port)
+            self.available_ranges.add(tcp_port_range)
+        self.acquired_ranges = dict()
+
+    def acquire_range(self, _id):
+        tcp_port_range = self.available_ranges.pop()
+        self.acquired_ranges[_id] = tcp_port_range
+        return tcp_port_range
+
+    def release_range(self, _id):
+        tcp_port_range = self.acquired_ranges.pop(_id)
+        self.available_ranges.add(tcp_port_range)
+
+
 class Dispatcher:
     """Run specified count of worker processes ('max_workers_cnt' arg), pass
     task IDs (via 'task_queue'), receive results and output (via
@@ -72,6 +98,7 @@ class Dispatcher:
         self.pid_to_worker_id = dict()
 
         self.randomize = randomize
+        self.tcp_port_dispatcher = TcpPortDispatcher()
 
     def terminate_all_workers(self):
         for process in self.processes:
@@ -143,7 +170,10 @@ class Dispatcher:
         task_queue_disp = self.find_nonempty_task_queue_disp()
         if not task_queue_disp:
             return
-        process = task_queue_disp.add_worker(self.worker_next_id)
+        tcp_port_range = self.tcp_port_dispatcher.acquire_range(
+            self.worker_next_id)
+        process = task_queue_disp.add_worker(self.worker_next_id,
+                                             tcp_port_range)
         self.processes.append(process)
         self.pids.append(process.pid)
         self.pid_to_worker_id[process.pid] = self.worker_next_id
@@ -154,6 +184,7 @@ class Dispatcher:
         task_queue_disp = self.get_task_queue_disp(worker_id)
         task_queue_disp.del_worker(worker_id)
         self.workers_cnt -= 1
+        self.tcp_port_dispatcher.release_range(worker_id)
 
     def mark_task_done(self, worker_id, task_id):
         task_queue_disp = self.get_task_queue_disp(worker_id)
@@ -295,20 +326,23 @@ class TaskQueueDispatcher:
         self.done = False
         self.done_task_ids = set()
 
-    def _run_worker(self, worker_id):
+    def _run_worker(self, worker_id, tcp_port_range):
         """Entry function for worker processes."""
+        os.environ['TEST_RUN_WORKER_ID'] = str(worker_id)
+        os.environ['TEST_RUN_TCP_PORT_START'] = str(tcp_port_range[0])
+        os.environ['TEST_RUN_TCP_PORT_END'] = str(tcp_port_range[1])
         color_stdout.queue = self.result_queue
         worker = self.gen_worker(worker_id)
         worker.run_all(self.task_queue, self.result_queue)
 
-    def add_worker(self, worker_id):
+    def add_worker(self, worker_id, tcp_port_range):
         # Note: each of our workers should consume only one None, but for the
         # case of abnormal circumstances we listen for processes termination
         # (method 'check_for_dead_processes') and for time w/o output from
         # workers (class 'HangWatcher').
         self.task_queue.put(None)  # 'stop worker' marker
 
-        entry = functools.partial(self._run_worker, worker_id)
+        entry = functools.partial(self._run_worker, worker_id, tcp_port_range)
 
         self.worker_ids.add(worker_id)
         process = multiprocessing.Process(target=entry)

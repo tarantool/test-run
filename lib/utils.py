@@ -3,6 +3,7 @@ import sys
 import collections
 import signal
 from gevent import socket
+import random
 
 
 UNIX_SOCKET_LEN_LIMIT = 107
@@ -58,18 +59,28 @@ def print_tail_n(filename, num_lines):
 
 
 def check_port(port, rais=True):
+    """ True -- it's possible to listen on this port for TCP/IPv4 or TCP/IPv6
+    connections (UNIX Sockets in case of file path). False -- otherwise.
+    """
     try:
         if isinstance(port, (int, long)):
-            sock = socket.create_connection(("localhost", port))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('127.0.0.1', port))
+            sock.listen(5)
+            sock.close()
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            sock.bind(('::1', port))
+            sock.listen(5)
+            sock.close()
         else:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(port)
-
-    except socket.error:
-        return True
-    if rais:
-        raise RuntimeError("The server is already running on port {0}".format(port))
-    return False
+    except socket.error as e:
+        return False
+        if rais:
+            raise RuntimeError(
+                "The server is already running on port {0}".format(port))
+    return True
 
 # A list of ports used so far. Avoid reusing ports
 # to reduce race conditions between starting and stopping servers.
@@ -78,17 +89,22 @@ def check_port(port, rais=True):
 # network sockets
 ports = {}
 
-def find_port(port):
+def find_port():
     global ports
-    while port < 65536:
+    start_port = int(os.environ.get('TEST_RUN_TCP_PORT_START', '3000'))
+    end_port = int(os.environ.get('TEST_RUN_TCP_PORT_END', '65535'))
+    port = random.randrange(start_port, end_port + 1)
+
+    while port <= end_port:
         if port not in ports and check_port(port, False):
             ports[port] = True
             return port
         port += 1
-# We've made a full circle, clear the list of used ports and start
-# from scratch
+
+    # We've made a full circle, clear the list of used ports and start
+    # from scratch
     ports = {}
-    return find_port(34000)
+    return find_port()
 
 
 def find_in_path(name):

@@ -1,11 +1,6 @@
 #!/usr/bin/env python2
 
 
-# TODOs:
-# * Give each worker 1000 unique ports for TCP sockets and let find_port from
-#   utils.py works only inside them.
-
-
 # How it works (briefly, simplified)
 # ##################################
 #
