@@ -49,7 +49,7 @@ def module_init():
     os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
     os.environ["BUILDDIR"] = os.path.abspath(args.builddir)
 
-    TarantoolServer.find_exe(args.builddir)  # XXX: can raise
+    TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
 
 

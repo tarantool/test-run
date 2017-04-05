@@ -96,6 +96,7 @@ class Dispatcher:
         self.max_workers_cnt = min(max_workers_cnt, tasks_cnt)
 
         self.pid_to_worker_id = dict()
+        self.worker_id_to_pid = dict()
 
         self.randomize = randomize
         self.tcp_port_dispatcher = TcpPortDispatcher()
@@ -177,14 +178,26 @@ class Dispatcher:
         self.processes.append(process)
         self.pids.append(process.pid)
         self.pid_to_worker_id[process.pid] = self.worker_next_id
+        self.worker_id_to_pid[self.worker_next_id] = process.pid
+
         self.workers_cnt += 1
         self.worker_next_id += 1
 
     def del_worker(self, worker_id):
+        pid = self.worker_id_to_pid[worker_id]
+
         task_queue_disp = self.get_task_queue_disp(worker_id)
         task_queue_disp.del_worker(worker_id)
         self.workers_cnt -= 1
         self.tcp_port_dispatcher.release_range(worker_id)
+
+        self.pids.remove(pid)
+        del self.worker_id_to_pid[worker_id]
+        del self.pid_to_worker_id[pid]
+        for process in self.processes:
+            if process.pid == pid:
+                self.processes.remove(process)
+                break
 
     def mark_task_done(self, worker_id, task_id):
         task_queue_disp = self.get_task_queue_disp(worker_id)
@@ -232,6 +245,8 @@ class Dispatcher:
                     self.mark_task_done(obj.worker_id, obj.task_id)
                 elif isinstance(obj, WorkerDone):
                     self.del_worker(obj.worker_id)
+            if not objs:
+                self.check_for_dead_processes()
 
             new_workers_cnt = self.max_workers_cnt - self.workers_cnt
             for _ in range(new_workers_cnt):
@@ -245,7 +260,6 @@ class Dispatcher:
         if not ready_inputs:
             for listener in self.listeners:
                 listener.process_timeout(self.report_timeout)
-            self.check_for_dead_processes()
             return []
 
         # collect received objects
@@ -281,7 +295,7 @@ class Dispatcher:
         self.invoke_listeners(inputs, ready_inputs)
 
     def check_for_dead_processes(self):
-        for pid in self.pids[:]:
+        for pid in self.pids:
             exited = False
             try:
                 os.waitpid(pid, os.WNOHANG)
@@ -289,17 +303,12 @@ class Dispatcher:
                 exited = True
             if exited:
                 worker_id = self.pid_to_worker_id[pid]
-                task_queue_disp = self.get_task_queue_disp(worker_id)
-                if not task_queue_disp:
-                    continue
-                result_queue = task_queue_disp.result_queue
-                result_queue.put(WorkerDone(worker_id, 'unknown'))
                 color_stdout(
                     "[Main process] Worker %d don't reported work "
                     "done using results queue, but the corresponding "
-                    "process seems dead. Sending fake WorkerDone marker.\n"
+                    "process seems dead. Removing it from Dispatcher.\n"
                     % worker_id, schema='test_var')
-                self.pids.remove(pid)  # XXX: sync it w/ self.processes
+                self.del_worker(worker_id)
 
     def wait_processes(self):
         for process in self.processes:
@@ -350,7 +359,6 @@ class TaskQueueDispatcher:
         return process
 
     def del_worker(self, worker_id):
-        # TODO: join on process, remove pid from pids
         self.worker_ids.remove(worker_id)
         # mark task queue as done when the first worker done to prevent cycling
         # with add-del workers

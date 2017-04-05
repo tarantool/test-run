@@ -224,8 +224,8 @@ class Worker:
             if rais:
                 raise
 
-    # TODO: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
-    #       worker' marker readed from the queue, but not returned to us?
+    # XXX: What if KeyboardInterrupt raised inside task_queue.get() and 'stop
+    #      worker' marker readed from the queue, but not returned to us?
     def task_get(self, task_queue):
         self.last_task_done = False
         self.last_task_id = task_queue.get()
@@ -275,7 +275,7 @@ class Worker:
                 color_log('Worker "%s" exhausted task queue; '
                           'stopping the server...\n' % self.name,
                           schema='test_var')
-                self.stop(task_queue, result_queue)
+                self.stop_worker(task_queue, result_queue)
                 break
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
