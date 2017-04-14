@@ -86,12 +86,6 @@ class TestSuite:
                     dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
 
     def find_tests(self):
-        if not lib.Options().args.reproduce:
-            color_stdout("Collecting tests in ", schema='ts_text')
-            color_stdout(repr(self.suite_path), schema='path')
-            color_stdout(": ", self.ini["description"], ".\n",
-                         schema='ts_text')
-
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'app':
@@ -105,8 +99,16 @@ class TestSuite:
             raise ValueError('Cannot collect tests of unknown type')
 
         if not lib.Options().args.reproduce:
-            color_stdout("Found ", str(len(self.tests)), " tests.\n",
-                         schema='path')
+            color_stdout("Collecting tests in ", schema='ts_text')
+            color_stdout(
+                '%s (Found %s tests)' % (
+                    repr(self.suite_path).ljust(16),
+                    str(len(self.tests)).ljust(3)
+                ),
+                schema='path'
+            )
+            color_stdout(": ", self.ini["description"], ".\n",
+                         schema='ts_text')
         return self.tests
 
     def gen_server(self):
@@ -161,8 +163,11 @@ class TestSuite:
             'new', 'fail', or 'disabled'.
         """
         test.inspector = inspector
-        color_stdout(os.path.join(
-            self.ini['suite'], os.path.basename(test.name)).ljust(48),
+        color_stdout(
+            os.path.join(
+                self.ini['suite'],
+                os.path.basename(test.name)
+            ).ljust(48),
             schema='t_name'
         )
         # for better diagnostics in case of a long-running test
@@ -170,7 +175,7 @@ class TestSuite:
         conf = ''
         if test.run_params:
             conf = test.conf_name
-        color_stdout("%s" % conf.ljust(16), schema='test_var')
+        color_stdout(conf.ljust(16), schema='test_var')
         test_name = os.path.basename(test.name)
 
         if self.is_test_enabled(test, conf, server):

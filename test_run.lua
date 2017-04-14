@@ -1,11 +1,12 @@
 local socket = require('socket')
+local json = require('json')
 local yaml = require('yaml')
 local log = require('log')
 local fiber = require('fiber')
 local fio = require('fio')
 local errno = require('errno')
 
-local function request(self, msg)
+local function cmd(self, msg)
     local sock = socket.tcp_connect(self.host, self.port)
     local data = msg .. '\n'
     sock:send(data)
@@ -19,21 +20,22 @@ local function request(self, msg)
     return result
 end
 
-local function tnt_eval(self, node, expr)
-    return request(self, 'eval ' .. node .. ' "' .. expr .. '"')
+local eval_cmd = 'eval %s "%s"'
+
+local function eval(self, node, expr)
+    return self:cmd(eval_cmd:format(node, expr))
 end
 
+local get_param_cmd = 'eval %s "return box.info%s"'
+
 local function get_param(self, node, param)
-    local cmd = 'eval ' .. node .. ' "return box.info'
-    if param ~= nil then
-        cmd = cmd .. '.' .. param
-    end
-    cmd = cmd .. '"'
-    return request(self, cmd)
+    -- if param is passed then append dot, otherwise make it empty
+    param = param and '.' .. param or ''
+    return self:cmd(get_param_cmd:format(node, param))
 end
 
 local function get_lsn(self, node, sid)
-    local nodes = get_param(self, node, 'vclock')
+    local nodes = self:get_param(node, 'vclock')
     return tonumber(nodes[1][tonumber(sid)])
 end
 
@@ -87,22 +89,30 @@ local function wait_vclock(self, node, to_vclock)
     end
 end
 
+
+local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua",' ..
+                            ' wait_load=False, wait=False'
+local create_cluster_cmd2 = 'start server %s'
+
 local function create_cluster(self, servers)
     -- TODO: use the name of test suite instead of 'replication/'
     for _, name in ipairs(servers) do
-        self:cmd("create server "..name..
-                 "  with script='replication/"..name..".lua', "..
-                 "       wait_load=False, wait=False")
-        self:cmd("start server "..name)
+        self:cmd(create_cluster_cmd1:format(name, 'replication', name))
+        self:cmd(create_cluster_cmd2:format(name))
     end
 end
 
+local drop_cluster_cmd1 = 'stop server %s'
+local drop_cluster_cmd2 = 'cleanup server %s'
+
 local function drop_cluster(self, servers)
     for _, name in ipairs(self) do
-        self:cmd("stop server "..name)
-        self:cmd("cleanup server "..name)
+        self:cmd(drop_cluster_cmd1:format(name))
+        self:cmd(drop_cluster_cmd2:format(name))
     end
 end
+
+local wait_fullmesh_cmd = 'box.info.replication[%s]'
 
 local function wait_fullmesh(self, servers)
     log.info("starting full mesh")
@@ -124,11 +134,11 @@ local function wait_fullmesh(self, servers)
             if server ~= server2 then
                 log.info("%s -> %s: waiting for connection", server2, server)
                 while true do
-                    local info = self:eval(server2,
-                        "box.info.replication["..server_id.."]")[1]
-                    if info ~= nil and
-                       (info.status == 'follow' or info.upstream ~= nil and
-                        info.upstream.status == 'follow') then
+                    local cmd = wait_fullmesh_cmd:format(server_id)
+                    local info = self:eval(server2, cmd)[1]
+                    if info ~= nil and (info.status == 'follow' or
+                                        (info.upstream ~= nil and
+                                         info.upstream.status == 'follow')) then
                         log.info("%s -> %s: connected", server2, server)
                         break
                     end
@@ -160,23 +170,30 @@ local function wait_cluster_vclock(self, servers, vclock)
     return vclock
 end
 
+local switch_cmd1 = "env = require('test_run')"
+local switch_cmd2 = "test_run = env.new('%s', '%s')"
+local switch_cmd3 = "set connection %s"
+
 local function switch(self, node)
     -- switch to other node and enable test_run
-    self:eval(node, "env=require('test_run')")
-    self:eval(node, "test_run=env.new('"..self.host.."', "..tostring(self.port)..")")
-    return self:cmd('set connection ' .. node)
+    self:eval(node, switch_cmd1)
+    self:eval(node, switch_cmd2:format(self.host, self.port))
+    return self:cmd(switch_cmd3:format(node))
 end
+
+local get_cfg_cmd = 'config %s'
 
 local function get_cfg(self, name)
     if self.run_conf == nil then
-        self.run_conf = self:cmd('config ' .. name)
+        self.run_conf = self:cmd(get_cfg_cmd:format(name))
     end
     return self.run_conf[name]
 end
 
 local function grep_log(self, node, what, bytes)
     local filename = self:eval(node, "box.cfg.log")[1]
-    local file -- forward declaration for fail() to capture
+    local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
+
     local function fail(msg)
         local err = errno.strerror()
         if file ~= nil then
@@ -184,7 +201,7 @@ local function grep_log(self, node, what, bytes)
         end
         error(string.format("%s: %s: %s", msg, filename, err))
     end
-    file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
+
     if file == nil then
         fail("Failed to open log file")
     end
@@ -233,44 +250,42 @@ local function grep_log(self, node, what, bytes)
     return found
 end
 
-local function new(host, port)
+local inspector_methods = {
+    cmd = cmd,
+    eval = eval,
+    -- get wrappers
+    get_param = get_param,
+    get_server_id = get_server_id,
+    get_cfg = get_cfg,
+    -- lsn
+    get_lsn = get_lsn,
+    wait_lsn = wait_lsn,
+    -- vclock
+    get_vclock = get_vclock,
+    wait_vclock = wait_vclock,
+    switch = switch,
+    -- replication
+    create_cluster = create_cluster,
+    drop_cluster = drop_cluster,
+    wait_fullmesh = wait_fullmesh,
+    get_cluster_vclock = get_cluster_vclock,
+    wait_cluster_vclock = wait_cluster_vclock,
+    --
+    grep_log = grep_log,
+}
+
+local function inspector_new(host, port)
     local inspector = {}
 
-    if host == nil then
-        inspector.host = 'localhost'
-    else
-        inspector.host = host
+    inspector.host = host or 'localhost'
+    inspector.port = port or tonumber(os.getenv('INSPECTOR'))
+    if inspector.port == nil then
+        error('Inspector not started')
     end
 
-    if port == nil then
-        inspector.port = tonumber(os.getenv('INSPECTOR'))
-	if inspector.port == nil then
-	    error('Inspector not started')
-	end
-    else
-        inspector.port = port
-    end
-
-
-    inspector.cmd = request
-    inspector.eval = tnt_eval
-    inspector.get_param = get_param
-    inspector.get_server_id = get_server_id
-    inspector.get_lsn = get_lsn
-    inspector.wait_lsn = wait_lsn
-    inspector.get_vclock = get_vclock
-    inspector.wait_vclock = wait_vclock
-    inspector.switch = switch
-    inspector.create_cluster = create_cluster
-    inspector.drop_cluster = drop_cluster
-    inspector.wait_fullmesh = wait_fullmesh
-    inspector.get_cluster_vclock = get_cluster_vclock
-    inspector.wait_cluster_vclock = wait_cluster_vclock
-    inspector.get_cfg = get_cfg
-    inspector.grep_log = grep_log
-    return inspector
+    return setmetatable(inspector, { __index = inspector_methods })
 end
 
 return {
-    new=new;
+    new = inspector_new;
 }

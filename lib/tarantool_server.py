@@ -414,6 +414,13 @@ class TarantoolServer(Server):
         self.stop()
 
     @classmethod
+    def version(cls):
+        p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
+        version = p.stdout.read().rstrip()
+        p.wait()
+        return version
+
+    @classmethod
     def find_exe(cls, builddir, silent=True):
         cls.builddir = os.path.abspath(builddir)
         builddir = os.path.join(builddir, "src")
@@ -432,16 +439,33 @@ class TarantoolServer(Server):
                 ctl_dir = os.path.join(_dir, '../extra/dist')
                 ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
-                cls.binary = os.path.abspath(exe)
-                os.environ["PATH"] = (os.path.abspath(ctl_dir) + os.pathsep +
-                                      os.path.abspath(_dir) + os.pathsep +
-                                      os.environ["PATH"])
-                os.environ["TARANTOOLCTL_PLUGIN_PATH"] = os.path.abspath(
-                        os.path.join(ctl_dir, 'plugins')
+                cls.binary      = os.path.abspath(exe)
+                cls.ctl_path    = os.path.abspath(ctl)
+                cls.ctl_plugins = os.path.abspath(
+                    os.path.join(ctl_dir, 'plugins')
                 )
-                cls.ctl_path = os.path.abspath(ctl)
+                os.environ["PATH"] = os.pathsep.join([
+                        os.path.abspath(ctl_dir),
+                        os.path.abspath(_dir),
+                        os.environ["PATH"]
+                ])
+                os.environ["TARANTOOLCTL_PLUGIN_PATH"] = cls.ctl_plugins
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
+
+    @classmethod
+    def print_exe(cls):
+        color_stdout('Installing the server ...\n', schema='serv_text')
+
+        if cls.binary:
+            color_stdout('    Found executable   at ', schema='serv_text')
+            color_stdout(cls.binary + '\n', schema='path')
+
+        if cls.ctl_path:
+            color_stdout('    Found tarantoolctl at ', schema='serv_text')
+            color_stdout(cls.ctl_path + '\n', schema='path')
+
+        color_stdout("\n", cls.version(), "\n", schema='version')
 
     def install(self, silent=True):
         if self._start_against_running:
@@ -659,7 +683,8 @@ class TarantoolServer(Server):
             if not silent:
                 raise Exception('Server is not started')
             return
-        color_log('Stopping the server ...\n', schema='serv_text')
+        if not silent:
+            color_stdout('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
             color_log('TarantoolServer.stop(): stopping the %s\n'
@@ -814,14 +839,6 @@ class TarantoolServer(Server):
         while (self.get_lsn(node_id) < lsn):
             # print("wait_lsn", node_id, lsn, self.get_param("vclock"))
             time.sleep(0.01)
-
-    def version(self):
-        p = subprocess.Popen([self.binary, "--version"],
-                             cwd=self.vardir,
-                             stdout=subprocess.PIPE)
-        version = p.stdout.read().rstrip()
-        p.wait()
-        return version
 
     def get_log(self):
         return TarantoolLog(self.logfile).positioning()

@@ -88,13 +88,14 @@ class Options:
                 "--builddir",
                 dest = "builddir",
                 default = "..",
-                help = """Path to project build directory. Default: " + "../.""")
+                help = """Path to project build directory. Default: ".." """)
 
         parser.add_argument(
                 "--tarantool-port",
                 dest = "tarantool_port",
                 default = None,
-                help = """Listen port number to run tests against. Admin port number must be listen+1""")
+                help = """Listen port number to run tests against. Admin port
+                number must be listen + 1""")
 
         parser.add_argument(
                 "--vardir",
@@ -112,8 +113,16 @@ class Options:
                 "--conf",
                 dest="conf",
                 default=None,
-                help="""Force set test configuration mode"""
-        )
+                help="""Force set test configuration mode""")
+
+        parser.add_argument(
+                "--jobs",
+                dest="jobs",
+                default=-1,
+                type=int,
+                help="""Workers count. Default: -1, means everything running
+                consistently. Otherwise parallel testing is enabled. 0 means
+                2 x CPU count. """)
 
         parser.add_argument(
                 "--reproduce",
@@ -121,15 +130,7 @@ class Options:
                 default=None,
                 help="""Run tests in the order given by the file.
                 Such files created by workers in the "var/reproduce" directory.
-                Note: The option works now only with test-run-parallel.py.""")
-
-        parser.add_argument(
-                "--jobs",
-                dest="jobs",
-                default=0,
-                type=int,
-                help="""Workers count. Default: CPUs count x 2.
-                Note: The option works now only with test-run-parallel.py.""")
+                Note: The option works now only with parallel testing.""")
 
         parser.add_argument(
                 "--no-output-timeout",
@@ -140,7 +141,7 @@ class Options:
                 amount of seconds. Set it to -1 to disable hang detection.
                 Default: 10 [seconds] (but disabled when one of --gdb, --llgb,
                 --valgrind, --long options is passed).
-                Note: The option works now only with test-run-parallel.py.""")
+                Note: The option works now only with parallel testing.""")
 
         self.args = parser.parse_args()
         self.check()

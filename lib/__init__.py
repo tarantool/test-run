@@ -46,8 +46,9 @@ def module_init():
         pass
 
     args.builddir = os.path.abspath(os.path.expanduser(args.builddir))
-    os.environ["SOURCEDIR"] = os.path.dirname(os.path.abspath(path))
-    os.environ["BUILDDIR"] = os.path.abspath(args.builddir)
+
+    os.environ["SOURCEDIR"] = os.path.dirname(os.getcwd())
+    os.environ["BUILDDIR"]  = args.builddir
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)

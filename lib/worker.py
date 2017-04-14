@@ -4,6 +4,7 @@ import traceback
 import yaml
 import copy
 import functools
+import collections
 
 import lib
 from lib.utils import safe_makedirs
@@ -50,6 +51,12 @@ def get_reproduce_file(worker_name):
     return os.path.join(reproduce_dir, '%s.list.yaml' % worker_name)
 
 
+def print_greetings():
+    # print information about tarantool
+    color_stdout('\n')
+    TarantoolServer.print_exe()
+
+
 # Get tasks and worker generators
 #################################
 
@@ -60,7 +67,7 @@ def get_task_groups():
     group.
     """
     suites = find_suites()
-    res = {}
+    res = collections.OrderedDict()
     for suite in suites:
         key = os.path.basename(suite.suite_path)
         gen_worker = functools.partial(Worker, suite)  # get _id as an arg
@@ -216,9 +223,9 @@ class Worker:
                          schema='error')
             self.stop_server(cleanup=False)
 
-    def stop_server(self, rais=True, cleanup=True):
+    def stop_server(self, rais=True, cleanup=True, silent=True):
         try:
-            self.suite.stop_server(self.server, self.inspector, silent=True,
+            self.suite.stop_server(self.server, self.inspector, silent=silent,
                                    cleanup=cleanup)
         except (KeyboardInterrupt, Exception):
             if rais:
