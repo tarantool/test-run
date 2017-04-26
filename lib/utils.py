@@ -57,10 +57,11 @@ def check_port(port, rais=True):
             sock.bind(('127.0.0.1', port))
             sock.listen(5)
             sock.close()
-            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-            sock.bind(('::1', port))
-            sock.listen(5)
-            sock.close()
+            if not bool(os.environ.get('TRAVIS')):
+                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+                sock.bind(('::1', port))
+                sock.listen(5)
+                sock.close()
         else:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(port)
