@@ -61,10 +61,6 @@ class TestState(object):
 
             # token format: eval <server name> "<expr>"
             return self.lua_eval(name, expr[1:-1])
-        elif token == 'wait_lsn':
-            waiter = lexer.get_token()
-            master = lexer.get_token()
-            return self.wait_lsn(waiter, master)
         elif token == 'switch':
             server = lexer.get_token()
             return self.switch(server)
@@ -269,16 +265,6 @@ class TestState(object):
                 'Unknown command for server: %s' % ctype
             )
 
-    def wait_lsn(self, waiter, master):
-        if waiter not in self.servers:
-            raise LuaPreprocessorException('Can\'t start nonexistent server %s' % repr(waiter))
-        if master not in self.servers:
-            raise LuaPreprocessorException('Can\'t start nonexistent server %s' % repr(master))
-        replica = self.servers[waiter]
-        wait_for = self.servers[master]
-        master_id = wait_for.get_param('server')['id']
-        lsn = wait_for.get_lsn(master_id)
-        replica.wait_lsn(master_id, lsn)
 
     def connection(self, ctype, cnames, sname):
         # we always get a list of connections as input here

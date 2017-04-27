@@ -37,17 +37,30 @@ local function get_lsn(self, node, sid)
     return tonumber(nodes[1][tonumber(sid)])
 end
 
+local function get_server_id(self, node)
+    local server = self:get_param(node, "server")[1]
+    if server ~= nil then
+        -- Tarantool < 1.7.4
+        if server.id <= 0 then
+            return nil -- bootstrap in progress
+        end
+        return tonumber(server.id)
+    end
+    -- Tarantool 1.7.4+
+    local server_id = self:get_param(node, "id")[1]
+    if server_id == nil then
+        return nil -- bootstrap in progress
+    end
+    return tonumber(server_id)
+end
+
 local function wait_lsn(self, waiter, master)
-    local sid = self:get_param(master, 'server')[1].id
+    local sid = self:get_server_id(master)
     local lsn = self:get_lsn(master, sid)
 
     while self:get_lsn(waiter, sid) < lsn do
         fiber.sleep(0.001)
     end
-end
-
-local function get_server_id(self, node)
-    return tonumber(self:get_param(node, "server")[1].id)
 end
 
 local function get_vclock(self, node)
@@ -99,7 +112,7 @@ local function wait_fullmesh(self, servers)
         local server_id
         while true do
             server_id = self:get_server_id(server)
-            if server_id > 0 then
+            if server_id ~= nil then
                 log.info("%s: bootstrapped", server)
                 break
             end
