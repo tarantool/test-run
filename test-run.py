@@ -195,7 +195,8 @@ def main_consistent():
 if __name__ == "__main__":
     status = 0
 
-    if lib.Options().args.jobs == -1:
+    force_parallel = bool(lib.Options().args.reproduce)
+    if not force_parallel and lib.Options().args.jobs == -1:
         status = main_consistent()
     else:
         status = main_parallel()
