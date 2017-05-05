@@ -116,8 +116,10 @@ class Options:
                 help="""Force set test configuration mode""")
 
         parser.add_argument(
-                "--jobs",
+                "-j", "--jobs",
                 dest="jobs",
+                const=0,
+                nargs='?',
                 default=-1,
                 type=int,
                 help="""Workers count. Default: -1, means everything running
