@@ -29,7 +29,6 @@ from lib.preprocessor import TestState
 from lib.box_connection import BoxConnection
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.utils import find_port
-from lib.utils import check_port
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import format_process

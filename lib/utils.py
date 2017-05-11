@@ -47,17 +47,18 @@ def print_tail_n(filename, num_lines):
             color_stdout(line, schema='tail')
 
 
-def check_port(port, rais=True):
+def check_port(port, rais=True, ipv4=True, ipv6=True):
     """ True -- it's possible to listen on this port for TCP/IPv4 or TCP/IPv6
     connections (UNIX Sockets in case of file path). False -- otherwise.
     """
     try:
         if isinstance(port, (int, long)):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('127.0.0.1', port))
-            sock.listen(5)
-            sock.close()
-            if not bool(os.environ.get('TRAVIS')):
+            if ipv4:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind(('127.0.0.1', port))
+                sock.listen(5)
+                sock.close()
+            if ipv6:
                 sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
                 sock.bind(('::1', port))
                 sock.listen(5)
@@ -66,11 +67,12 @@ def check_port(port, rais=True):
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(port)
     except socket.error as e:
-        return False
         if rais:
             raise RuntimeError(
                 "The server is already running on port {0}".format(port))
+        return False
     return True
+
 
 # A list of ports used so far. Avoid reusing ports
 # to reduce race conditions between starting and stopping servers.
@@ -79,6 +81,10 @@ def check_port(port, rais=True):
 # network sockets
 ports = {}
 
+
+is_ipv6_supported = check_port(port=0, rais=False, ipv4=False, ipv6=True)
+
+
 def find_port():
     global ports
     start_port = int(os.environ.get('TEST_RUN_TCP_PORT_START', '3000'))
@@ -86,7 +92,8 @@ def find_port():
     port = random.randrange(start_port, end_port + 1)
 
     while port <= end_port:
-        if port not in ports and check_port(port, False):
+        is_free = check_port(port, False, ipv4=True, ipv6=is_ipv6_supported)
+        if port not in ports and is_free:
             ports[port] = True
             return port
         port += 1
