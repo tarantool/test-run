@@ -120,11 +120,10 @@ class Options:
                 dest="jobs",
                 const=0,
                 nargs='?',
-                default=-1,
+                default=0,
                 type=int,
-                help="""Workers count. Default: -1, means everything running
-                consistently. Otherwise parallel testing is enabled. 0 means
-                2 x CPU count. """)
+                help="""Workers count. Default: 0, means 2 x CPU count. -1
+                means everything running consistently (single process). """)
 
         parser.add_argument(
                 "--reproduce",
