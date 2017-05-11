@@ -138,9 +138,15 @@ class Dispatcher:
                 no_output_timeout)
             self.listeners.append(hang_watcher)
 
+    def run_max_workers(self):
+        ok = True
+        new_workers_cnt = self.max_workers_cnt - self.workers_cnt
+        while ok and new_workers_cnt > 0:
+            ok = self.add_worker()
+            new_workers_cnt = self.max_workers_cnt - self.workers_cnt
+
     def start(self):
-        for _ in range(self.max_workers_cnt):
-            self.add_worker()
+        self.run_max_workers()
 
     def find_nonempty_task_queue_disp(self):
         """Find TaskQueueDispatcher that doesn't reported it's 'done' (don't
@@ -150,9 +156,21 @@ class Dispatcher:
             self.task_queue_disps.values())
         if self.randomize:
             random.shuffle(task_queue_disps_rnd)
+        # run all parallel groups first
         for task_queue_disp in task_queue_disps_rnd:
-            if not task_queue_disp.done:
-                return task_queue_disp
+            if not task_queue_disp.is_parallel:
+                continue
+            if task_queue_disp.done:
+                continue
+            return task_queue_disp
+        # then run all rest groups in a sequence
+        self.max_workers_cnt = 1
+        for task_queue_disp in task_queue_disps_rnd:
+            if len(task_queue_disp.worker_ids) > 0:
+                continue
+            if task_queue_disp.done:
+                continue
+            return task_queue_disp
         return None
 
     def get_task_queue_disp(self, worker_id):
@@ -167,10 +185,10 @@ class Dispatcher:
     def add_worker(self):
         # don't add new workers if fail occured and --force not passed
         if self.fail_watcher and self.fail_watcher.got_fail:
-            return
+            return False
         task_queue_disp = self.find_nonempty_task_queue_disp()
         if not task_queue_disp:
-            return
+            return False
         tcp_port_range = self.tcp_port_dispatcher.acquire_range(
             self.worker_next_id)
         process = task_queue_disp.add_worker(self.worker_next_id,
@@ -182,6 +200,8 @@ class Dispatcher:
 
         self.workers_cnt += 1
         self.worker_next_id += 1
+
+        return True
 
     def del_worker(self, worker_id):
         pid = self.worker_id_to_pid[worker_id]
@@ -248,9 +268,7 @@ class Dispatcher:
             if not objs:
                 self.check_for_dead_processes()
 
-            new_workers_cnt = self.max_workers_cnt - self.workers_cnt
-            for _ in range(new_workers_cnt):
-                self.add_worker()
+            self.run_max_workers()
 
     def invoke_listeners(self, inputs, ready_inputs):
         """Returns received objects from result queue to allow Dispatcher
@@ -324,9 +342,13 @@ class TaskQueueDispatcher:
         self.key = key
         self.gen_worker = task_group['gen_worker']
         self.task_ids = task_group['task_ids']
-        self.randomize = randomize
-        if self.randomize:
-            random.shuffle(self.task_ids)
+        self.is_parallel = task_group['is_parallel']
+        if self.is_parallel:
+            self.randomize = randomize
+            if self.randomize:
+                random.shuffle(self.task_ids)
+        else:
+            self.randomize = False
         self.result_queue = SimpleQueue()
         self.task_queue = SimpleQueue()
         for task_id in self.task_ids:

@@ -76,6 +76,7 @@ def get_task_groups():
             res[key] = {
                 'gen_worker': gen_worker,
                 'task_ids': task_ids,
+                'is_parallel': suite.is_parallel(),
             }
     return res
 

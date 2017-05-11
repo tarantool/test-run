@@ -189,3 +189,6 @@ class TestSuite:
             inspector.cleanup_nondefault()
 
         return short_status
+
+    def is_parallel(self):
+        return self.ini.get('is_parallel', False)
