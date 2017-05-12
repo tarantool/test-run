@@ -43,7 +43,7 @@ local function get_server_id(self, node)
     local server = self:get_param(node, "server")[1]
     if server ~= nil then
         -- Tarantool < 1.7.4
-        if server.id <= 0 then
+        if server.id ~= nil and server.id <= 0 then
             return nil -- bootstrap in progress
         end
         return tonumber(server.id)
