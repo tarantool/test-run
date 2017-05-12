@@ -132,7 +132,7 @@ class Dispatcher:
                 self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
-            no_output_timeout = float(args.no_output_timeout or 10)
+            no_output_timeout = float(args.no_output_timeout or 120)
             hang_watcher = listeners.HangWatcher(
                 output_watcher.not_done_worker_ids, self.kill_all_workers,
                 no_output_timeout)
