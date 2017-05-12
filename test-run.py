@@ -193,6 +193,10 @@ def main_consistent():
 
 
 if __name__ == "__main__":
+    # don't sure why, but it values 1 or 2 gives 1.5x speedup for parallel
+    # test-run (and almost doesn't affect consistent test-run)
+    os.environ['OMP_NUM_THREADS'] = '2'
+
     status = 0
 
     force_parallel = bool(lib.Options().args.reproduce)
