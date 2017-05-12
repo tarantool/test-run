@@ -104,17 +104,17 @@ class OutputWatcher(BaseWatcher):
         self.buffer = dict()
 
     @staticmethod
-    def add_prefix(output, worker_name):
-        prefix_max_len = len('[xxx_replication-py] ')
-        prefix = ('[%s] ' % worker_name).ljust(prefix_max_len)
+    def add_prefix(output, worker_id):
+        prefix_max_len = len('[xxx] ')
+        prefix = ('[%03d] ' % worker_id).ljust(prefix_max_len)
         output = output.rstrip('\n')
         lines = [(line + '\n') for line in output.split('\n')]
         output = prefix + prefix.join(lines)
         return output
 
     @staticmethod
-    def _write(output, worker_name):
-        output = OutputWatcher.add_prefix(output, worker_name)
+    def _write(output, worker_id):
+        output = OutputWatcher.add_prefix(output, worker_id)
         sys.stdout.write(output)
 
     @staticmethod
@@ -125,7 +125,7 @@ class OutputWatcher(BaseWatcher):
         if isinstance(obj, WorkerDone):
             bufferized = self.buffer.get(obj.worker_id, '')
             if bufferized:
-                OutputWatcher._write(bufferized, obj.worker_name)
+                OutputWatcher._write(bufferized, obj.worker_id)
             if obj.worker_id in self.buffer.keys():
                 del self.buffer[obj.worker_id]
             return
@@ -135,7 +135,7 @@ class OutputWatcher(BaseWatcher):
 
         bufferized = self.buffer.get(obj.worker_id, '')
         if OutputWatcher._decolor(obj.output).endswith('\n'):
-            OutputWatcher._write(bufferized + obj.output, obj.worker_name)
+            OutputWatcher._write(bufferized + obj.output, obj.worker_id)
             self.buffer[obj.worker_id] = ''
         else:
             self.buffer[obj.worker_id] = bufferized + obj.output
