@@ -82,6 +82,10 @@ def main_loop_parallel():
     if jobs < 1:
         # faster result I got was with 2 * cpu_count
         jobs = 2 * multiprocessing.cpu_count()
+
+    if jobs > 0:
+        color_stdout("Running in parallel with %d workers\n\n" % jobs,
+                     schema='tr_text')
     randomize = True
 
     task_groups = lib.worker.get_task_groups()
@@ -121,7 +125,7 @@ def main_loop_parallel():
         dispatcher.report_undone(verbose=is_force)
         return EXIT_HANG
     finally:
-        color_stdout('-' * 96, "\n", schema='separator')
+        color_stdout('-' * 81, "\n", schema='separator')
     return EXIT_SUCCESS
 
 

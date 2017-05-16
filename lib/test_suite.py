@@ -16,6 +16,17 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+class ConfigurationError(RuntimeError):
+    def __init__(self, name, value, expected):
+        self.name = name
+        self.value = value
+        self.expected = expected
+
+    def __str__(self):
+        return "Bad value for %s: expected %s, got %s" % (
+            repr(self.name), self.expected, repr(self.value)
+        )
+
 
 class TestSuite:
     """Each test suite contains a number of related tests files,
@@ -191,4 +202,12 @@ class TestSuite:
         return short_status
 
     def is_parallel(self):
-        return self.ini.get('is_parallel', False)
+        val = self.ini.get('is_parallel', 'False').lower()
+        if val == 'true':
+            val = True
+        elif val == 'false':
+            val = False
+        else:
+            raise ConfigurationError()
+            pass
+        return val
