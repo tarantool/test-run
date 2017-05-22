@@ -86,7 +86,7 @@ class Dispatcher:
             self.result_queues.append(task_queue_disp.result_queue)
             self.task_queues.append(task_queue_disp.task_queue)
 
-        self.report_timeout = 2.0
+        self.report_timeout = 1.0
 
         self.statistics = None
         self.fail_watcher = None
@@ -132,10 +132,11 @@ class Dispatcher:
                 self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
+            warn_timeout = 10.0
             no_output_timeout = float(args.no_output_timeout or 120)
             hang_watcher = listeners.HangWatcher(
                 output_watcher.not_done_worker_ids, self.kill_all_workers,
-                no_output_timeout)
+                warn_timeout, no_output_timeout)
             self.listeners.append(hang_watcher)
 
     def run_max_workers(self):

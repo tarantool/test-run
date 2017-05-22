@@ -167,23 +167,32 @@ class HangError(Exception):
 
 class HangWatcher(BaseWatcher):
     """Terminate all workers if no output received 'no_output_times' time."""
-    def __init__(self, get_not_done_worker_ids, kill_all_workers, timeout):
+    def __init__(self, get_not_done_worker_ids, kill_all_workers, warn_timeout,
+            kill_timeout):
         self.get_not_done_worker_ids = get_not_done_worker_ids
         self.kill_all_workers = kill_all_workers
-        self.timeout = timeout
+        self.warn_timeout = warn_timeout
+        self.kill_timeout = kill_timeout
+        self.warned_seconds_ago = 0.0
         self.inactivity = 0.0
 
     def process_result(self, obj):
+        self.warned_seconds_ago = 0.0
         self.inactivity = 0.0
 
     def process_timeout(self, delta_seconds):
+        self.warned_seconds_ago += delta_seconds
         self.inactivity += delta_seconds
         worker_ids = self.get_not_done_worker_ids()
-        color_stdout("No output during %d seconds. List of workers don't"
-                     " reported its done: %s; We will exit after %d seconds"
-                     " w/o output.\n" % (self.inactivity, worker_ids,
-                                         self.timeout), schema='test_var')
-        if self.inactivity < self.timeout:
+        if self.warned_seconds_ago < self.warn_timeout:
+            return
+        color_stdout("No output during %d seconds. "
+            "List of workers not reporting the status: %s; "
+            "Will abort after %d seconds without output.\n" % (
+                self.inactivity, worker_ids, self.kill_timeout),
+                schema='test_var')
+        self.warned_seconds_ago = 0.0
+        if self.inactivity < self.kill_timeout:
             return
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
