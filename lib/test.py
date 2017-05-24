@@ -6,6 +6,8 @@ import filecmp
 import difflib
 import traceback
 import gevent
+import pytap13
+import pprint
 
 try:
     from cStringIO import StringIO
@@ -180,9 +182,13 @@ class Test:
         self.is_executed = True
         sys.stdout.flush()
 
+        is_tap = False
         if not self.skip:
             if self.is_executed_ok and os.path.isfile(self.result):
                 self.is_equal_result = filecmp.cmp(self.result, self.tmp_result)
+            elif self.is_executed_ok:
+                is_tap, is_ok = self.check_tap_output()
+                self.is_equal_result = is_ok
         else:
             self.is_equal_result = 1
 
@@ -204,7 +210,7 @@ class Test:
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and not self.is_equal_result and not
-              os.path.isfile(self.result)):
+              os.path.isfile(self.result)) and not is_tap:
             os.rename(self.tmp_result, self.result)
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
@@ -256,3 +262,37 @@ class Test:
                                             reject_time)
 
                 color_stdout.writeout_unidiff(diff)
+
+    def check_tap_output(self):
+        """ Returns is_tap, is_ok """
+        if not os.path.isfile(self.tmp_result):
+            color_strout('\nCannot find %s\n' % self.tmp_result, schema='error')
+            self.is_crash_reported = True
+            return False
+        with open(self.tmp_result, 'r') as f:
+            content = f.read()
+        tap = pytap13.TAP13()
+        try:
+            tap.parse(content)
+        except ValueError as e:
+            color_stdout('\nTAP13 parse failed: %s\n' % str(e), schema='error')
+            self.is_crash_reported = True
+            return False, False
+        is_ok = True
+        for test_case in tap.tests:
+            if test_case.result == 'ok':
+                continue
+            color_stdout('\n%s %s - %s # %s %s\n' % (
+                test_case.result,
+                test_case.id or '',
+                test_case.description or '',
+                test_case.directive or '',
+                test_case.comment or ''), schema='error')
+            if test_case.yaml:
+                yaml_str = pprint.pformat(test_case.yaml)
+                color_stdout(yaml_str + '\n', schema='error')
+            color_stdout('Rejected result file: %s\n' % self.reject, schema='test_var')
+            is_ok = False
+        if not is_ok:
+            self.is_crash_reported = True
+        return True, is_ok
