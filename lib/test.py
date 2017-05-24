@@ -8,6 +8,7 @@ import traceback
 import gevent
 import pytap13
 import pprint
+import shutil
 
 try:
     from cStringIO import StringIO
@@ -211,11 +212,11 @@ class Test:
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and not self.is_equal_result and not
               os.path.isfile(self.result)) and not is_tap:
-            os.rename(self.tmp_result, self.result)
+            shutil.copy(self.tmp_result, self.result)
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
         else:
-            os.rename(self.tmp_result, self.reject)
+            shutil.copy(self.tmp_result, self.reject)
             short_status = 'fail'
             color_stdout("[ fail ]\n", schema='test_fail')
 
