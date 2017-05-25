@@ -263,6 +263,34 @@ class Test:
 
                 color_stdout.writeout_unidiff(diff)
 
+    def tap_parse_print_yaml(self, yml):
+        if 'expected' in yml and 'got' in yml:
+            color_stdout('Expected: %s\n' % yml['expected'], schema='error')
+            color_stdout('Got:      %s\n' % yml['got'],      schema='error')
+            del yml['expected']
+            del yml['got']
+        if 'trace' in yml:
+            color_stdout('Traceback:\n', schema='error')
+            for fr in yml['trace']:
+                fname = fr.get('name', '')
+                if fname:
+                    fname = " function '%s'" % fname
+                line = '[%-4s]%s at <%s:%d>\n' % (
+                        fr['what'], fname, fr['filename'], fr['line']
+                )
+                color_stdout(line, schema='error')
+            del yml['trace']
+        if 'filename' in yml:
+            del yml['filename']
+        if 'line' in yml:
+            del yml['line']
+        yaml_str = pprint.pformat(yml)
+        color_stdout('\n', schema='error')
+        if len(yml):
+            for line in yaml_str.splitlines():
+                color_stdout(line + '\n', schema='error')
+            color_stdout('\n', schema='error')
+
     def check_tap_output(self):
         """ Returns is_tap, is_ok """
         if not os.path.isfile(self.tmp_result):
@@ -282,17 +310,18 @@ class Test:
         for test_case in tap.tests:
             if test_case.result == 'ok':
                 continue
-            color_stdout('\n%s %s - %s # %s %s\n' % (
+            if is_ok:
+                color_stdout('\n')
+            color_stdout('%s %s %s # %s %s\n' % (
                 test_case.result,
                 test_case.id or '',
-                test_case.description or '',
+                test_case.description or '-',
                 test_case.directive or '',
                 test_case.comment or ''), schema='error')
             if test_case.yaml:
-                yaml_str = pprint.pformat(test_case.yaml)
-                color_stdout(yaml_str + '\n', schema='error')
-            color_stdout('Rejected result file: %s\n' % self.reject, schema='test_var')
+                self.tap_parse_print_yaml(test_case.yaml)
             is_ok = False
         if not is_ok:
+            color_stdout('Rejected result file: %s\n' % self.reject, schema='test_var')
             self.is_crash_reported = True
         return True, is_ok
