@@ -106,9 +106,18 @@ local drop_cluster_cmd1 = 'stop server %s'
 local drop_cluster_cmd2 = 'cleanup server %s'
 
 local function drop_cluster(self, servers)
-    for _, name in ipairs(self) do
+    for _, name in ipairs(servers) do
         self:cmd(drop_cluster_cmd1:format(name))
         self:cmd(drop_cluster_cmd2:format(name))
+    end
+end
+
+local function cleanup_cluster(self)
+    local cluster = box.space._cluster:select()
+    for _, tuple in pairs(cluster) do
+        if tuple[1] ~= box.info.id then
+            box.space._cluster:delete(tuple[1])
+        end
     end
 end
 
@@ -267,6 +276,7 @@ local inspector_methods = {
     -- replication
     create_cluster = create_cluster,
     drop_cluster = drop_cluster,
+    cleanup_cluster = cleanup_cluster,
     wait_fullmesh = wait_fullmesh,
     get_cluster_vclock = get_cluster_vclock,
     wait_cluster_vclock = wait_cluster_vclock,
