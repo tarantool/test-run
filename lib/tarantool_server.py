@@ -434,21 +434,30 @@ class TarantoolServer(Server):
                 ctl_dir = os.path.join(_dir, '../extra/dist')
 
             ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
-            if not os.access(ctl, os.X_OK):
+            need_lua_path = False
+            if os.path.isdir(ctl) or not os.access(ctl, os.X_OK):
                 ctl_dir = os.path.join(_dir, '../extra/dist')
-                ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
+                ctl = os.path.join(ctl_dir, 'tarantoolctl/binary.lua')
+                print(1, ctl)
+                need_lua_path = True
+            print(2, ctl)
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
                 cls.binary      = os.path.abspath(exe)
                 cls.ctl_path    = os.path.abspath(ctl)
+                print(cls.ctl_path)
                 cls.ctl_plugins = os.path.abspath(
-                    os.path.join(ctl_dir, 'plugins')
+                    os.path.join(ctl_dir, '..')
                 )
                 os.environ["PATH"] = os.pathsep.join([
                         os.path.abspath(ctl_dir),
                         os.path.abspath(_dir),
                         os.environ["PATH"]
                 ])
-                os.environ["TARANTOOLCTL_PLUGIN_PATH"] = cls.ctl_plugins
+                os.environ["TARANTOOLCTL"] = ctl
+                if need_lua_path:
+                    os.environ["LUA_PATH"] = ctl_dir + '/?.lua;' + \
+                                             ctl_dir + '/?/init.lua;' + \
+                                             os.environ.get("LUA_PATH", ";;")
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
