@@ -7,6 +7,14 @@ from lib.singleton import Singleton
 from lib.colorer import color_stdout
 
 
+def env_int(name, default):
+    try:
+        value = os.environ.get(name)
+        return default if value is None else int(value)
+    except ValueError:
+        return default
+
+
 class Options:
     """Handle options of test-runner"""
 
@@ -120,10 +128,11 @@ class Options:
                 dest="jobs",
                 const=0,
                 nargs='?',
-                default=0,
+                default=env_int('TEST_RUN_JOBS', 0),
                 type=int,
-                help="""Workers count. Default: 0, means 2 x CPU count. -1
-                means everything running consistently (single process). """)
+                help="""Workers count. Default: ${TEST_RUN_JOBS} or 0 (0 means
+                2 x CPU count). -1 means everything running consistently
+                (single process). """)
 
         parser.add_argument(
                 "--reproduce",
