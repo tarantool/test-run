@@ -15,6 +15,14 @@ def env_int(name, default):
         return default
 
 
+def env_list(name, default):
+    value_str = os.environ.get(name)
+    if value_str is None:
+        return default
+    value_list = value_str.split()
+    return value_list or default
+
+
 class Options:
     """Handle options of test-runner"""
 
@@ -33,7 +41,7 @@ class Options:
                 "tests",
                 metavar="test",
                 nargs="*",
-                default = [""],
+                default = env_list('TEST_RUN_TESTS', ['']),
                 help="""Can be empty. List of test names, to look for in suites. Each
                 name is used as a substring to look for in the path to test file,
                 e.g. "show" will run all tests that have "show" in their name in all
