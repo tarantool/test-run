@@ -165,7 +165,7 @@ def main_loop_consistent(failed_test_ids):
             if short_status == 'fail':
                 failed_test_ids.append(task_id)
                 if not lib.Options().args.is_force:
-                    worker.stop_server()
+                    worker.stop_server(cleanup=False)
                     return
 
         color_stdout('-' * 75, "\n",       schema='separator')
