@@ -133,8 +133,9 @@ class TAP13(object):
             raise ValueError("Missing plan in the TAP source")
 
         if len(self.tests) != self.tests_planned:
-            for i in range(len(self.tests), self.tests_planned):
-                self.tests.append(Test('not ok', i + 1, comment = 'DIAG: Test %s not present' % (i + 1)))
+            self.tests.append(Test('not ok', len(self.tests),
+                    comment = 'DIAG: Expected %s tests, got %s' % \
+                            (self.tests_planned, len(self.tests))))
 
 
     def parse(self, source):
