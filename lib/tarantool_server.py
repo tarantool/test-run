@@ -518,7 +518,12 @@ class TarantoolServer(Server):
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
                 try:
-                    shutil.copy(source, self.vardir)
+                    if os.path.isdir(source):
+                        shutil.copytree(source,
+                                os.path.join(self.vardir,
+                                             os.path.basename(source)))
+                    else:
+                        shutil.copy(source, self.vardir)
                 except IOError as e:
                     if (e.errno == errno.ENOENT):
                         continue

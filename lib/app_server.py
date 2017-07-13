@@ -70,16 +70,19 @@ class AppServer(Server):
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
                 try:
-                    shutil.copy(source, self.vardir)
+                    if os.path.isdir(source):
+                        shutil.copytree(source,
+                                os.path.join(self.vardir,
+                                             os.path.basename(source)))
+                    else:
+                        shutil.copy(source, self.vardir)
                 except IOError as e:
                     if (e.errno == errno.ENOENT):
                         continue
                     raise
         os.putenv("LISTEN", str(find_port()))
-        shutil.copy(
-            os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
-            self.vardir
-        )
+        shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
+                    self.vardir)
 
         # Note: we don't know the instance name of the tarantool server, so
         # cannot check length of path of *.control unix socket created by it.
