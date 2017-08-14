@@ -120,7 +120,7 @@ def signame(signum):
 
 
 def warn_unix_sockets_at_start(vardir):
-    max_unix_socket_rel = '??_replication/autobootstrap_guest3.control'
+    max_unix_socket_rel = '???_replication/autobootstrap_guest3.control'
     real_vardir = os.path.realpath(vardir)
     max_unix_socket_abs = os.path.join(real_vardir, max_unix_socket_rel)
     max_unix_socket_real = os.path.realpath(max_unix_socket_abs)
