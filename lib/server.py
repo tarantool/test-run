@@ -38,11 +38,6 @@ class Server(object):
                 raise OSError(format_str.format(op1, op2))
 
         lname = cls.__name__.lower()
-        if ('tarantoolserver' not in lname) and (ini.get('gdb')
-                or ini.get('lldb') or ini.get('strace')):
-            # Only TarantoolServer supports running under gdb/lldb/strace for now
-            # TODO: support AppServer and UnittestServer
-            return cls
 
         if ini.get('valgrind') and not 'valgrind' in lname:
             cls = type('Valgrind' + cls.__name__, (ValgrindMixin, cls), {})
