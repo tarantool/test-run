@@ -4,7 +4,12 @@ import shlex
 from lib.utils import find_in_path
 from lib.utils import print_tail_n
 from lib.utils import non_empty_valgrind_logs
-from lib.colorer import color_stdout
+from lib.colorer import color_stdout, color_log
+from six.moves import shlex_quote
+
+
+def shlex_join(strings):
+    return ' '.join(shlex_quote(s) for s in strings)
 
 
 class Mixin(object):
@@ -90,7 +95,10 @@ class ValgrindMixin(Mixin):
     def prepare_args(self):
         if not find_in_path('valgrind'):
             raise OSError('`valgrind` executables not found in PATH')
-        return self.valgrind_cmd_args + super(ValgrindMixin, self).prepare_args()
+        orig_args = super(ValgrindMixin, self).prepare_args()
+        args = self.valgrind_cmd_args + orig_args
+        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
+        return args
 
     def wait_stop(self):
         return self.process.wait()
@@ -119,10 +127,13 @@ class StraceMixin(Mixin):
     def prepare_args(self):
         if not find_in_path('strace'):
             raise OSError('`strace` executables not found in PATH')
-        return shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
-            bin=' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
+        orig_args = super(StraceMixin, self).prepare_args()
+        args = shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
+            bin=' '.join(orig_args),
             log=self.strace_log
         ))
+        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
+        return args
 
     def wait_stop(self):
         self.kill_old_server()
@@ -131,29 +142,42 @@ class StraceMixin(Mixin):
 
 class DebugMixin(Mixin):
     debugger_args = {
-        "name": None,
+        "screen_name": None,
         "debugger": None,
         "sh_string": None
     }
 
     def prepare_args(self):
+        screen_name = self.debugger_args['screen_name']
         debugger = self.debugger_args['debugger']
-        screen_name = self.debugger_args['name']
         sh_string = self.debugger_args['sh_string']
 
         if not find_in_path('screen'):
             raise OSError('`screen` executables not found in PATH')
         if not find_in_path(debugger):
             raise OSError('`%s` executables not found in PATH' % debugger)
-        color_stdout('You started the server in %s mode.\n' % debugger,
-                     schema='info')
-        color_stdout('To attach, use `screen -r %s `\n' % screen_name,
-                     schema='info')
-        return shlex.split(sh_string.format(
-            self.debugger_args['name'], self.binary,
-            ' '.join([self.ctl_path, 'start', os.path.basename(self.script)]),
-            self.logfile, debugger)
-        )
+
+        is_tarantoolserver = 'TarantoolServer' in self.__class__.__name__
+
+        if is_tarantoolserver:
+            color_stdout('You started the server in %s mode.\n' % debugger,
+                         schema='info')
+            color_stdout('To attach, use `screen -r %s`\n' % screen_name,
+                         schema='info')
+
+        # detach only for TarantoolServer
+        screen_opts = '-d' if is_tarantoolserver else ''
+
+        orig_args = super(DebugMixin, self).prepare_args()
+        args = shlex.split(sh_string.format(
+            screen_name=screen_name,
+            screen_opts=screen_opts,
+            binary=self.binary,
+            args=' '.join(orig_args),
+            logfile=self.logfile,
+            debugger=debugger))
+        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
+        return args
 
     def wait_stop(self):
         self.kill_old_server()
@@ -162,19 +186,23 @@ class DebugMixin(Mixin):
 
 class GdbMixin(DebugMixin):
     debugger_args = {
-        "name": "tarantool",
+        "screen_name": "tarantool",
         "debugger": "gdb",
-        "sh_string": """screen -dmS {0} {4} {1}
-                        -ex 'b main' -ex 'run {2} >> {3} 2>> {3}' """
+        "sh_string":
+            """screen {screen_opts} -mS {screen_name} {debugger} {binary}
+               -ex 'b main' -ex 'run {args} >> {logfile} 2>> {logfile}'
+            """
     }
 
 
 class LLdbMixin(DebugMixin):
     debugger_args = {
-        "name": "tarantool",
+        "screen_name": "tarantool",
         "debugger": "lldb",
-        "sh_string": """screen -dmS {0} {4} -f {1}
-                        -o 'b main'
-                        -o 'settings set target.run-args {2}'
-                        -o 'process launch -o {3} -e {3}' """
+        "sh_string":
+            """screen {screen_opts} -mS {screen_name} {debugger} -f {binary}
+               -o 'b main'
+               -o 'settings set target.run-args {args}'
+               -o 'process launch -o {logfile} -e {logfile}'
+            """
     }

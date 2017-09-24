@@ -11,6 +11,8 @@ from lib.tarantool_server import Test, TarantoolServer
 from lib.preprocessor import TestState
 from lib.utils import find_port
 from test import TestRunGreenlet
+from lib.colorer import color_log
+
 
 def run_server(execs, cwd, server):
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
@@ -58,6 +60,11 @@ class AppServer(Server):
         self.lua_libs = ini['lua_libs']
         self.name = 'app_server'
         self.process = None
+        self.binary = TarantoolServer.binary
+
+    @property
+    def logfile(self):
+        return os.path.basename(self.current_test.tmp_result)
 
     def prepare_args(self):
         return [os.path.join(os.getcwd(), self.current_test.name)]

@@ -36,6 +36,14 @@ class UnittestServer(Server):
         self.debug = False
         self.name = 'unittest_server'
 
+    @property
+    def logfile(self):
+        return self.current_test.tmp_result
+
+    @property
+    def binary(self):
+        return UnittestServer.prepare_args(self)[0]
+
     def prepare_args(self):
         return [os.path.join(self.builddir, "test", self.current_test.name)]
 
