@@ -71,8 +71,17 @@ class Options:
                 action = "store_true",
                 default = False,
                 help = """Start the server under 'gdb' debugger in detached
-                Screen. This option is mutually exclusive with --valgrind and
-                --lldb.
+                Screen. This option is mutually exclusive with --valgrind,
+                --gdbserver, --lldb and --strace.
+                Default: false.""")
+
+        parser.add_argument(
+                "--gdbserver",
+                dest = "gdbserver",
+                action = "store_true",
+                default = False,
+                help = """Start the server under 'gdbserver'. This option is
+                mutually exclusive with --valgrind, --gdb, --lldb and --strace.
                 Default: false.""")
 
         parser.add_argument(
@@ -81,8 +90,8 @@ class Options:
                 action = "store_true",
                 default = False,
                 help = """Start the server under 'lldb' debugger in detached
-                Screen. This option is mutually exclusive with --valgrind
-                and --gdb.
+                Screen. This option is mutually exclusive with --valgrind,
+                --gdb, --gdbserver and --strace.
                 Default: false.""")
 
 
@@ -91,14 +100,20 @@ class Options:
                 dest = "valgrind",
                 action = "store_true",
                 default = False,
-                help = "Run the server under 'valgrind'. Default: false.")
+                help = """Run the server under 'valgrind'. This option is
+                mutually exclusive with --gdb, --gdbserver, --lldb and
+                --strace.
+                Default: false.""")
 
         parser.add_argument(
                 "--strace",
                 dest = "strace",
                 action = "store_true",
                 default = False,
-                help = "Run the server under 'strace'. Default: false.")
+                help = """Run the server under 'strace'. This option is mutually
+                exclusive with --valgrind, --gdb, --gdbserver, --lldb and
+                --strace.
+                Default: false.""")
 
         parser.add_argument(
                 "--builddir",
