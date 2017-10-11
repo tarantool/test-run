@@ -117,6 +117,7 @@ class Dispatcher:
         args = lib.Options().args
         watch_hang = args.no_output_timeout >= 0 and \
             not args.gdb and \
+            not args.gdbserver and \
             not args.lldb and \
             not args.valgrind and \
             not args.long

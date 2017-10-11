@@ -150,20 +150,28 @@ class DebugMixin(Mixin):
     def prepare_args(self):
         screen_name = self.debugger_args['screen_name']
         debugger = self.debugger_args['debugger']
+        gdbserver_port = self.debugger_args['gdbserver_port']
+        gdbserver_opts = self.debugger_args['gdbserver_opts']
         sh_string = self.debugger_args['sh_string']
 
-        if not find_in_path('screen'):
+        is_under_gdbserver = 'GdbServer' in self.__class__.__name__
+
+        if not is_under_gdbserver and not find_in_path('screen'):
             raise OSError('`screen` executables not found in PATH')
         if not find_in_path(debugger):
             raise OSError('`%s` executables not found in PATH' % debugger)
 
         is_tarantoolserver = 'TarantoolServer' in self.__class__.__name__
 
-        if is_tarantoolserver:
-            color_stdout('You started the server in %s mode.\n' % debugger,
+        if is_tarantoolserver or is_under_gdbserver:
+            color_stdout('\nYou started the server in %s mode.\n' % debugger,
                          schema='info')
-            color_stdout('To attach, use `screen -r %s`\n' % screen_name,
-                         schema='info')
+            if is_under_gdbserver:
+                color_stdout("To attach, use `gdb -ex 'target remote :%s'`\n" %
+                             gdbserver_port, schema='info')
+            else:
+                color_stdout('To attach, use `screen -r %s`\n' % screen_name,
+                             schema='info')
 
         # detach only for TarantoolServer
         screen_opts = '-d' if is_tarantoolserver else ''
@@ -175,7 +183,9 @@ class DebugMixin(Mixin):
             binary=self.binary,
             args=' '.join(orig_args),
             logfile=self.logfile,
-            debugger=debugger))
+            debugger=debugger,
+            gdbserver_port=gdbserver_port,
+            gdbserver_opts=gdbserver_opts))
         color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
         return args
 
@@ -188,17 +198,33 @@ class GdbMixin(DebugMixin):
     debugger_args = {
         "screen_name": "tarantool",
         "debugger": "gdb",
+        "gdbserver_port": None,
+        "gdbserver_opts": None,
         "sh_string":
             """screen {screen_opts} -mS {screen_name} {debugger} {binary}
                -ex 'b main' -ex 'run {args} >> {logfile} 2>> {logfile}'
             """
     }
 
+# this would be good for running unit tests:
+# https://cygwin.com/ml/gdb-patches/2015-03/msg01051.html
+class GdbServerMixin(DebugMixin):
+    debugger_args = {
+        "screen_name": None,
+        "debugger": "gdbserver",
+        "gdbserver_port": "8888",
+        "gdbserver_opts": "",
+        "sh_string":
+            """gdbserver :{gdbserver_port} {binary} {args} -- {gdbserver_opts}
+            """
+    }
 
 class LLdbMixin(DebugMixin):
     debugger_args = {
         "screen_name": "tarantool",
         "debugger": "lldb",
+        "gdbserver_port": None,
+        "gdbserver_opts": None,
         "sh_string":
             """screen {screen_opts} -mS {screen_name} {debugger} -f {binary}
                -o 'b main'
