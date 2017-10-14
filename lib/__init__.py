@@ -47,8 +47,13 @@ def module_init():
 
     args.builddir = os.path.abspath(os.path.expanduser(args.builddir))
 
-    os.environ["SOURCEDIR"] = os.path.dirname(os.getcwd())
-    os.environ["BUILDDIR"]  = args.builddir
+    SOURCEDIR = os.path.dirname(os.getcwd())
+    BUILDDIR = args.builddir
+    os.environ["SOURCEDIR"] = SOURCEDIR
+    os.environ["BUILDDIR"] = BUILDDIR
+    soext = sys.platform == 'darwin' and 'dylib' or 'so'
+    os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
+    os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
