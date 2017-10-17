@@ -152,7 +152,13 @@ class TestState(object):
             schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
-        self.servers[sname].start(silent=True, rais=True)
+        wait = True
+        if 'wait' in opts and opts['wait'] == 'False':
+            wait = False
+        wait_load = True
+        if 'wait_load' in opts and opts['wait_load'] == 'False':
+            wait_load = False
+        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load)
         self.connections[sname] = self.servers[sname].admin
         try:
             self.connections[sname]('return true', silent=True)
