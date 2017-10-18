@@ -193,6 +193,3 @@ class Options:
 
         if check_error:
             exit(-1)
-
-
-

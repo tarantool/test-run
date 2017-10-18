@@ -112,6 +112,18 @@ local function drop_cluster(self, servers)
     end
 end
 
+local set_env_variable_cmd = [[env %s="%s"]]
+
+local function set_cluster_environment(self, env_dict)
+    if type(env_dict) ~= 'table' then
+        log.error('environment must be a Lua table')
+        return nil
+    end
+    for name, val in pairs(env_dict) do
+        self:cmd(set_env_variable_cmd:format(name, val))
+    end
+end
+
 local function cleanup_cluster(self)
     local cluster = box.space._cluster:select()
     for _, tuple in pairs(cluster) do
@@ -280,6 +292,7 @@ local inspector_methods = {
     wait_fullmesh = wait_fullmesh,
     get_cluster_vclock = get_cluster_vclock,
     wait_cluster_vclock = wait_cluster_vclock,
+    set_cluster_environment = set_cluster_environment,
     --
     grep_log = grep_log,
 }
