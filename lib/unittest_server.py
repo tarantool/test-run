@@ -47,7 +47,7 @@ class UnittestServer(Server):
     def prepare_args(self):
         return [os.path.join(self.builddir, "test", self.current_test.name)]
 
-    def deploy(self, vardir=None, silent=True, wait=True):
+    def deploy(self, vardir=None, silent=True, wait_load=True):
         self.vardir = vardir
         if not os.access(self.vardir, os.F_OK):
             os.makedirs(self.vardir)

@@ -90,15 +90,19 @@ local function wait_vclock(self, node, to_vclock)
 end
 
 
-local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua",' ..
-                            ' wait_load=False, wait=False'
-local create_cluster_cmd2 = 'start server %s'
+local create_and_dont_wait_cmd = 'create server %s with script="%s/%s.lua", wait_load=False'
+local create_and_wait_cmd      = 'create server %s with script="%s/%s.lua", wait_load=True'
+local start_cluster_cmd        = 'start server %s'
 
-local function create_cluster(self, servers, test_suite)
+local function create_cluster(self, servers, test_suite, wait)
     test_suite = test_suite or 'replication'
     for _, name in ipairs(servers) do
-        self:cmd(create_cluster_cmd1:format(name, test_suite, name))
-        self:cmd(create_cluster_cmd2:format(name))
+        if wait then
+            self:cmd(create_and_wait_cmd:format(name, test_suite, name))
+        else
+            self:cmd(create_and_dont_wait_cmd:format(name, test_suite, name))
+        end
+        self:cmd(start_cluster_cmd:format(name))
     end
 end
 

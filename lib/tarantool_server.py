@@ -145,7 +145,6 @@ class LuaTest(FuncTest):
         except KeyboardInterrupt:
             # prevent tests greenlet from writing to the real stdout
             lua.kill()
-
             ts.stop_nondefault()
             raise
 
@@ -164,14 +163,21 @@ CON_SWITCH = {
 }
 
 
-class TarantoolStartError(OSError):
-    pass
+class TarantoolStartError(Exception):
+    def __init__(self, sname, msg):
+        super(TarantoolStartError, self).__init__()
+        self.sname = sname
+        self.error = msg
+
+    def __str__(self):
+        return "Could not start server '%s'\n Reason: %s" % (self.sname, self.error)
 
 
 class TarantoolLog(object):
-    def __init__(self, path):
+    def __init__(self, path, sname):
         self.path = path
         self.log_begin = 0
+        self.sname = sname
 
     def positioning(self):
         if os.path.exists(self.path):
@@ -204,9 +210,12 @@ class TarantoolLog(object):
             f.seek(self.log_begin, os.SEEK_SET)
             cur_pos = self.log_begin
             while True:
-                if not (proc is None):
-                    if not (proc.poll() is None):
-                        raise TarantoolStartError
+                if proc is not None:
+                    if proc.poll() is not None and proc.returncode > 0:
+                        raise TarantoolStartError(
+                            self.sname,
+                            'Process returned errorcode: %d' % proc.returncode
+                        )
                 log_str = f.readline()
                 if not log_str:
                     time.sleep(0.001)
@@ -284,7 +293,7 @@ class TarantoolServer(Server):
 
     @logfile_pos.setter
     def logfile_pos(self, val):
-        self._logfile_pos = TarantoolLog(val).positioning()
+        self._logfile_pos = TarantoolLog(val, self.name).positioning()
 
     @property
     def script(self):
@@ -351,6 +360,19 @@ class TarantoolServer(Server):
                              ' Server class, his derivation or None')
         self._rpl_master = val
 
+    # this property is required for tarantool test replication-py/swap.test.py
+    @property
+    def master_uri(self):
+        if not hasattr(self, '_master_uri'): self._master_uri = None
+        return self._master_uri
+
+    @master_uri.setter
+    def master_uri(self, val):
+        if not isinstance(self, (TarantoolServer, None)):
+            raise ValueError('Replication master must be Tarantool'
+                             ' Server class, his derivation or None')
+        self._master_uri = val
+
     # ------------------------------------------------------------------------------#
 
     def __new__(cls, ini=None, *args, **kwargs):
@@ -401,6 +423,9 @@ class TarantoolServer(Server):
 
         # set in from a test let test-run ignore server's crashes
         self.crash_expected = False
+
+        # set in a test with test_run:create_cluster(*,*,True)
+        self.wait_for_start = False
 
         # filled in {Test,FuncTest,LuaTest,PythonTest}.execute()
         # or passed through execfile() for PythonTest
@@ -503,9 +528,9 @@ class TarantoolServer(Server):
         path = os.path.join(self.vardir, self.name + '.control')
         warn_unix_socket(path)
 
-    def deploy(self, silent=True, **kwargs):
+    def deploy(self, silent=True, wait_load=True, **kwargs):
         self.install(silent)
-        self.start(silent=silent, **kwargs)
+        self.start(silent=silent, wait_load=wait_load, **kwargs)
 
     def copy_files(self):
         if self.script:
@@ -532,8 +557,7 @@ class TarantoolServer(Server):
     def prepare_args(self):
         return [self.ctl_path, 'start', os.path.basename(self.script)]
 
-    def start(self, silent=True, wait=True, wait_load=True, rais=True,
-              **kwargs):
+    def start(self, silent=True, wait_load=True, **kwargs):
         if self._start_against_running:
             return
         if self.status == 'started':
@@ -569,36 +593,30 @@ class TarantoolServer(Server):
         self.crash_detector = TestRunGreenlet(self.crash_detect)
         self.crash_detector.info = "Crash detector: %s" % self.process
         self.crash_detector.start()
-        wait = wait
-        wait_load = wait_load
-        if wait:
-            try:
-                self.wait_until_started(wait_load)
-            except TarantoolStartError:
-                # Raise exception when caller ask for it (e.g. in case of
-                # non-default servers)
-                if rais:
-                    raise
-                # Python tests expect we raise an exception when non-default
-                # server fails
-                if self.crash_expected:
-                    raise
-                if not self.current_test or not self.current_test.is_crash_reported:
-                    if self.current_test:
-                        self.current_test.is_crash_reported = True
-                    color_stdout('\n[Instance "{}"] Tarantool server failed to start\n'.format(
-                        self.name), schema='error')
-                    self.print_log(15)
-                # if the server fails before any test started, we should inform
-                # a caller by the exception
-                if not self.current_test:
-                    raise
-                self.kill_current_test()
+
+        if self.wait_for_start or wait_load:
+            self.wait_load(wait_load)
 
         port = self.admin.port
         self.admin.disconnect()
         self.admin = CON_SWITCH[self.tests_type]('localhost', port)
         self.status = 'started'
+
+    def wait_load(self, wait_load):
+        try:
+            self.wait_until_started(wait_load)
+        except Exception:
+            if self.crash_expected:
+                raise
+            if not self.current_test or not self.current_test.is_crash_reported:
+                if self.current_test:
+                    self.current_test.is_crash_reported = True
+                color_stdout('\n[Instance "{}"] Tarantool server failed to start\n'.format(
+                    self.name), schema='error')
+                self.print_log(15)
+            if not self.current_test:
+                raise
+            self.kill_current_test()
 
     def crash_detect(self):
         if self.crash_expected:
@@ -610,7 +628,7 @@ class TarantoolServer(Server):
                 gevent.sleep(0.1)
 
         if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
-           return
+            return
 
         self.kill_current_test()
 
@@ -673,6 +691,7 @@ class TarantoolServer(Server):
         """ Unblock save_join() call inside LuaTest.execute(), which doing
             necessary servers/greenlets clean up.
         """
+        self.stop()
         # current_test_greenlet is None for PythonTest
         if self.current_test.current_test_greenlet:
             gevent.kill(self.current_test.current_test_greenlet)
@@ -714,7 +733,7 @@ class TarantoolServer(Server):
 
     def restart(self):
         self.stop()
-        self.start()
+        self.start(wait_load=True)
 
     def kill_old_server(self, silent=True):
         pid = self.read_pidfile()
@@ -739,8 +758,11 @@ class TarantoolServer(Server):
         """
         if wait_load:
             msg = 'entering the event loop|will retry binding|hot standby mode'
-            self.logfile_pos.seek_wait(
-                msg, self.process if not self.gdb and not self.lldb else None)
+            try:
+                self.logfile_pos.seek_wait(
+                    msg, self.process if not self.gdb and not self.lldb else None)
+            except Exception:
+                raise
         while True:
             try:
                 temp = AdminConnection('localhost', self.admin.port)
@@ -748,6 +770,8 @@ class TarantoolServer(Server):
                     ans = yaml.load(temp.execute("2 + 2"))
                     return True
                 ans = yaml.load(temp.execute('box.info.status'))[0]
+                if 'error' in ans:
+                    raise Exception(ans)
                 if ans in ('running', 'hot_standby', 'orphan'):
                     return True
                 elif ans in ('loading'):
@@ -851,4 +875,4 @@ class TarantoolServer(Server):
             time.sleep(0.01)
 
     def get_log(self):
-        return TarantoolLog(self.logfile).positioning()
+        return TarantoolLog(self.logfile, self.name).positioning()

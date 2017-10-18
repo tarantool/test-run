@@ -6,7 +6,7 @@ import lib
 from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
 from lib.server import Server
-from lib.tarantool_server import TarantoolServer
+from lib.tarantool_server import TarantoolServer, TarantoolStartError
 from lib.app_server import AppServer
 from lib.unittest_server import UnittestServer
 from lib.utils import non_empty_valgrind_logs, print_tail_n
@@ -155,7 +155,7 @@ class TestSuite:
         # fixme: remove this string if we fix all legacy tests
         suite_name = os.path.basename(self.suite_path)
         server.tests_type = 'python' if suite_name.endswith('-py') else 'lua'
-        server.deploy(silent=False)
+        server.deploy(silent=False, wait_load=True)
         return inspector
 
     def stop_server(self, server, inspector, silent=False, cleanup=True):
@@ -190,7 +190,12 @@ class TestSuite:
         test_name = os.path.basename(test.name)
 
         if self.is_test_enabled(test, conf, server):
-            short_status = test.run(server)
+            try:
+                short_status = test.run(server)
+            except (TarantoolStartError, Exception):
+                short_status = 'fail'
+                if test.inspector:
+                    test.inspector.parser.stop_nondefault()
         else:
             color_stdout("[ disabled ]\n", schema='t_name')
             short_status = 'disabled'

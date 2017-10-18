@@ -228,7 +228,9 @@ class Worker:
         try:
             self.suite.stop_server(self.server, self.inspector, silent=silent,
                                    cleanup=cleanup)
-        except (KeyboardInterrupt, Exception):
+        except (KeyboardInterrupt, Exception) as e:
+            color_stdout("The raised exception is '%s' of type '%s'.\n"
+                         % (str(e), str(type(e))), schema='error')
             if rais:
                 raise
 

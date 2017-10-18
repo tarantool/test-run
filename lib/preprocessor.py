@@ -152,13 +152,7 @@ class TestState(object):
             schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
-        wait = True
-        if 'wait' in opts and opts['wait'] == 'False':
-            wait = False
-        wait_load = True
-        if 'wait_load' in opts and opts['wait_load'] == 'False':
-            wait_load = False
-        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load)
+        self.servers[sname].start(silent=True)
         self.connections[sname] = self.servers[sname].admin
         try:
             self.connections[sname]('return true', silent=True)
@@ -182,8 +176,11 @@ class TestState(object):
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
-        for flag in ['wait', 'wait_load']:
-            opts[flag] = bool(literal_eval(opts.get(flag, '1')))
+        wait_load = True
+        if 'wait_load' in opts:
+            temp.wait_for_start = bool(literal_eval(opts.get('wait_load', '1')))
+            wait_load = temp.wait_for_start
+            del opts['wait_load']
         if 'need_init' in opts:
             temp.need_init   = True if opts['need_init'] == 'True' else False
         if 'script' in opts:
@@ -193,6 +190,8 @@ class TestState(object):
         temp.rpl_master = None
         if 'rpl_master' in opts:
             temp.rpl_master = self.servers[opts['rpl_master']]
+        if 'master_uri' in opts:
+            temp.master_uri = opts['master_uri']
         temp.vardir = self.suite_ini['vardir']
         temp.inspector_port = int(self.suite_ini.get(
             'inspector_port', temp.DEFAULT_INSPECTOR
@@ -203,7 +202,7 @@ class TestState(object):
             temp.current_test = self.servers['default'].current_test
         self.servers[sname] = temp
         if 'workdir' not in opts:
-            self.servers[sname].deploy(silent=True, **opts)
+            self.servers[sname].deploy(silent=True, wait_load=wait_load, **opts)
         else:
             copy_from = opts['workdir']
             copy_to = self.servers[sname].name
@@ -361,4 +360,7 @@ class TestState(object):
             v.cleanup()
 
     def kill_current_test(self):
-        self.servers['default'].kill_current_test()
+        for server in self.servers:
+            if server == 'default':
+                continue
+            self.servers[server].kill_current_test()

@@ -7,11 +7,11 @@ import shutil
 from gevent.subprocess import Popen, PIPE
 
 from lib.server import Server
-from lib.tarantool_server import Test, TarantoolServer
+from lib.tarantool_server import Test, TarantoolServer, TarantoolStartError
 from lib.preprocessor import TestState
-from lib.utils import find_port
+from lib.utils import find_port, format_process
 from test import TestRunGreenlet
-from lib.colorer import color_log
+from lib.colorer import color_stdout, color_log
 
 
 def run_server(execs, cwd, server):
@@ -20,6 +20,7 @@ def run_server(execs, cwd, server):
     sys.stdout.write(stdout)
     if server.process.wait() != 0:
         sys.stdout.write(stderr)
+        raise TarantoolStartError(server.name, stderr)
     server.process = None
 
 class AppTest(Test):
@@ -33,8 +34,10 @@ class AppTest(Test):
         tarantool = TestRunGreenlet(run_server, execs, server.vardir, server)
         self.current_test_greenlet = tarantool
         tarantool.start()
-
-        tarantool.join()
+        try:
+            tarantool.get()
+        except TarantoolStartError:
+            raise
 
 class AppServer(Server):
     """A dummy server implementation for application server tests"""
@@ -69,7 +72,7 @@ class AppServer(Server):
     def prepare_args(self):
         return [os.path.join(os.getcwd(), self.current_test.name)]
 
-    def deploy(self, vardir=None, silent=True, need_init=True):
+    def deploy(self, vardir=None, silent=True, need_init=True, **kwargs):
         self.vardir = vardir
         if not os.access(self.vardir, os.F_OK):
             os.makedirs(self.vardir)

@@ -170,12 +170,12 @@ class Test:
         except TestExecutionError:
             self.is_executed_ok = False
         except Exception as e:
-            if e.__class__.__name__ == 'TarantoolStartError':
-                # worker should stop
-                raise
             color_stdout('\nTest.run() received the following error:\n' +
                 traceback.format_exc() + '\n', schema='error')
             diagnostics = str(e)
+            if e.__class__.__name__ == 'TarantoolStartError':
+                # worker should stop
+                raise
         finally:
             if sys.stdout and sys.stdout != save_stdout:
                 sys.stdout.close()
