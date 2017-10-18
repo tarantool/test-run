@@ -26,6 +26,7 @@ class TestState(object):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
+        self.test_env = {}
         self.operation = False
         self.create_server = create_server
         self.servers = { 'default': default_server }
@@ -69,6 +70,15 @@ class TestState(object):
         elif token == 'config':
             var_name = lexer.get_token()
             return self.run_params
+        elif token == 'env':
+            key = lexer.get_token()
+            val = lexer.get_token()
+            if val == '=':
+                val = lexer.get_token()
+            if '\"' in val:
+                val = val.replace('\"', '')
+            self.test_env[key] = val
+            return True
         token_store.append(token)
         token = lexer.get_token()
         if token == 'server':
@@ -182,6 +192,7 @@ class TestState(object):
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
+        temp.environ = self.test_env
         for flag in ['wait', 'wait_load']:
             opts[flag] = bool(literal_eval(opts.get(flag, '1')))
         if 'need_init' in opts:

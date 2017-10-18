@@ -383,6 +383,7 @@ class TarantoolServer(Server):
         self.name = "default"
         self.conf = {}
         self.status = None
+        self.environ = None
         # -----InitBasicVars-----#
         self.core = ini['core']
 
@@ -552,18 +553,24 @@ class TarantoolServer(Server):
         color_log(path + " \n", schema='path')
         color_log(self.version() + "\n", schema='version')
 
-        os.putenv("LISTEN", self.iproto.uri)
-        os.putenv("ADMIN", self.admin.uri)
+        # prepare test environment
+        env = os.environ.copy()
+        if self.environ is not None:
+            for key in self.environ:
+                env[key.upper()] = self.environ[key]
+        env["LISTEN"] = self.iproto.uri
+        env["ADMIN"] = self.admin.uri
         if self.rpl_master:
-            os.putenv("MASTER", self.rpl_master.iproto.uri)
+            env["MASTER"] = self.rpl_master.iproto.uri
         self.logfile_pos = self.logfile
 
         # redirect stdout from tarantoolctl and tarantool
-        os.putenv("TEST_WORKDIR", self.vardir)
+        env["TEST_WORKDIR"] = self.vardir
         self.process = subprocess.Popen(args,
                                         cwd=self.vardir,
                                         stdout=self.log_des,
-                                        stderr=self.log_des)
+                                        stderr=self.log_des,
+                                        env=env)
 
         # gh-19 crash detection
         self.crash_detector = TestRunGreenlet(self.crash_detect)
