@@ -93,12 +93,19 @@ end
 local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua",' ..
                             ' wait_load=False, wait=False'
 local create_cluster_cmd2 = 'start server %s'
+local start_cluster_cmd = 'start server %s with wait_load=False, wait=False'
 
 local function create_cluster(self, servers, test_suite)
     test_suite = test_suite or 'replication'
     for _, name in ipairs(servers) do
         self:cmd(create_cluster_cmd1:format(name, test_suite, name))
         self:cmd(create_cluster_cmd2:format(name))
+    end
+end
+
+local function start_cluster(self, servers)
+    for _, name in ipairs(servers) do
+        self:cmd(start_cluster_cmd:format(name))
     end
 end
 
@@ -118,6 +125,24 @@ local function cleanup_cluster(self)
         if tuple[1] ~= box.info.id then
             box.space._cluster:delete(tuple[1])
         end
+    end
+end
+
+local function create_shard_cluster(self, replica_sets, test_suite)
+    for _, replica_set in ipairs(replica_sets) do
+        self:create_cluster(replica_set, test_suite)
+    end
+end
+
+local function wait_shard_fullmesh(self, replica_sets)
+    for _, replica_set in ipairs(replica_sets) do
+        self:wait_fullmesh(replica_set)
+    end
+end
+
+local function drop_shard_cluster(self, replica_sets)
+    for _, replica_set in ipairs(replica_sets) do
+        self:drop_cluster(replica_set)
     end
 end
 
@@ -280,6 +305,11 @@ local inspector_methods = {
     wait_fullmesh = wait_fullmesh,
     get_cluster_vclock = get_cluster_vclock,
     wait_cluster_vclock = wait_cluster_vclock,
+    -- sharding
+    create_shard_cluster = create_shard_cluster,
+    wait_shard_fullmesh = wait_shard_fullmesh,
+    drop_shard_cluster = drop_shard_cluster,
+    start_cluster = start_cluster,
     --
     grep_log = grep_log,
 }
