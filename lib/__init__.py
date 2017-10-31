@@ -19,7 +19,7 @@ def setenv():
     path = os.path.abspath('../')
     while path != '/':
         if os.path.isfile('%s/%s' % (path, check_file)):
-            os.putenv('TARANTOOL_SRC_DIR', path)
+            os.environ['TARANTOOL_SRC_DIR'] = path
             break
         path = os.path.abspath(os.path.join(path, '../'))
 

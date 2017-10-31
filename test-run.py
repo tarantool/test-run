@@ -100,7 +100,7 @@ def main_loop_parallel():
     lib.worker.print_greetings()
 
     color_stdout("\n", '=' * 86, "\n", schema='separator')
-    color_stdout("WORKR".ljust(6),     schema='t_name')
+    color_stdout("WORKER".ljust(7),    schema='t_name')
     color_stdout("TEST".ljust(48),     schema='t_name')
     color_stdout("PARAMS".ljust(16),   schema='test_var')
     color_stdout("RESULT\n",           schema='test_pass')

@@ -95,6 +95,9 @@ class TestSuite:
         for i in ["lua_libs"]:
             self.ini[i] = map(lambda x: os.path.join(suite_path, x),
                     dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
+        for i in ["requirements"]:
+            self.ini[i] = map(lambda x: os.path.join(suite_path, x),
+                    dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
 
     def find_tests(self):
         if self.ini['core'] == 'tarantool':
