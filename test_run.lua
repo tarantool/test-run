@@ -94,10 +94,10 @@ local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua",' ..
                             ' wait_load=False, wait=False'
 local create_cluster_cmd2 = 'start server %s'
 
-local function create_cluster(self, servers)
-    -- TODO: use the name of test suite instead of 'replication/'
+local function create_cluster(self, servers, test_suite)
+    test_suite = test_suite or 'replication'
     for _, name in ipairs(servers) do
-        self:cmd(create_cluster_cmd1:format(name, 'replication', name))
+        self:cmd(create_cluster_cmd1:format(name, test_suite, name))
         self:cmd(create_cluster_cmd2:format(name))
     end
 end

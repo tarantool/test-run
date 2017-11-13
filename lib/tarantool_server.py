@@ -437,14 +437,11 @@ class TarantoolServer(Server):
             need_lua_path = False
             if os.path.isdir(ctl) or not os.access(ctl, os.X_OK):
                 ctl_dir = os.path.join(_dir, '../extra/dist')
-                ctl = os.path.join(ctl_dir, 'tarantoolctl/binary.lua')
-                print(1, ctl)
+                ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
                 need_lua_path = True
-            print(2, ctl)
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
                 cls.binary      = os.path.abspath(exe)
                 cls.ctl_path    = os.path.abspath(ctl)
-                print(cls.ctl_path)
                 cls.ctl_plugins = os.path.abspath(
                     os.path.join(ctl_dir, '..')
                 )

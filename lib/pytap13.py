@@ -28,7 +28,7 @@ import yaml
 RE_VERSION = re.compile(r"^\s*TAP version 13\s*$")
 RE_PLAN = re.compile(r"^\s*(?P<start>\d+)\.\.(?P<end>\d+)\s*(#\s*(?P<explanation>.*))?\s*$")
 RE_TEST_LINE = re.compile(r"^\s*(?P<result>(not\s+)?ok)\s*(?P<id>\d+)?\s*(?P<description>[^#]+)?\s*(#\s*(?P<directive>TODO|SKIP)?\s*(?P<comment>.+)?)?\s*$",  re.IGNORECASE)
-RE_EXPLANATION = re.compile(r"^\s*#\s*(?P<explanation>.+)?\s*$")
+RE_DIAGNOSTIC = re.compile(r"^\s*#\s*(?P<diagnostic>.+)?\s*$")
 RE_YAMLISH_START = re.compile(r"^\s*---.*$")
 RE_YAMLISH_END = re.compile(r"^\s*\.\.\.\s*$")
 
@@ -49,11 +49,11 @@ class Test(object):
 
 
 class TAP13(object):
-    def __init__(self):
+    def __init__(self, strict = False):
         self.tests = []
         self.__tests_counter = 0
         self.tests_planned = None
-
+        self.strict = strict
 
     def _parse(self, source):
         seek_version = True
@@ -69,35 +69,51 @@ class TAP13(object):
             if in_yaml:
                 if RE_YAMLISH_END.match(line):
                     test = self.tests[-1]
-                    test.yaml = yaml.load(test._yaml_buffer.getvalue())
+                    try:
+                        test.yaml = yaml.load(test._yaml_buffer.getvalue())
+                    except Exception as e:
+                        if not self.strict:
+                            continue
+                        test_num = len(self.tests) + 1
+                        self.tests.append(Test(
+                            'not ok', test_num,
+                            comment = 'DIAG: Test %s has wrong YAML: %s' % (
+                                test_num, str(e))))
                     in_yaml = False
                 else:
                     self.tests[-1]._yaml_buffer.write(line)
                 continue
 
             if in_test:
-                if RE_EXPLANATION.match(line):
+                if RE_DIAGNOSTIC.match(line):
                     self.tests[-1].diagnostics.append(line.strip())
                     continue
                 if RE_YAMLISH_START.match(line):
                     in_yaml = True
                     continue
 
+            on_top_level = not line.startswith('    ')
+            raw_line = line.rstrip('\n')
             line = line.strip()
 
+            if RE_DIAGNOSTIC.match(line):
+                continue
+
             # this is "beginning" of the parsing, skip all lines until
-            # version is found
+            # version is found (in non-strict mode)
             if seek_version:
-                if RE_VERSION.match(line):
+                m = RE_VERSION.match(line)
+                if m:
                     seek_version = False
                     seek_plan = True
                     seek_test = True
-                else:
+                    continue
+                elif not self.strict:
                     continue
 
-            if seek_plan:
-                m = RE_PLAN.match(line)
-                if m:
+            m = RE_PLAN.match(line)
+            if m:
+                if seek_plan and on_top_level:
                     d = m.groupdict()
                     self.tests_planned = int(d.get('end', 0))
                     seek_plan = False
@@ -106,10 +122,13 @@ class TAP13(object):
                     #    if plan is at the end, it must be the last line -> stop processing
                     if self.__tests_counter > 0:
                         break
+                    continue
+                elif not on_top_level:
+                    continue
 
             if seek_test:
                 m = RE_TEST_LINE.match(line)
-                if m:
+                if m and on_top_level:
                     self.__tests_counter += 1
                     t_attrs = m.groupdict()
                     if t_attrs['id'] is None:
@@ -127,14 +146,20 @@ class TAP13(object):
                     self.tests.append(t)
                     in_test = True
                     continue
+                elif not on_top_level:
+                    continue
+
+            if self.strict:
+                raise ValueError('Wrong TAP line: [' + raw_line + ']')
 
         if self.tests_planned is None:
             # TODO: raise better error than ValueError
             raise ValueError("Missing plan in the TAP source")
 
         if len(self.tests) != self.tests_planned:
-            for i in range(len(self.tests), self.tests_planned):
-                self.tests.append(Test('not ok', i + 1, comment = 'DIAG: Test %s not present' % (i + 1)))
+            self.tests.append(Test('not ok', len(self.tests),
+                    comment = 'DIAG: Expected %s tests, got %s' % \
+                            (self.tests_planned, len(self.tests))))
 
 
     def parse(self, source):
