@@ -158,7 +158,10 @@ class TestState(object):
         wait_load = True
         if 'wait_load' in opts and opts['wait_load'] == 'False':
             wait_load = False
-        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load)
+        args = []
+        if 'args' in opts:
+            args = opts['args'][1:-1].split(' ')
+        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load, args=args)
         self.connections[sname] = self.servers[sname].admin
         try:
             self.connections[sname]('return true', silent=True)

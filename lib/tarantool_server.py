@@ -529,10 +529,10 @@ class TarantoolServer(Server):
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
 
-    def prepare_args(self):
-        return [self.ctl_path, 'start', os.path.basename(self.script)]
+    def prepare_args(self, args):
+        return [self.ctl_path, 'start', os.path.basename(self.script)] + args
 
-    def start(self, silent=True, wait=True, wait_load=True, rais=True,
+    def start(self, silent=True, wait=True, wait_load=True, rais=True, args=[],
               **kwargs):
         if self._start_against_running:
             return
@@ -541,7 +541,7 @@ class TarantoolServer(Server):
                 color_stdout('The server is already started.\n', schema='lerror')
             return
 
-        args = self.prepare_args()
+        args = self.prepare_args(args)
         self.pidfile = '%s.pid' % self.name
         self.logfile = '%s.log' % self.name
 
