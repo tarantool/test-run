@@ -182,8 +182,6 @@ class TestState(object):
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
-        for flag in ['wait', 'wait_load']:
-            opts[flag] = bool(literal_eval(opts.get(flag, '1')))
         if 'need_init' in opts:
             temp.need_init   = True if opts['need_init'] == 'True' else False
         if 'script' in opts:
@@ -201,13 +199,11 @@ class TestState(object):
             temp.current_test = self.default_server_no_connect.current_test
         elif self.servers['default']:
             temp.current_test = self.servers['default'].current_test
+        temp.install(silent=True)
         self.servers[sname] = temp
-        if 'workdir' not in opts:
-            self.servers[sname].deploy(silent=True, **opts)
-        else:
+        if 'workdir' in opts:
             copy_from = opts['workdir']
             copy_to = self.servers[sname].name
-            self.servers[sname].install(silent=True)
             os.system('rm -rf %s/%s' % (
                 self.servers[sname].vardir, copy_to
             ))
@@ -224,7 +220,7 @@ class TestState(object):
         setattr(self.environ, sname, nmsp)
 
     def server_deploy(self, ctype, sname, opts):
-        self.servers[sname].deploy()
+        self.servers[sname].install()
 
     def server_cleanup(self, ctype, sname, opts):
         if sname not in self.servers:
