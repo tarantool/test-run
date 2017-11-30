@@ -90,9 +90,8 @@ local function wait_vclock(self, node, to_vclock)
 end
 
 
-local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua",' ..
-                            ' wait_load=False, wait=False'
-local create_cluster_cmd2 = 'start server %s'
+local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua"'
+local create_cluster_cmd2 = 'start server %s with wait_load=False, wait=False'
 
 local function create_cluster(self, servers, test_suite)
     test_suite = test_suite or 'replication'
