@@ -50,6 +50,8 @@ def save_join(green_obj, timeout=None):
         green_obj.join(timeout=timeout)
     except GreenletExit:
         return True
+    except TarantoolStartError:
+        return True
     return False
 
 
