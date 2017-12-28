@@ -83,8 +83,8 @@ class Server(object):
         # default servers running in TestSuite.run_all()
         self.test_suite = test_suite
 
-    def prepare_args(self):
-        return []
+    def prepare_args(self, args=[]):
+        return args
 
     def cleanup(self, full=False):
         if full:

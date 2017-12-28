@@ -92,13 +92,13 @@ class ValgrindMixin(Mixin):
                 log=self.valgrind_log,
                 sup=self.valgrind_sup))
 
-    def prepare_args(self):
+    def prepare_args(self, args=[]):
         if not find_in_path('valgrind'):
             raise OSError('`valgrind` executables not found in PATH')
-        orig_args = super(ValgrindMixin, self).prepare_args()
-        args = self.valgrind_cmd_args + orig_args
-        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
-        return args
+        orig_args = super(ValgrindMixin, self).prepare_args(args)
+        res_args = self.valgrind_cmd_args + orig_args
+        color_log('\nRUN: ' + shlex_join(res_args) + '\n', schema='test_var')
+        return res_args
 
     def wait_stop(self):
         return self.process.wait()
@@ -124,16 +124,16 @@ class StraceMixin(Mixin):
         # TODO: don't overwrite log, like in the 'valgrind_log' property above
         return os.path.join(self.vardir, 'strace.log')
 
-    def prepare_args(self):
+    def prepare_args(self, args=[]):
         if not find_in_path('strace'):
             raise OSError('`strace` executables not found in PATH')
-        orig_args = super(StraceMixin, self).prepare_args()
-        args = shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
+        orig_args = super(StraceMixin, self).prepare_args(args)
+        res_args = shlex.split("strace -o {log} -f -tt -T -x -I1 {bin}".format(
             bin=' '.join(orig_args),
             log=self.strace_log
         ))
-        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
-        return args
+        color_log('\nRUN: ' + shlex_join(res_args) + '\n', schema='test_var')
+        return res_args
 
     def wait_stop(self):
         self.kill_old_server()
@@ -147,7 +147,7 @@ class DebugMixin(Mixin):
         "sh_string": None
     }
 
-    def prepare_args(self):
+    def prepare_args(self, args=[]):
         screen_name = self.debugger_args['screen_name']
         debugger = self.debugger_args['debugger']
         gdbserver_port = self.debugger_args['gdbserver_port']
@@ -176,8 +176,8 @@ class DebugMixin(Mixin):
         # detach only for TarantoolServer
         screen_opts = '-d' if is_tarantoolserver else ''
 
-        orig_args = super(DebugMixin, self).prepare_args()
-        args = shlex.split(sh_string.format(
+        orig_args = super(DebugMixin, self).prepare_args(args)
+        res_args = shlex.split(sh_string.format(
             screen_name=screen_name,
             screen_opts=screen_opts,
             binary=self.binary,
@@ -186,8 +186,8 @@ class DebugMixin(Mixin):
             debugger=debugger,
             gdbserver_port=gdbserver_port,
             gdbserver_opts=gdbserver_opts))
-        color_log('\nRUN: ' + shlex_join(args) + '\n', schema='test_var')
-        return args
+        color_log('\nRUN: ' + shlex_join(res_args) + '\n', schema='test_var')
+        return res_args
 
     def wait_stop(self):
         self.kill_old_server()

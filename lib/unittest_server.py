@@ -44,8 +44,8 @@ class UnittestServer(Server):
     def binary(self):
         return UnittestServer.prepare_args(self)[0]
 
-    def prepare_args(self):
-        return [os.path.join(self.builddir, "test", self.current_test.name)]
+    def prepare_args(self, args=[]):
+        return [os.path.join(self.builddir, "test", self.current_test.name)] + args
 
     def deploy(self, vardir=None, silent=True, wait=True):
         self.vardir = vardir

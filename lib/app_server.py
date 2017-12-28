@@ -66,8 +66,8 @@ class AppServer(Server):
     def logfile(self):
         return os.path.basename(self.current_test.tmp_result)
 
-    def prepare_args(self):
-        return [os.path.join(os.getcwd(), self.current_test.name)]
+    def prepare_args(self, args=[]):
+        return [os.path.join(os.getcwd(), self.current_test.name)] + args
 
     def deploy(self, vardir=None, silent=True, need_init=True):
         self.vardir = vardir

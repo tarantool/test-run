@@ -531,7 +531,7 @@ class TarantoolServer(Server):
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
 
-    def prepare_args(self, args):
+    def prepare_args(self, args=[]):
         return [self.ctl_path, 'start', os.path.basename(self.script)] + args
 
     def start(self, silent=True, wait=True, wait_load=True, rais=True, args=[],
