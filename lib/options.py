@@ -58,6 +58,14 @@ class Options:
                 means find all available.""")
 
         parser.add_argument(
+                "--verbose",
+                dest = 'is_verbose',
+                action = "store_true",
+                default = False,
+                help = """Print TAP13 test output to log.
+                Default: false.""")
+
+        parser.add_argument(
                 "--force",
                 dest = "is_force",
                 action = "store_true",

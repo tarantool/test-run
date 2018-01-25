@@ -15,8 +15,8 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+import lib
 from lib.utils import non_empty_valgrind_logs, print_tail_n
-
 from lib.colorer import color_stdout
 
 
@@ -188,6 +188,10 @@ class Test:
             if self.is_executed_ok and os.path.isfile(self.result):
                 self.is_equal_result = filecmp.cmp(self.result, self.tmp_result)
             elif self.is_executed_ok:
+                if lib.Options().args.is_verbose:
+                    color_stdout('\n')
+                    with open(self.tmp_result, 'r') as logfile:
+                        color_stdout(logfile.read(), schema='log')
                 is_tap, is_ok = self.check_tap_output()
                 self.is_equal_result = is_ok
         else:
