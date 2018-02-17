@@ -103,11 +103,13 @@ end
 
 local drop_cluster_cmd1 = 'stop server %s'
 local drop_cluster_cmd2 = 'cleanup server %s'
+local drop_cluster_cmd3 = 'delete server %s'
 
 local function drop_cluster(self, servers)
     for _, name in ipairs(servers) do
         self:cmd(drop_cluster_cmd1:format(name))
         self:cmd(drop_cluster_cmd2:format(name))
+        self:cmd(drop_cluster_cmd3:format(name))
     end
 end
 
