@@ -221,6 +221,7 @@ class TestState(object):
         if temp.rpl_master:
             setattr(nmsp, 'master', temp.rpl_master.iproto.port)
         setattr(self.environ, sname, nmsp)
+        return self.servers[sname].iproto.uri
 
     def server_deploy(self, ctype, sname, opts):
         self.servers[sname].install()
@@ -274,7 +275,7 @@ class TestState(object):
     def server(self, ctype, sname, opts):
         attr = 'server_%s' % ctype
         if hasattr(self, attr):
-            getattr(self, attr)(ctype, sname, opts)
+            return getattr(self, attr)(ctype, sname, opts)
         else:
             raise LuaPreprocessorException(
                 'Unknown command for server: %s' % ctype
