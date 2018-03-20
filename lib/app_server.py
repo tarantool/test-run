@@ -26,6 +26,7 @@ class AppTest(Test):
     def execute(self, server):
         server.current_test = self
         ts = TestState(self.suite_ini, None, TarantoolServer,
+                       self.run_params,
                        default_server_no_connect=server)
         self.inspector.set_parser(ts)
 
@@ -111,16 +112,33 @@ class AppServer(Server):
 
     @staticmethod
     def find_tests(test_suite, suite_path):
-        def patterned(test, patterns):
+        def patterned(test_name, patterns):
             answer = []
             for i in patterns:
-                if test.name.find(i) != -1:
-                    answer.append(test)
+                if test_name.find(i) != -1:
+                    answer.append(test_name)
             return answer
 
         test_suite.ini['suite'] = suite_path
-        test_suite.tests = [AppTest(k, test_suite.args, test_suite.ini) for k in sorted(glob.glob(os.path.join(suite_path, "*.test.lua" )))]
-        test_suite.tests = sum(map((lambda x: patterned(x, test_suite.args.tests)), test_suite.tests), [])
+
+        test_names = sorted(glob.glob(os.path.join(suite_path, "*.test.lua")))
+        test_names = sum(map((lambda x: patterned(x, test_suite.args.tests)),
+                             test_names), [])
+        tests = []
+
+        for k in test_names:
+            runs = test_suite.get_multirun_params(k)
+            is_correct = lambda x: test_suite.args.conf is None or \
+                                   test_suite.args.conf == x
+            if runs:
+                tests.extend([AppTest(
+                    k, test_suite.args,
+                    test_suite.ini, runs[r], r
+                ) for r in runs.keys() if is_correct(r)])
+            else:
+                tests.append(AppTest(k, test_suite.args, test_suite.ini))
+
+        test_suite.tests = tests
 
     def print_log(self, lines):
         pass
