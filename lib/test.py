@@ -190,8 +190,8 @@ class Test:
             elif self.is_executed_ok:
                 if lib.Options().args.is_verbose:
                     color_stdout('\n')
-                    with open(self.tmp_result, 'r') as logfile:
-                        color_stdout(logfile.read(), schema='log')
+                    with open(self.tmp_result, 'r') as f:
+                        color_stdout(f.read(), schema='log')
                 is_tap, is_ok = self.check_tap_output()
                 self.is_equal_result = is_ok
         else:
@@ -242,12 +242,12 @@ class Test:
                 where = ": there were warnings in the valgrind log file(s)"
         return short_status
 
-    def print_diagnostics(self, logfile, message):
+    def print_diagnostics(self, log_file, message):
         """Print 10 lines of client program output leading to test
         failure. Used to diagnose a failure of the client program"""
 
         color_stdout(message, schema='error')
-        print_tail_n(logfile, 10)
+        print_tail_n(log_file, 10)
 
     def print_unidiff(self):
         """Print a unified diff between .test and .result files. Used
