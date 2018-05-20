@@ -14,12 +14,14 @@ from test import TestRunGreenlet
 from lib.colorer import color_log
 
 
-def run_server(execs, cwd, server):
+def run_server(execs, cwd, server, logfile):
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
     stdout, stderr = server.process.communicate()
     sys.stdout.write(stdout)
     if server.process.wait() != 0:
         sys.stdout.write(stderr)
+    with open(logfile, 'a') as f:
+        f.write(stderr)
     server.process = None
 
 class AppTest(Test):
@@ -31,7 +33,8 @@ class AppTest(Test):
         self.inspector.set_parser(ts)
 
         execs = server.prepare_args()
-        tarantool = TestRunGreenlet(run_server, execs, server.vardir, server)
+        tarantool = TestRunGreenlet(run_server, execs, server.vardir, server,
+                                    server.logfile)
         self.current_test_greenlet = tarantool
         tarantool.start()
 
@@ -65,7 +68,15 @@ class AppServer(Server):
 
     @property
     def logfile(self):
-        return os.path.basename(self.current_test.tmp_result)
+        # remove suite name using basename
+        test_name = os.path.basename(self.current_test.name)
+        # add :conf_name if any
+        if self.current_test.conf_name is not None:
+            test_name += ':' + self.current_test.conf_name
+        # add '.tarantool.log'
+        file_name = test_name + '.tarantool.log'
+        # put into vardir
+        return os.path.join(self.vardir, file_name)
 
     def prepare_args(self, args=[]):
         return [os.path.join(os.getcwd(), self.current_test.name)] + args
