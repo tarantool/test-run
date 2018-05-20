@@ -221,7 +221,8 @@ class TestState(object):
         if temp.rpl_master:
             setattr(nmsp, 'master', temp.rpl_master.iproto.port)
         setattr(self.environ, sname, nmsp)
-        return self.servers[sname].iproto.uri
+        if 'return_listen_uri' in opts and opts['return_listen_uri'] == 'True':
+            return self.servers[sname].iproto.uri
 
     def server_deploy(self, ctype, sname, opts):
         self.servers[sname].install()
