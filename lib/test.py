@@ -21,9 +21,7 @@ from lib.colorer import color_stdout
 
 
 class TestExecutionError(OSError):
-    """ When we know we fail, but already reported the fail in an another
-    greenlet.
-    """
+    """To be raised when a test execution fails"""
     pass
 
 
