@@ -10,17 +10,19 @@ from lib.server import Server
 from lib.tarantool_server import Test, TarantoolServer
 from lib.preprocessor import TestState
 from lib.utils import find_port
-from test import TestRunGreenlet
+from test import TestRunGreenlet, TestExecutionError
 from lib.colorer import color_log
 
 
-def run_server(execs, cwd, server):
+def run_server(execs, cwd, server, logfile, retval):
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
     stdout, stderr = server.process.communicate()
     sys.stdout.write(stdout)
-    if server.process.wait() != 0:
-        sys.stdout.write(stderr)
+    with open(logfile, 'a') as f:
+        f.write(stderr)
+    retval['returncode'] = server.process.wait()
     server.process = None
+
 
 class AppTest(Test):
     def execute(self, server):
@@ -31,11 +33,16 @@ class AppTest(Test):
         self.inspector.set_parser(ts)
 
         execs = server.prepare_args()
-        tarantool = TestRunGreenlet(run_server, execs, server.vardir, server)
+        retval = dict()
+        tarantool = TestRunGreenlet(run_server, execs, server.vardir, server,
+                                    server.logfile, retval)
         self.current_test_greenlet = tarantool
         tarantool.start()
 
         tarantool.join()
+        if retval['returncode'] != 0:
+            raise TestExecutionError
+
 
 class AppServer(Server):
     """A dummy server implementation for application server tests"""
@@ -65,7 +72,15 @@ class AppServer(Server):
 
     @property
     def logfile(self):
-        return os.path.basename(self.current_test.tmp_result)
+        # remove suite name using basename
+        test_name = os.path.basename(self.current_test.name)
+        # add :conf_name if any
+        if self.current_test.conf_name is not None:
+            test_name += ':' + self.current_test.conf_name
+        # add '.tarantool.log'
+        file_name = test_name + '.tarantool.log'
+        # put into vardir
+        return os.path.join(self.vardir, file_name)
 
     def prepare_args(self, args=[]):
         return [os.path.join(os.getcwd(), self.current_test.name)] + args
@@ -139,6 +154,3 @@ class AppServer(Server):
                 tests.append(AppTest(k, test_suite.args, test_suite.ini))
 
         test_suite.tests = tests
-
-    def print_log(self, lines):
-        pass

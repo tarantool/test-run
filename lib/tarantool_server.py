@@ -781,15 +781,6 @@ class TarantoolServer(Server):
                 pass
         return pid
 
-    def print_log(self, lines):
-        color_stdout('\nLast {0} lines of Tarantool Log file [Instance "{1}"][{2}]:\n'.format(
-            lines, self.name, self.logfile or 'null'), schema='error')
-        if os.path.exists(self.logfile):
-            with open(self.logfile, 'r') as log:
-                color_stdout(''.join(log.readlines()[-lines:]))
-        else:
-            color_stdout("    Can't find log:\n", schema='error')
-
     def test_option_get(self, option_list_str, silent=False):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
