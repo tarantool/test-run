@@ -161,12 +161,12 @@ class TestState(object):
         args = []
         if 'args' in opts:
             args = opts['args'][1:-1].split(' ')
-        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load, args=args)
-        self.connections[sname] = self.servers[sname].admin
         try:
+            self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load, args=args)
+            self.connections[sname] = self.servers[sname].admin
             self.connections[sname]('return true', silent=True)
-        except socket.error as e:
-            LuaPreprocessorException('Can\'t start server '+repr(sname))
+        except:
+            return 'Can\'t start server ' + repr(sname)
 
     def server_stop(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
