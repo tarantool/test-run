@@ -567,12 +567,6 @@ class TarantoolServer(Server):
                                         stdout=self.log_des,
                                         stderr=self.log_des)
 
-        # gh-19 crash detection
-        self.crash_detector = TestRunGreenlet(self.crash_detect)
-        self.crash_detector.info = "Crash detector: %s" % self.process
-        self.crash_detector.start()
-        wait = wait
-        wait_load = wait_load
         if wait:
             try:
                 self.wait_until_started(wait_load)
@@ -596,6 +590,11 @@ class TarantoolServer(Server):
                 if not self.current_test:
                     raise
                 self.kill_current_test()
+
+        # gh-19 crash detection
+        self.crash_detector = TestRunGreenlet(self.crash_detect)
+        self.crash_detector.info = "Crash detector: %s" % self.process
+        self.crash_detector.start()
 
         port = self.admin.port
         self.admin.disconnect()
