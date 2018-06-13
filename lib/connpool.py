@@ -1,6 +1,7 @@
 import logging
 
 import gevent
+
 try:
     from gevent.lock import BoundedSemaphore
 except:
@@ -144,4 +145,5 @@ def retry(f, exc_classes=DEFAULT_EXC_CLASSES, logger=None,
                                    max_failure_log_message.format(
                                        f=f.func_name, e=e))
                     raise
+
     return deco

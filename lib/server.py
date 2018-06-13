@@ -23,9 +23,10 @@ class Server(object):
         if not hasattr(self, '_vardir'):
             raise ValueError("No vardir specified")
         return self._vardir
+
     @vardir.setter
     def vardir(self, path):
-        if path == None:
+        if path is None:
             return
         self._vardir = os.path.abspath(path)
 
@@ -44,13 +45,13 @@ class Server(object):
 
         lname = cls.__name__.lower()
 
-        if ini.get('valgrind') and not 'valgrind' in lname:
+        if ini.get('valgrind') and 'valgrind' not in lname:
             cls = type('Valgrind' + cls.__name__, (ValgrindMixin, cls), {})
-        elif ini.get('gdbserver') and not 'gdbserver' in lname:
+        elif ini.get('gdbserver') and 'gdbserver' not in lname:
             cls = type('GdbServer' + cls.__name__, (GdbServerMixin, cls), {})
-        elif ini.get('gdb') and not 'gdb' in lname:
+        elif ini.get('gdb') and 'gdb' not in lname:
             cls = type('Gdb' + cls.__name__, (GdbMixin, cls), {})
-        elif ini.get('lldb') and not 'lldb' in lname:
+        elif ini.get('lldb') and 'lldb' not in lname:
             cls = type('LLdb' + cls.__name__, (LLdbMixin, cls), {})
         elif 'strace' in ini and ini['strace']:
             cls = type('Strace' + cls.__name__, (StraceMixin, cls), {})
@@ -58,7 +59,7 @@ class Server(object):
         return cls
 
     def __new__(cls, ini=None, *args, **kwargs):
-        if ini == None or 'core' not in ini or ini['core'] is None:
+        if ini is None or 'core' not in ini or ini['core'] is None:
             return object.__new__(cls)
         core = ini['core'].lower().strip()
         cls.mdlname = "lib.{0}_server".format(core.replace(' ', '_'))
@@ -100,12 +101,16 @@ class Server(object):
 
     def install(self, binary=None, vardir=None, mem=None, silent=True):
         pass
+
     def init(self):
         pass
+
     def start(self, silent=True):
         pass
+
     def stop(self, silent=True):
         pass
+
     def restart(self):
         pass
 

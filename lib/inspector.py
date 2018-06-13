@@ -96,9 +96,9 @@ class TarantoolInspector(StreamServer):
             except Exception as e:
                 self.parser.kill_current_test()
                 color_stdout('\nTarantoolInpector.handle() received the following error:\n' +
-                    traceback.format_exc() + '\n', schema='error')
-                result = { "error": repr(e) }
-            if result == None:
+                             traceback.format_exc() + '\n', schema='error')
+                result = {"error": repr(e)}
+            if result is None:
                 result = True
             result = yaml.dump(result)
             if not result.endswith('...\n'):

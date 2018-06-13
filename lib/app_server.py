@@ -46,6 +46,7 @@ class AppTest(Test):
 
 class AppServer(Server):
     """A dummy server implementation for application server tests"""
+
     def __new__(cls, ini=None, *args, **kwargs):
         cls = Server.get_mixed_class(cls, ini)
         return object.__new__(cls)
@@ -55,7 +56,8 @@ class AppServer(Server):
             _ini = {}
         ini = {
             'vardir': None
-        }; ini.update(_ini)
+        }
+        ini.update(_ini)
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
@@ -95,8 +97,8 @@ class AppServer(Server):
                 try:
                     if os.path.isdir(source):
                         shutil.copytree(source,
-                                os.path.join(self.vardir,
-                                             os.path.basename(source)))
+                                        os.path.join(self.vardir,
+                                                     os.path.basename(source)))
                     else:
                         shutil.copy(source, self.vardir)
                 except IOError as e:
@@ -115,7 +117,7 @@ class AppServer(Server):
         if not self.process:
             return
         color_log('AppServer.stop(): stopping the %s\n'
-            % format_process(self.process.pid), schema='test_var')
+                  % format_process(self.process.pid), schema='test_var')
         try:
             self.process.terminate()
         except OSError:
@@ -143,8 +145,7 @@ class AppServer(Server):
 
         for k in test_names:
             runs = test_suite.get_multirun_params(k)
-            is_correct = lambda x: test_suite.args.conf is None or \
-                                   test_suite.args.conf == x
+            is_correct = lambda x: test_suite.args.conf is None or test_suite.args.conf == x
             if runs:
                 tests.extend([AppTest(
                     k, test_suite.args,

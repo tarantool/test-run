@@ -89,13 +89,14 @@ class TarantoolPool(ConnectionPool):
     def close_all(self):
         self.conn.clear()
 
+
 class TarantoolConnection(object):
     @property
     def uri(self):
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
             return self.port
         else:
-            return self.host+':'+str(self.port)
+            return self.host + ':' + str(self.port)
 
     def __init__(self, host, port):
         self.host = host
@@ -154,6 +155,7 @@ class TarantoolConnection(object):
     def __call__(self, command, silent=False, simple=False):
         return self.execute(command, silent)
 
+
 class TarantoolAsyncConnection(TarantoolConnection):
     pool = TarantoolPool
 
@@ -180,4 +182,3 @@ class TarantoolAsyncConnection(TarantoolConnection):
 
     def execute(self, command, silent=True):
         return self.execute_no_reconnect(command, silent)
-

@@ -30,6 +30,7 @@ from tarantool_connection import TarantoolConnection, TarantoolPool, TarantoolAs
 
 ADMIN_SEPARATOR = '\n'
 
+
 def get_handshake(sock, length=128, max_try=100):
     """
     Correct way to get tarantool handshake
@@ -37,10 +38,11 @@ def get_handshake(sock, length=128, max_try=100):
     result = ""
     i = 0
     while len(result) != length and i < max_try:
-        result = "%s%s" % (result, sock.recv(length-len(result)))
+        result = "%s%s" % (result, sock.recv(length - len(result)))
         # max_try counter for tarantool/gh-1362
         i += 1
     return result
+
 
 class AdminPool(TarantoolPool):
     def _new_connection(self):
@@ -50,9 +52,11 @@ class AdminPool(TarantoolPool):
             # tarantool/gh-1163
             # 1. raise only if handshake is not full
             # 2. be silent on crashes or if it's server.stop() operation
-            print 'Handshake error {\n', handshake, '\n}'
+            print
+            'Handshake error {\n', handshake, '\n}'
             raise RuntimeError('Broken tarantool console handshake')
         return s
+
 
 class ExecMixIn(object):
     def cmd(self, socket, cmd, silent):
@@ -75,6 +79,7 @@ class ExecMixIn(object):
                 sys.stdout.write(res.replace("\r\n", "\n"))
         return res
 
+
 class AdminConnection(TarantoolConnection, ExecMixIn):
     def execute_no_reconnect(self, command, silent):
         if not command:
@@ -89,6 +94,7 @@ class AdminConnection(TarantoolConnection, ExecMixIn):
         handshake = get_handshake(self.socket)
         if not re.search(r'^Tarantool.*console.*', str(handshake)):
             raise RuntimeError('Broken tarantool console handshake')
+
 
 class AdminAsyncConnection(TarantoolAsyncConnection, ExecMixIn):
     pool = AdminPool

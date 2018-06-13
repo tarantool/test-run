@@ -13,6 +13,7 @@ class BaseWatcher(object):
     """Base class for all listeners intended to be called when some message
     arrive to a result queue from some worker.
     """
+
     def process_result(self, obj):
         raise ValueError('override me')
 
@@ -167,8 +168,9 @@ class HangError(Exception):
 
 class HangWatcher(BaseWatcher):
     """Terminate all workers if no output received 'no_output_times' time."""
+
     def __init__(self, get_not_done_worker_ids, kill_all_workers, warn_timeout,
-            kill_timeout):
+                 kill_timeout):
         self.get_not_done_worker_ids = get_not_done_worker_ids
         self.kill_all_workers = kill_all_workers
         self.warn_timeout = warn_timeout
@@ -187,10 +189,10 @@ class HangWatcher(BaseWatcher):
         if self.warned_seconds_ago < self.warn_timeout:
             return
         color_stdout("No output during %d seconds. "
-            "List of workers not reporting the status: %s; "
-            "Will abort after %d seconds without output.\n" % (
-                self.inactivity, worker_ids, self.kill_timeout),
-                schema='test_var')
+                     "List of workers not reporting the status: %s; "
+                     "Will abort after %d seconds without output.\n" % (
+                         self.inactivity, worker_ids, self.kill_timeout),
+                     schema='test_var')
         self.warned_seconds_ago = 0.0
         if self.inactivity < self.kill_timeout:
             return

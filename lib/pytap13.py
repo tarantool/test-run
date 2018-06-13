@@ -17,6 +17,7 @@
 # Author: Josef Skladanka <jskladan@redhat.com>
 
 import re
+
 try:
     from CStringIO import StringIO
 except ImportError:
@@ -24,17 +25,18 @@ except ImportError:
 
 import yaml
 
-
 RE_VERSION = re.compile(r"^\s*TAP version 13\s*$")
 RE_PLAN = re.compile(r"^\s*(?P<start>\d+)\.\.(?P<end>\d+)\s*(#\s*(?P<explanation>.*))?\s*$")
-RE_TEST_LINE = re.compile(r"^\s*(?P<result>(not\s+)?ok)\s*(?P<id>\d+)?\s*(?P<description>[^#]+)?\s*(#\s*(?P<directive>TODO|SKIP)?\s*(?P<comment>.+)?)?\s*$",  re.IGNORECASE)
+RE_TEST_LINE = re.compile(r"^\s*(?P<result>(not\s+)?ok)\s*(?P<id>\d+)?"
+                          r"\s*(?P<description>[^#]+)?\s*(#\s*(?P<directive>TODO|SKIP)?\s*(?P<comment>.+)?)?\s*$",
+                          re.IGNORECASE)
 RE_DIAGNOSTIC = re.compile(r"^\s*#\s*(?P<diagnostic>.+)?\s*$")
 RE_YAMLISH_START = re.compile(r"^\s*---.*$")
 RE_YAMLISH_END = re.compile(r"^\s*\.\.\.\s*$")
 
 
 class Test(object):
-    def __init__(self, result, id, description = None, directive = None, comment = None):
+    def __init__(self, result, id, description=None, directive=None, comment=None):
         self.result = result
         self.id = id
         self.description = description
@@ -49,7 +51,7 @@ class Test(object):
 
 
 class TAP13(object):
-    def __init__(self, strict = False):
+    def __init__(self, strict=False):
         self.tests = []
         self.__tests_counter = 0
         self.tests_planned = None
@@ -77,7 +79,7 @@ class TAP13(object):
                         test_num = len(self.tests) + 1
                         self.tests.append(Test(
                             'not ok', test_num,
-                            comment = 'DIAG: Test %s has wrong YAML: %s' % (
+                            comment='DIAG: Test %s has wrong YAML: %s' % (
                                 test_num, str(e))))
                     in_yaml = False
                 else:
@@ -140,7 +142,7 @@ class TAP13(object):
                     # here we add the missing tests in sequence
                     while t_attrs['id'] > self.__tests_counter:
                         comment = 'DIAG: Test %s not present' % self.__tests_counter
-                        self.tests.append(Test('not ok', self.__tests_counter, comment = comment))
+                        self.tests.append(Test('not ok', self.__tests_counter, comment=comment))
                         self.__tests_counter += 1
                     t = Test(**t_attrs)
                     self.tests.append(t)
@@ -158,15 +160,15 @@ class TAP13(object):
 
         if len(self.tests) != self.tests_planned:
             self.tests.append(Test('not ok', len(self.tests),
-                    comment = 'DIAG: Expected %s tests, got %s' % \
-                            (self.tests_planned, len(self.tests))))
-
+                                   comment='DIAG: Expected %s tests, got %s' % \
+                                           (self.tests_planned, len(self.tests))))
 
     def parse(self, source):
         if isinstance(source, (str, unicode)):
             self._parse(StringIO(source))
         elif hasattr(source, "__iter__"):
             self._parse(source)
+
 
 if __name__ == "__main__":
     input = """
@@ -207,7 +209,9 @@ if __name__ == "__main__":
     t.parse(input)
 
     import pprint
+
     for test in t.tests:
-        print test.result, test.id, test.description, "#", test.directive, test.comment
+        print
+        test.result, test.id, test.description, "#", test.directive, test.comment
         pprint.pprint(test._yaml_buffer)
         pprint.pprint(test.yaml)

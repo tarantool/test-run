@@ -106,7 +106,8 @@ class LuaTest(FuncTest):
 
         # check that all servers stopped correctly
         for server in check_list:
-            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
+            crash_occured = crash_occured or server.process.returncode not in (
+                None, 0, -signal.SIGKILL, -signal.SIGTERM)
 
         for server in check_list:
             server.process.poll()
@@ -151,6 +152,7 @@ class LuaTest(FuncTest):
             ts.stop_nondefault()
             raise
 
+
 class PythonTest(FuncTest):
     def execute(self, server):
         server.current_test = self
@@ -159,6 +161,7 @@ class PythonTest(FuncTest):
         # crash was detected (possibly on non-default server)
         if server.current_test.is_crash_reported:
             raise TestExecutionError
+
 
 CON_SWITCH = {
     'lua': AdminAsyncConnection,
@@ -281,7 +284,8 @@ class TarantoolServer(Server):
 
     @property
     def logfile_pos(self):
-        if not hasattr(self, '_logfile_pos'): self._logfile_pos = None
+        if not hasattr(self, '_logfile_pos'):
+            self._logfile_pos = None
         return self._logfile_pos
 
     @logfile_pos.setter
@@ -290,7 +294,8 @@ class TarantoolServer(Server):
 
     @property
     def script(self):
-        if not hasattr(self, '_script'): self._script = None
+        if not hasattr(self, '_script'):
+            self._script = None
         return self._script
 
     @script.setter
@@ -304,7 +309,8 @@ class TarantoolServer(Server):
 
     @property
     def _admin(self):
-        if not hasattr(self, 'admin'): self.admin = None
+        if not hasattr(self, 'admin'):
+            self.admin = None
         return self.admin
 
     @_admin.setter
@@ -317,7 +323,8 @@ class TarantoolServer(Server):
 
     @property
     def _iproto(self):
-        if not hasattr(self, 'iproto'): self.iproto = None
+        if not hasattr(self, 'iproto'):
+            self.iproto = None
         return self.iproto
 
     @_iproto.setter
@@ -332,18 +339,22 @@ class TarantoolServer(Server):
 
     @property
     def log_des(self):
-        if not hasattr(self, '_log_des'): self._log_des = open(self.logfile, 'a')
+        if not hasattr(self, '_log_des'):
+            self._log_des = open(self.logfile, 'a')
         return self._log_des
 
     @log_des.deleter
     def log_des(self):
-        if not hasattr(self, '_log_des'): return
-        if not self._log_des.closed: self._log_des.closed()
+        if not hasattr(self, '_log_des'):
+            return
+        if not self._log_des.closed:
+            self._log_des.closed()
         delattr(self, _log_des)
 
     @property
     def rpl_master(self):
-        if not hasattr(self, '_rpl_master'): self._rpl_master = None
+        if not hasattr(self, '_rpl_master'):
+            self._rpl_master = None
         return self._rpl_master
 
     @rpl_master.setter
@@ -442,15 +453,15 @@ class TarantoolServer(Server):
                 ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
                 need_lua_path = True
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
-                cls.binary      = os.path.abspath(exe)
-                cls.ctl_path    = os.path.abspath(ctl)
+                cls.binary = os.path.abspath(exe)
+                cls.ctl_path = os.path.abspath(ctl)
                 cls.ctl_plugins = os.path.abspath(
                     os.path.join(ctl_dir, '..')
                 )
                 os.environ["PATH"] = os.pathsep.join([
-                        os.path.abspath(ctl_dir),
-                        os.path.abspath(_dir),
-                        os.environ["PATH"]
+                    os.path.abspath(ctl_dir),
+                    os.path.abspath(_dir),
+                    os.environ["PATH"]
                 ])
                 os.environ["TARANTOOLCTL"] = ctl
                 if need_lua_path:
@@ -519,8 +530,8 @@ class TarantoolServer(Server):
                 try:
                     if os.path.isdir(source):
                         shutil.copytree(source,
-                                os.path.join(self.vardir,
-                                             os.path.basename(source)))
+                                        os.path.join(self.vardir,
+                                                     os.path.basename(source)))
                     else:
                         shutil.copy(source, self.vardir)
                 except IOError as e:
@@ -612,7 +623,7 @@ class TarantoolServer(Server):
                 gevent.sleep(0.1)
 
         if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
-           return
+            return
 
         self.kill_current_test()
 
@@ -700,7 +711,7 @@ class TarantoolServer(Server):
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
             color_log('TarantoolServer.stop(): stopping the %s\n'
-                % format_process(self.process.pid), schema='test_var')
+                      % format_process(self.process.pid), schema='test_var')
             try:
                 self.process.terminate()
             except OSError:
@@ -784,13 +795,15 @@ class TarantoolServer(Server):
     def test_option_get(self, option_list_str, silent=False):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
-            print " ".join([os.path.basename(self.binary)] + args[1:])
+            print
+            " ".join([os.path.basename(self.binary)] + args[1:])
         output = subprocess.Popen(args, cwd=self.vardir, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT).stdout.read()
         return output
 
     def test_option(self, option_list_str):
-        print self.test_option_get(option_list_str)
+        print
+        self.test_option_get(option_list_str)
 
     def test_debug(self):
         if re.findall(r"-Debug", self.test_option_get("-V", True), re.I):
@@ -806,8 +819,7 @@ class TarantoolServer(Server):
                  ]
         for k in get_tests("*.test.lua"):
             runs = test_suite.get_multirun_params(k)
-            is_correct = lambda x: test_suite.args.conf is None or \
-                                   test_suite.args.conf == x
+            is_correct = lambda x: test_suite.args.conf is None or test_suite.args.conf == x
             if runs:
                 tests.extend([LuaTest(
                     k, test_suite.args,
@@ -825,7 +837,7 @@ class TarantoolServer(Server):
                     test_suite.tests.append(test)
 
     def get_param(self, param=None):
-        if not param is None:
+        if param is not None:
             return yaml.load(self.admin("box.info." + param, silent=True))[0]
         return yaml.load(self.admin("box.info", silent=True))
 

@@ -11,28 +11,32 @@ from lib.admin_connection import AdminAsyncConnection
 
 from lib.colorer import color_stdout, color_log
 
+
 class Namespace(object):
     pass
+
 
 class LuaPreprocessorException(Exception):
     def __init__(self, val):
         super(LuaPreprocessorException, self).__init__()
         self.value = val
+
     def __str__(self):
         return "lua preprocessor error: " + repr(self.value)
 
+
 class TestState(object):
-    def __init__(self, suite_ini, default_server, create_server, params = {}, **kwargs):
+    def __init__(self, suite_ini, default_server, create_server, params={}, **kwargs):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
         self.operation = False
         self.create_server = create_server
-        self.servers = { 'default': default_server }
+        self.servers = {'default': default_server}
         self.connections = {}
         self.run_params = params
         if default_server is not None:
-            self.connections =  { 'default': default_server.admin }
+            self.connections = {'default': default_server.admin}
             # curcon is an array since we may have many connections
             self.curcon = [self.connections['default']]
             nmsp = Namespace()
@@ -138,20 +142,20 @@ class TestState(object):
             ret = lexer.get_token()
             return self.variable(ftype, ref, ret)
         else:
-            raise LuaPreprocessorException("Wrong command: "+repr(lexer.instream.getvalue()))
+            raise LuaPreprocessorException("Wrong command: " + repr(lexer.instream.getvalue()))
 
     def options(self, key, value):
         if key == 'delimiter':
             self.delimiter = value[1:-1]
         else:
-            raise LuaPreprocessorException("Wrong option: "+repr(key))
+            raise LuaPreprocessorException("Wrong option: " + repr(key))
 
     def server_start(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_start(%s, %s, %s)\n' % (
             hex(id(self)), str(ctype), str(sname), str(opts)),
-            schema='test_var')
+                  schema='test_var')
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t start nonexistent server '+repr(sname))
+            raise LuaPreprocessorException('Can\'t start nonexistent server ' + repr(sname))
         wait = True
         if 'wait' in opts and opts['wait'] == 'False':
             wait = False
@@ -166,13 +170,13 @@ class TestState(object):
         try:
             self.connections[sname]('return true', silent=True)
         except socket.error as e:
-            LuaPreprocessorException('Can\'t start server '+repr(sname))
+            LuaPreprocessorException('Can\'t start server ' + repr(sname))
 
     def server_stop(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
             hex(id(self)), str(ctype), str(sname), str(opts)), schema='test_var')
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t stop nonexistent server '+repr(sname))
+            raise LuaPreprocessorException('Can\'t stop nonexistent server ' + repr(sname))
         self.connections[sname].disconnect()
         self.connections.pop(sname)
         self.servers[sname].stop()
@@ -180,13 +184,13 @@ class TestState(object):
     def server_create(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_create(%s, %s, %s)\n' % (
             hex(id(self)), str(ctype), str(sname), str(opts)),
-            schema='test_var')
+                  schema='test_var')
         if sname in self.servers:
             raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
         if 'need_init' in opts:
-            temp.need_init   = True if opts['need_init'] == 'True' else False
+            temp.need_init = True if opts['need_init'] == 'True' else False
         if 'script' in opts:
             temp.script = opts['script'][1:-1]
         if 'lua_libs' in opts:
@@ -229,7 +233,7 @@ class TestState(object):
 
     def server_cleanup(self, ctype, sname, opts):
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
+            raise LuaPreprocessorException('Can\'t cleanup nonexistent server ' + repr(sname))
         self.servers[sname].cleanup()
         if sname != 'default':
             if hasattr(self.environ, sname):
@@ -239,7 +243,7 @@ class TestState(object):
 
     def server_delete(self, ctype, sname, opts):
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t cleanup nonexistent server '+repr(sname))
+            raise LuaPreprocessorException('Can\'t cleanup nonexistent server ' + repr(sname))
         self.servers[sname].cleanup()
         if sname != 'default':
             if hasattr(self.environ, sname):
@@ -282,29 +286,28 @@ class TestState(object):
                 'Unknown command for server: %s' % ctype
             )
 
-
     def connection(self, ctype, cnames, sname):
         # we always get a list of connections as input here
         cname = cnames[0]
         if ctype == 'create':
             if sname not in self.servers:
-                raise LuaPreprocessorException('Can\'t create connection to nonexistent server '+repr(sname))
+                raise LuaPreprocessorException('Can\'t create connection to nonexistent server ' + repr(sname))
             if cname in self.connections:
                 raise LuaPreprocessorException('Connection {0} already exists'.format(repr(cname)))
             self.connections[cname] = AdminAsyncConnection('localhost', self.servers[sname].admin.port)
             self.connections[cname].connect()
         elif ctype == 'drop':
             if cname not in self.connections:
-                raise LuaPreprocessorException('Can\'t drop nonexistent connection '+repr(cname))
+                raise LuaPreprocessorException('Can\'t drop nonexistent connection ' + repr(cname))
             self.connections[cname].disconnect()
             self.connections.pop(cname)
         elif ctype == 'set':
             for i in cnames:
-                if not i in self.connections:
-                    raise LuaPreprocessorException('Can\'t set nonexistent connection '+repr(cname))
+                if i not in self.connections:
+                    raise LuaPreprocessorException('Can\'t set nonexistent connection ' + repr(cname))
             self.curcon = [self.connections[i] for i in cnames]
         else:
-            raise LuaPreprocessorException('Unknown command for connection: '+repr(ctype))
+            raise LuaPreprocessorException('Unknown command for connection: ' + repr(ctype))
 
     def filter(self, ctype, ref, ret):
         if ctype == 'push':
@@ -326,11 +329,10 @@ class TestState(object):
             result = []
         return result
 
-
     def variable(self, ctype, ref, ret):
         if ctype == 'set':
             self.curcon[0].reconnect()
-            self.curcon[0](ref+'='+str(eval(ret[1:-1], {}, self.environ.__dict__)), silent=True)
+            self.curcon[0](ref + '=' + str(eval(ret[1:-1], {}, self.environ.__dict__)), silent=True)
         else:
             raise LuaPreprocessorException("Wrong command for variables: " + repr(ctype))
 

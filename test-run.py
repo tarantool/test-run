@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 """Tarantool regression test suite front-end."""
 
-
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -67,13 +66,13 @@ from lib.tarantool_server import TarantoolServer
 from listeners import HangError
 from dispatcher import Dispatcher
 
-
 EXIT_SUCCESS = 0
 EXIT_HANG = 1
 EXIT_INTERRUPTED = 2
 EXIT_FAILED_TEST = 3
 EXIT_NOTDONE_TEST = 4
 EXIT_UNKNOWN_ERROR = 50
+
 
 def main_loop_parallel():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
@@ -100,11 +99,11 @@ def main_loop_parallel():
     lib.worker.print_greetings()
 
     color_stdout("\n", '=' * 86, "\n", schema='separator')
-    color_stdout("WORKR".ljust(6),     schema='t_name')
-    color_stdout("TEST".ljust(48),     schema='t_name')
-    color_stdout("PARAMS".ljust(16),   schema='test_var')
-    color_stdout("RESULT\n",           schema='test_pass')
-    color_stdout('-' * 81, "\n",       schema='separator')
+    color_stdout("WORKR".ljust(6), schema='t_name')
+    color_stdout("TEST".ljust(48), schema='t_name')
+    color_stdout("PARAMS".ljust(16), schema='test_var')
+    color_stdout("RESULT\n", schema='test_pass')
+    color_stdout('-' * 81, "\n", schema='separator')
 
     try:
         is_force = lib.Options().args.is_force
@@ -150,10 +149,10 @@ def main_loop_consistent(failed_test_ids):
     for name, task_group in task_groups:
         # print information about current test suite
         color_stdout("\n", '=' * 80, "\n", schema='separator')
-        color_stdout("TEST".ljust(48),     schema='t_name')
-        color_stdout("PARAMS".ljust(16),   schema='test_var')
-        color_stdout("RESULT\n",           schema='test_pass')
-        color_stdout('-' * 75, "\n",       schema='separator')
+        color_stdout("TEST".ljust(48), schema='t_name')
+        color_stdout("PARAMS".ljust(16), schema='test_var')
+        color_stdout("RESULT\n", schema='test_pass')
+        color_stdout('-' * 75, "\n", schema='separator')
 
         task_ids = task_group['task_ids']
         if not task_ids:
@@ -168,7 +167,7 @@ def main_loop_consistent(failed_test_ids):
                     worker.stop_server(cleanup=False)
                     return
 
-        color_stdout('-' * 75, "\n",       schema='separator')
+        color_stdout('-' * 75, "\n", schema='separator')
 
         worker.stop_server(silent=False)
         color_stdout()
@@ -192,7 +191,7 @@ def main_consistent():
         color_stdout("\n===== %d tests failed:\n" % len(failed_test_ids),
                      schema='error')
         for test_id in failed_test_ids:
-             color_stdout("----- %s\n" % str(test_id), schema='info')
+            color_stdout("----- %s\n" % str(test_id), schema='info')
 
     return (-1 if failed_test_ids else 0)
 
