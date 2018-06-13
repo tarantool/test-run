@@ -9,7 +9,6 @@ from utils import warn_unix_sockets_at_start
 
 from lib.colorer import color_stdout
 
-
 __all__ = ['Options']
 
 
@@ -52,8 +51,8 @@ def module_init():
     os.environ["SOURCEDIR"] = SOURCEDIR
     os.environ["BUILDDIR"] = BUILDDIR
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
-    os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
-    os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
+    os.environ["LUA_PATH"] = SOURCEDIR + "/?.lua;" + SOURCEDIR + "/?/init.lua;;"
+    os.environ["LUA_CPATH"] = BUILDDIR + "/?." + soext + ";;"
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)

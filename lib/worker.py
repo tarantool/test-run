@@ -13,6 +13,7 @@ from lib.test_suite import TestSuite
 from lib.colorer import color_stdout, color_log
 from lib.tarantool_server import TarantoolServer
 
+
 # Utils
 #######
 
@@ -119,6 +120,7 @@ class BaseWorkerMessage(object):
     (int) and worker_name (string). Used as a structure, i.e. w/o data fields
     incapsulation.
     """
+
     def __init__(self, worker_id, worker_name):
         super(BaseWorkerMessage, self).__init__()
         self.worker_id = worker_id
@@ -132,6 +134,7 @@ class WorkerTaskResult(BaseWorkerMessage):
     than binary True/False. The task_id (any hashable object) field hold ID of
     the processed task.
     """
+
     def __init__(self, worker_id, worker_name, task_id, short_status):
         super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
@@ -145,6 +148,7 @@ class WorkerOutput(BaseWorkerMessage):
     LogOutputWatcher and OutputWatcher classes in listeners.py file to see how
     the output multiplexed by the main process.
     """
+
     def __init__(self, worker_id, worker_name, output, log_only):
         super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
@@ -153,6 +157,7 @@ class WorkerOutput(BaseWorkerMessage):
 
 class WorkerDone(BaseWorkerMessage):
     """Report the worker as done its work."""
+
     def __init__(self, worker_id, worker_name):
         super(WorkerDone, self).__init__(worker_id, worker_name)
 
@@ -185,7 +190,7 @@ class Worker:
     def __init__(self, suite, _id):
         self.sigterm_received = False
         signal.signal(signal.SIGTERM, lambda x, y, z=self:
-                      z.sigterm_handler(x, y))
+        z.sigterm_handler(x, y))
 
         self.initialized = False
         self.server = None

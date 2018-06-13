@@ -16,6 +16,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+
 class ConfigurationError(RuntimeError):
     def __init__(self, name, value, expected):
         self.name = name
@@ -39,6 +40,7 @@ class TestSuite:
     server for this suite, the client program to execute individual
     tests and other suite properties. The server is started once per
     suite."""
+
     def get_multirun_conf(self, suite_path):
         conf_name = self.ini.get('config', None)
         if conf_name is None:
@@ -63,7 +65,6 @@ class TestSuite:
         result = self.multi_run.get('*', None)
         return result
 
-
     def __init__(self, suite_path, args):
         """Initialize a test suite: check that it exists and contains
         a syntactically correct configuration file. Then create
@@ -74,7 +75,7 @@ class TestSuite:
         self.suite_path = suite_path
         self.ini["core"] = "tarantool"
 
-        if os.access(suite_path, os.F_OK) == False:
+        if os.access(suite_path, os.F_OK) is False:
             raise RuntimeError("Suite %s doesn't exist" % repr(suite_path))
 
         # read the suite config
@@ -94,7 +95,7 @@ class TestSuite:
             self.ini[i] = dict.fromkeys(self.ini[i].split()) if i in self.ini else dict()
         for i in ["lua_libs"]:
             self.ini[i] = map(lambda x: os.path.join(suite_path, x),
-                    dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
+                              dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
 
     def find_tests(self):
         if self.ini['core'] == 'tarantool':
@@ -126,9 +127,10 @@ class TestSuite:
         try:
             return Server(self.ini, test_suite=self)
         except Exception as e:
-            print e
+            print
+            e
             raise RuntimeError("Unknown server: core = {0}".format(
-                               self.ini["core"]))
+                self.ini["core"]))
 
     def is_test_enabled(self, test, conf, server):
         test_name = os.path.basename(test.name)
@@ -142,7 +144,7 @@ class TestSuite:
         for check in checks:
             check_enabled, disabled_tests = check
             if check_enabled and (test_name in disabled_tests
-                    or tconf in disabled_tests):
+                                  or tconf in disabled_tests):
                 return False
         return True
 

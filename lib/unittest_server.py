@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE, STDOUT
 from lib.server import Server
 from lib.tarantool_server import Test
 
+
 class UnitTest(Test):
     def __init__(self, *args, **kwargs):
         Test.__init__(self, *args, **kwargs)
@@ -17,8 +18,10 @@ class UnitTest(Test):
         proc = Popen(execs, stdout=PIPE, stderr=STDOUT)
         sys.stdout.write(proc.communicate()[0])
 
+
 class UnittestServer(Server):
     """A dummy server implementation for unit test suite"""
+
     def __new__(cls, ini=None, *args, **kwargs):
         cls = Server.get_mixed_class(cls, ini)
         return object.__new__(cls)
@@ -28,7 +31,8 @@ class UnittestServer(Server):
             _ini = {}
         ini = {
             'vardir': None,
-        }; ini.update(_ini)
+        }
+        ini.update(_ini)
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
@@ -66,7 +70,7 @@ class UnittestServer(Server):
             return answer
 
         test_suite.ini['suite'] = suite_path
-        tests = glob.glob(os.path.join(suite_path, "*.test" ))
+        tests = glob.glob(os.path.join(suite_path, "*.test"))
 
         if not tests:
             tests = glob.glob(os.path.join(test_suite.args.builddir, 'test', suite_path, '*.test'))

@@ -89,8 +89,8 @@ class ValgrindMixin(Mixin):
         return shlex.split("valgrind --log-file={log} --suppressions={sup} \
             --gen-suppressions=all --trace-children=yes --leak-check=full \
             --read-var-info=yes --quiet".format(
-                log=self.valgrind_log,
-                sup=self.valgrind_sup))
+            log=self.valgrind_log,
+            sup=self.valgrind_sup))
 
     def prepare_args(self, args=[]):
         if not find_in_path('valgrind'):
@@ -206,6 +206,7 @@ class GdbMixin(DebugMixin):
             """
     }
 
+
 # this would be good for running unit tests:
 # https://cygwin.com/ml/gdb-patches/2015-03/msg01051.html
 class GdbServerMixin(DebugMixin):
@@ -218,6 +219,7 @@ class GdbServerMixin(DebugMixin):
             """gdbserver :{gdbserver_port} {binary} {args} -- {gdbserver_opts}
             """
     }
+
 
 class LLdbMixin(DebugMixin):
     debugger_args = {

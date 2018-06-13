@@ -36,10 +36,12 @@ class TestRunGreenlet(gevent.Greenlet):
         self.callable(*self.callable_args, **self.callable_kwargs)
 
     def __repr__(self):
-            return "<TestRunGreenlet at %s info='%s'>" % (hex(id(self)), getattr(self, "info", None))
+        return "<TestRunGreenlet at %s info='%s'>" % (hex(id(self)), getattr(self, "info", None))
+
 
 class FilteredStream:
     """Helper class to filter .result file output"""
+
     def __init__(self, filename):
         #
         # always open the output stream in line-buffered mode,
@@ -99,9 +101,9 @@ class Test:
         self.args = args
         self.suite_ini = suite_ini
         self.result = os.path.join(suite_ini['suite'],
-                os.path.basename(self.rg.sub('.result', name)))
+                                   os.path.basename(self.rg.sub('.result', name)))
         self.skip_cond = os.path.join(suite_ini['suite'],
-                os.path.basename(self.rg.sub('.skipcond', name)))
+                                      os.path.basename(self.rg.sub('.skipcond', name)))
         self.tmp_result = os.path.join(self.suite_ini['vardir'],
                                        os.path.basename(self.result))
         self.reject = self.rg.sub('.reject', name)
@@ -172,7 +174,7 @@ class Test:
                 # worker should stop
                 raise
             color_stdout('\nTest.run() received the following error:\n' +
-                traceback.format_exc() + '\n', schema='error')
+                         traceback.format_exc() + '\n', schema='error')
             diagnostics = str(e)
         finally:
             if sys.stdout and sys.stdout != save_stdout:
@@ -212,8 +214,7 @@ class Test:
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
-        elif (self.is_executed_ok and not self.is_equal_result and not
-              os.path.isfile(self.result)) and not is_tap:
+        elif (self.is_executed_ok and not self.is_equal_result and not os.path.isfile(self.result)) and not is_tap:
             shutil.copy(self.tmp_result, self.result)
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
@@ -235,8 +236,8 @@ class Test:
                 os.remove(self.reject)
                 for log_file in non_empty_logs:
                     self.print_diagnostics(log_file,
-                            "Test failed! Last 10 lines of {}:\n".format(
-                                log_file))
+                                           "Test failed! Last 10 lines of {}:\n".format(
+                                               log_file))
                 where = ": there were warnings in the valgrind log file(s)"
         return short_status
 
@@ -269,7 +270,7 @@ class Test:
     def tap_parse_print_yaml(self, yml):
         if 'expected' in yml and 'got' in yml:
             color_stdout('Expected: %s\n' % yml['expected'], schema='error')
-            color_stdout('Got:      %s\n' % yml['got'],      schema='error')
+            color_stdout('Got:      %s\n' % yml['got'], schema='error')
             del yml['expected']
             del yml['got']
         if 'trace' in yml:
@@ -279,7 +280,7 @@ class Test:
                 if fname:
                     fname = " function '%s'" % fname
                 line = '[%-4s]%s at <%s:%d>\n' % (
-                        fr['what'], fname, fr['filename'], fr['line']
+                    fr['what'], fname, fr['filename'], fr['line']
                 )
                 color_stdout(line, schema='error')
             del yml['trace']

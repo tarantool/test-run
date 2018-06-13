@@ -6,12 +6,10 @@ import random
 from gevent import socket
 from lib.colorer import color_stdout
 
-
 UNIX_SOCKET_LEN_LIMIT = 107
 
 
 def check_libs():
-
     deps = [
         ('msgpack', 'msgpack-python'),
         ('tarantool', 'tarantool-python')
@@ -31,6 +29,7 @@ def check_libs():
             print(e)
             sys.exit(1)
 
+
 def non_empty_valgrind_logs(paths_to_log):
     """ Check that there were no warnings in the log."""
     non_empty_logs = []
@@ -38,6 +37,7 @@ def non_empty_valgrind_logs(paths_to_log):
         if os.path.exists(path_to_log) and os.path.getsize(path_to_log) != 0:
             non_empty_logs.append(path_to_log)
     return non_empty_logs
+
 
 def print_tail_n(filename, num_lines):
     """Print N last lines of a file."""
@@ -81,7 +81,6 @@ def check_port(port, rais=True, ipv4=True, ipv6=True):
 # network sockets
 ports = {}
 
-
 is_ipv6_supported = check_port(port=0, rais=False, ipv4=False, ipv6=True)
 
 
@@ -112,9 +111,12 @@ def find_in_path(name):
             return exe
     return ''
 
+
 # http://stackoverflow.com/a/2549950
 SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
-    if k.startswith('SIG') and not k.startswith('SIG_'))
+                if k.startswith('SIG') and not k.startswith('SIG_'))
+
+
 def signame(signum):
     return SIGNAMES[signum]
 
