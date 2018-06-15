@@ -50,8 +50,8 @@ def save_join(green_obj, timeout=None):
         green_obj.join(timeout=timeout)
     except GreenletExit:
         return True
-    except TarantoolStartError:
-        return True
+    # We don't catch TarantoolStartError here, because it catched in start()
+    # and crash_detect() methods to report replica crash.
     return False
 
 
@@ -115,10 +115,12 @@ class LuaTest(FuncTest):
                 # kill all servers and crash detectors on crash
                 if server.process.returncode is None:
                     server.process.kill()
-                gevent.kill(server.crash_detector)
+                if server.crash_detector is not None:
+                    gevent.kill(server.crash_detector)
             elif server.process.returncode is not None:
                 # join crash detectors of stopped servers
-                save_join(server.crash_detector)
+                if server.crash_detector is not None:
+                    save_join(server.crash_detector)
 
     def execute(self, server):
         server.current_test = self
@@ -397,8 +399,7 @@ class TarantoolServer(Server):
         self.use_unix_sockets = ini['use_unix_sockets']
         self._start_against_running = ini['tarantool_port']
         self.crash_detector = None
-        # use this option with inspector
-        # to enable crashes in test
+        # use this option with inspector to enable crashes in test
         self.crash_enabled = False
 
         # set in from a test let test-run ignore server's crashes
@@ -571,8 +572,7 @@ class TarantoolServer(Server):
         self.crash_detector = TestRunGreenlet(self.crash_detect)
         self.crash_detector.info = "Crash detector: %s" % self.process
         self.crash_detector.start()
-        wait = wait
-        wait_load = wait_load
+
         if wait:
             try:
                 self.wait_until_started(wait_load)

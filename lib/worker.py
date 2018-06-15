@@ -269,7 +269,7 @@ class Worker:
             raise
         except Exception as e:
             color_stdout(
-                'Worker "%s" received the following error; stopping...\n'
+                '\nWorker "%s" received the following error; stopping...\n'
                 % self.name + traceback.format_exc() + '\n', schema='error')
             raise
         return short_status
