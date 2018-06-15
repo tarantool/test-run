@@ -161,12 +161,28 @@ class TestState(object):
         args = []
         if 'args' in opts:
             args = opts['args'][1:-1].split(' ')
-        self.servers[sname].start(silent=True, rais=True, wait=wait, wait_load=wait_load, args=args)
-        self.connections[sname] = self.servers[sname].admin
+
+        crash_expected = 'crash_expected' in opts and \
+            opts['crash_expected'] == 'True'
+        crash_occured = False
         try:
-            self.connections[sname]('return true', silent=True)
-        except socket.error as e:
-            LuaPreprocessorException('Can\'t start server '+repr(sname))
+            if crash_expected:
+                # disable crash detector
+                self.servers[sname].crash_expected = True
+            self.servers[sname].start(silent=True, rais=True, wait=wait,
+                                      wait_load=wait_load, args=args)
+        except Exception as e:
+            crash_occured = True
+            if not (crash_expected and \
+                    e.__class__.__name__ == 'TarantoolStartError'):
+                raise
+        if not crash_occured:
+            self.connections[sname] = self.servers[sname].admin
+            try:
+                self.connections[sname]('return true', silent=True)
+            except socket.error as e:
+                LuaPreprocessorException('Can\'t start server '+repr(sname))
+        return not crash_occured
 
     def server_stop(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
