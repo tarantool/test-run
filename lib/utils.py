@@ -170,6 +170,8 @@ def format_process(pid):
     try:
         with open('/proc/%d/status' % pid, 'r') as f:
             for line in f:
+                if ':' not in line:
+                    continue
                 key, value = line.split(':', 1)
                 if key == 'State':
                     status = value.strip()
