@@ -49,23 +49,17 @@
 #   tests passed. Otherwise non-zero.
 
 
+import multiprocessing
 import os
-import signal
 import sys
 import time
 
-import subprocess
-import collections
-import multiprocessing
-
 import lib
 import lib.worker
-from lib.colorer import color_stdout
-from lib.utils import signame, format_process
-from lib.tarantool_server import TarantoolServer
 
-from listeners import HangError
 from dispatcher import Dispatcher
+from lib.colorer import color_stdout
+from listeners import HangError
 
 
 EXIT_SUCCESS = 0
@@ -74,6 +68,7 @@ EXIT_INTERRUPTED = 2
 EXIT_FAILED_TEST = 3
 EXIT_NOTDONE_TEST = 4
 EXIT_UNKNOWN_ERROR = 50
+
 
 def main_loop_parallel():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
@@ -168,7 +163,7 @@ def main_loop_consistent(failed_test_ids):
                     worker.stop_server(cleanup=False)
                     return
 
-        color_stdout('-' * 75, "\n",       schema='separator')
+        color_stdout('-' * 75, "\n", schema='separator')
 
         worker.stop_server(silent=False)
         color_stdout()
@@ -181,9 +176,11 @@ def main_consistent():
     try:
         main_loop_consistent(failed_test_ids)
     except KeyboardInterrupt:
-        color_stdout('[Main loop] Caught keyboard interrupt\n', schema='test_var')
+        color_stdout('[Main loop] Caught keyboard interrupt\n',
+                     schema='test_var')
     except RuntimeError as e:
-        color_stdout("\nFatal error: %s. Execution aborted.\n" % e, schema='error')
+        color_stdout("\nFatal error: %s. Execution aborted.\n" % e,
+                     schema='error')
         if lib.Options().args.gdb:
             time.sleep(100)
         return -1
@@ -192,7 +189,7 @@ def main_consistent():
         color_stdout("\n===== %d tests failed:\n" % len(failed_test_ids),
                      schema='error')
         for test_id in failed_test_ids:
-             color_stdout("----- %s\n" % str(test_id), schema='info')
+            color_stdout("----- %s\n" % str(test_id), schema='info')
 
     return (-1 if failed_test_ids else 0)
 

@@ -1,17 +1,18 @@
-import os
-import sys
-import glob
 import errno
+import glob
+import os
 import shutil
+import sys
 
 from gevent.subprocess import Popen, PIPE
 
+from lib.colorer import color_log
+from lib.preprocessor import TestState
 from lib.server import Server
 from lib.tarantool_server import Test, TarantoolServer
-from lib.preprocessor import TestState
 from lib.utils import find_port
+from lib.utils import format_process
 from test import TestRunGreenlet, TestExecutionError
-from lib.colorer import color_log
 
 
 def run_server(execs, cwd, server, logfile, retval):
@@ -51,16 +52,14 @@ class AppServer(Server):
         return object.__new__(cls)
 
     def __init__(self, _ini=None, test_suite=None):
-        if _ini is None:
-            _ini = {}
-        ini = {
-            'vardir': None
-        }; ini.update(_ini)
+        ini = dict(vardir=None)
+        ini.update({} if _ini is None else _ini)
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.vylog", "*.inprogress", "*.sup", "*.lua", "*.pid"
+            "*.snap", "*.xlog", "*.vylog", "*.inprogress",
+            "*.sup", "*.lua", "*.pid"
         ]
         self.cleanup()
         self.builddir = ini['builddir']
@@ -95,8 +94,8 @@ class AppServer(Server):
                 try:
                     if os.path.isdir(source):
                         shutil.copytree(source,
-                                os.path.join(self.vardir,
-                                             os.path.basename(source)))
+                                        os.path.join(self.vardir,
+                                                     os.path.basename(source)))
                     else:
                         shutil.copy(source, self.vardir)
                 except IOError as e:
@@ -114,8 +113,8 @@ class AppServer(Server):
     def stop(self, silent):
         if not self.process:
             return
-        color_log('AppServer.stop(): stopping the %s\n'
-            % format_process(self.process.pid), schema='test_var')
+        color_log('AppServer.stop(): stopping the %s\n' %
+                  format_process(self.process.pid), schema='test_var')
         try:
             self.process.terminate()
         except OSError:
@@ -134,6 +133,9 @@ class AppServer(Server):
                     answer.append(test_name)
             return answer
 
+        def is_correct(run):
+            return test_suite.args.conf is None or test_suite.args.conf == run
+
         test_suite.ini['suite'] = suite_path
 
         test_names = sorted(glob.glob(os.path.join(suite_path, "*.test.lua")))
@@ -141,16 +143,20 @@ class AppServer(Server):
                              test_names), [])
         tests = []
 
-        for k in test_names:
-            runs = test_suite.get_multirun_params(k)
-            is_correct = lambda x: test_suite.args.conf is None or \
-                                   test_suite.args.conf == x
+        for test_name in test_names:
+            runs = test_suite.get_multirun_params(test_name)
             if runs:
                 tests.extend([AppTest(
-                    k, test_suite.args,
-                    test_suite.ini, runs[r], r
-                ) for r in runs.keys() if is_correct(r)])
+                    test_name,
+                    test_suite.args,
+                    test_suite.ini,
+                    params=params,
+                    conf_name=conf_name
+                ) for conf_name, params in runs.iteritems()
+                    if is_correct(conf_name)])
             else:
-                tests.append(AppTest(k, test_suite.args, test_suite.ini))
+                tests.append(AppTest(test_name,
+                                     test_suite.args,
+                                     test_suite.ini))
 
         test_suite.tests = tests
