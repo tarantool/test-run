@@ -39,9 +39,9 @@ def non_empty_valgrind_logs(paths_to_log):
             non_empty_logs.append(path_to_log)
     return non_empty_logs
 
-def print_tail_n(filename, num_lines):
-    """Print N last lines of a file."""
-    with open(filename, "r+") as logfile:
+def print_tail_n(filename, num_lines=None):
+    """Print N last lines of a file. If num_lines is not set, prints the whole file"""
+    with open(filename, "r") as logfile:
         tail_n = collections.deque(logfile, num_lines)
         for line in tail_n:
             color_stdout(line, schema='tail')

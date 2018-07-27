@@ -8,6 +8,7 @@ from lib.server_mixins import GdbServerMixin
 from lib.server_mixins import LLdbMixin
 from lib.server_mixins import StraceMixin
 from lib.colorer import color_stdout
+from lib.utils import print_tail_n
 
 
 class Server(object):
@@ -109,11 +110,13 @@ class Server(object):
     def restart(self):
         pass
 
-    def print_log(self, lines):
-        color_stdout('\nLast {0} lines of Tarantool Log file [Instance "{1}"][{2}]:\n'.format(
-            lines, self.name, self.logfile or 'null'), schema='error')
+    def print_log(self, lines=None):
+        msg = '\n{prefix} of Tarantool Log file [Instance "{instance}"][{logfile}]:\n'.format(
+            prefix="Last {0} lines".format(lines) if lines else "Output",
+            instance=self.name,
+            logfile=self.logfile or 'null')
+        color_stdout(msg, schema='error')
         if os.path.exists(self.logfile):
-            with open(self.logfile, 'r') as log:
-                color_stdout(''.join(log.readlines()[-lines:]))
+            print_tail_n(self.logfile, lines)
         else:
             color_stdout("    Can't find log:\n", schema='error')

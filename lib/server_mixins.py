@@ -115,7 +115,7 @@ class ValgrindMixin(Mixin):
         color_stdout("It's known that it can be valgrind's \"the 'impossible' happened\" error\n", schema='error')
         color_stdout('Last %d lines of valgring log file [%s]:\n' % (
             lines_cnt, self.valgrind_log), schema='error')
-        print_tail_n(self.valgrind_log, 50)
+        print_tail_n(self.valgrind_log, lines_cnt)
 
 
 class StraceMixin(Mixin):

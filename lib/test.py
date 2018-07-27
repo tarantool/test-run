@@ -38,6 +38,7 @@ class TestRunGreenlet(gevent.Greenlet):
     def __repr__(self):
             return "<TestRunGreenlet at %s info='%s'>" % (hex(id(self)), getattr(self, "info", None))
 
+
 class FilteredStream:
     """Helper class to filter .result file output"""
     def __init__(self, filename):
@@ -224,7 +225,8 @@ class Test:
 
             where = ""
             if not self.is_crash_reported and not self.is_executed_ok:
-                self.print_diagnostics(self.reject, "Test failed! Last 15 lines of the result file:\n")
+                self.print_diagnostics(self.reject,
+                    "Test failed! Output from reject file {}:\n".format(self.reject))
                 server.print_log(15)
                 where = ": test execution aborted, reason '{0}'".format(diagnostics)
             elif not self.is_crash_reported and not self.is_equal_result:
@@ -235,17 +237,16 @@ class Test:
                 os.remove(self.reject)
                 for log_file in non_empty_logs:
                     self.print_diagnostics(log_file,
-                            "Test failed! Last 10 lines of {}:\n".format(
-                                log_file))
+                        "Test failed! Output from log file {}:\n".format(log_file))
                 where = ": there were warnings in the valgrind log file(s)"
         return short_status
 
     def print_diagnostics(self, log_file, message):
-        """Print 10 lines of client program output leading to test
+        """Print whole lines of client program output leading to test
         failure. Used to diagnose a failure of the client program"""
 
         color_stdout(message, schema='error')
-        print_tail_n(log_file, 10)
+        print_tail_n(log_file)
 
     def print_unidiff(self):
         """Print a unified diff between .test and .result files. Used
@@ -269,7 +270,7 @@ class Test:
     def tap_parse_print_yaml(self, yml):
         if 'expected' in yml and 'got' in yml:
             color_stdout('Expected: %s\n' % yml['expected'], schema='error')
-            color_stdout('Got:      %s\n' % yml['got'],      schema='error')
+            color_stdout('Got:      %s\n' % yml['got'], schema='error')
             del yml['expected']
             del yml['got']
         if 'trace' in yml:
@@ -279,7 +280,7 @@ class Test:
                 if fname:
                     fname = " function '%s'" % fname
                 line = '[%-4s]%s at <%s:%d>\n' % (
-                        fr['what'], fname, fr['filename'], fr['line']
+                    fr['what'], fname, fr['filename'], fr['line']
                 )
                 color_stdout(line, schema='error')
             del yml['trace']
@@ -297,7 +298,7 @@ class Test:
     def check_tap_output(self):
         """ Returns is_tap, is_ok """
         if not os.path.isfile(self.tmp_result):
-            color_strout('\nCannot find %s\n' % self.tmp_result, schema='error')
+            color_stdout('\nCannot find %s\n' % self.tmp_result, schema='error')
             self.is_crash_reported = True
             return False
         with open(self.tmp_result, 'r') as f:
