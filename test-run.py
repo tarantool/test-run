@@ -158,6 +158,13 @@ def main_loop_consistent(failed_test_ids):
         for task_id in task_ids:
             short_status = worker.run_task(task_id)
             if short_status == 'fail':
+                reproduce_file_path = \
+                    lib.worker.get_reproduce_file(worker.name)
+                color_stdout('Reproduce file %s\n' %
+                             reproduce_file_path, schema='error')
+                color_stdout("---\n", schema='separator')
+                lib.utils.print_tail_n(reproduce_file_path)
+                color_stdout("...\n", schema='separator')
                 failed_test_ids.append(task_id)
                 if not lib.Options().args.is_force:
                     worker.stop_server(cleanup=False)
