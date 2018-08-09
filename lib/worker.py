@@ -9,7 +9,7 @@ import collections
 import lib
 from lib.utils import safe_makedirs
 from lib.test_suite import TestSuite
-
+from lib.test import get_result
 from lib.colorer import color_stdout, color_log
 from lib.tarantool_server import TarantoolServer
 
@@ -157,6 +157,19 @@ class WorkerDone(BaseWorkerMessage):
         super(WorkerDone, self).__init__(worker_id, worker_name)
 
 
+class WorkerCurrentTask(BaseWorkerMessage):
+    """ Provide information about current task running on worker.
+    It possible to check the `.result` file of hung tests.
+    And collect information about current tasks in parallel mode,
+    to show which parallel tests can affect failed test.
+    """
+    def __init__(self, worker_id, worker_name,
+                 task_name, task_param, task_result_filepath):
+        super(WorkerCurrentTask, self).__init__(worker_id, worker_name)
+        self.task_name = task_name
+        self.task_param = task_param
+        self.task_result_filepath = task_result_filepath
+
 # Worker
 ########
 
@@ -175,6 +188,13 @@ class Worker:
 
     def done_marker(self):
         return WorkerDone(self.id, self.name)
+
+    def current_task(self, task_id):
+        task_name, task_param = task_id
+        task_result_filepath = os.path.join(self.suite.ini['vardir'],
+                                            get_result(task_name))
+        return WorkerCurrentTask(self.id, self.name,
+                                 task_name, task_param, task_result_filepath)
 
     def wrap_result(self, task_id, short_status):
         return WorkerTaskResult(self.id, self.name, task_id, short_status)
@@ -285,6 +305,8 @@ class Worker:
                           schema='test_var')
                 self.stop_worker(task_queue, result_queue)
                 break
+
+            result_queue.put(self.current_task(task_id))
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
             if not lib.Options().args.is_force and short_status == 'fail':
@@ -307,7 +329,9 @@ class Worker:
 
         try:
             self.run_loop(task_queue, result_queue)
-        except (KeyboardInterrupt, Exception):
+        except (KeyboardInterrupt, Exception) as e:
+            if not isinstance(e, KeyboardInterrupt):
+                color_stdout('Exception: %s\n' % e, schema='error')
             self.stop_worker(task_queue, result_queue, cleanup=False)
 
         result_queue.put(self.done_marker())

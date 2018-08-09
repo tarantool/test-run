@@ -5,7 +5,7 @@ import yaml
 
 import lib
 from lib.worker import get_reproduce_file
-from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult
+from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult, WorkerCurrentTask
 from lib.colorer import color_stdout
 
 
@@ -178,28 +178,53 @@ class HangWatcher(BaseWatcher):
         self.kill_timeout = kill_timeout
         self.warned_seconds_ago = 0.0
         self.inactivity = 0.0
+        self.worker_current_task = dict()
 
     def process_result(self, obj):
         self.warned_seconds_ago = 0.0
         self.inactivity = 0.0
 
+        if isinstance(obj, WorkerCurrentTask):
+            self.worker_current_task[obj.worker_id] = obj
+
     def process_timeout(self, delta_seconds):
         self.warned_seconds_ago += delta_seconds
         self.inactivity += delta_seconds
         worker_ids = self.get_not_done_worker_ids()
+
         if self.warned_seconds_ago < self.warn_timeout:
             return
+
         color_stdout("No output during %d seconds. "
-            "List of workers not reporting the status: %s; "
-            "Will abort after %d seconds without output.\n" % (
-                self.inactivity, worker_ids, self.kill_timeout),
+            "Will abort after %d seconds without output. "
+            "List of workers not reporting the status:\n" % (
+                self.inactivity, self.kill_timeout),
                 schema='test_var')
+
+        hung_tasks = [task for worker_id, task
+                      in self.worker_current_task.iteritems()
+                      if worker_id in worker_ids]
+        for current_task in hung_tasks:
+            color_stdout("[{0:03d}] {1} {2}\n".format(current_task.worker_id,
+                                                      current_task.task_name,
+                                                      current_task.task_param),
+                         schema='test_var')
+            color_stdout("Last 15 lines of result file "
+                         "[{0}]\n".format(current_task.task_result_filepath),
+                         schema='error')
+            lib.utils.print_tail_n(current_task.task_result_filepath,
+                                   num_lines=15)
+
+
         self.warned_seconds_ago = 0.0
+
         if self.inactivity < self.kill_timeout:
             return
+
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n',
                      schema='test_var')
         self.kill_all_workers()
+
         raise HangError()
