@@ -9,6 +9,7 @@ import gevent
 import pytap13
 import pprint
 import shutil
+from functools import partial
 
 try:
     from cStringIO import StringIO
@@ -84,6 +85,16 @@ class FilteredStream:
         self.stream.flush()
 
 
+def get_filename_by_test(postfix, test_name):
+    rg = re.compile('\.test.*')
+    return os.path.basename(rg.sub(postfix, test_name))
+
+
+get_reject = partial(get_filename_by_test, '.reject')
+get_result = partial(get_filename_by_test, '.result')
+get_skipcond = partial(get_filename_by_test, '.skipcond')
+
+
 class Test:
     """An individual test file. A test object can run itself
     and remembers completion state of the run.
@@ -91,7 +102,6 @@ class Test:
     If file <test_name>.skipcond is exists it will be executed before
     test and if it sets self.skip to True value the test will be skipped.
     """
-    rg = re.compile('\.test.*')
 
     def __init__(self, name, args, suite_ini, params={}, conf_name=None):
         """Initialize test properties: path to test file, path to
@@ -99,13 +109,11 @@ class Test:
         self.name = name
         self.args = args
         self.suite_ini = suite_ini
-        self.result = os.path.join(suite_ini['suite'],
-                os.path.basename(self.rg.sub('.result', name)))
-        self.skip_cond = os.path.join(suite_ini['suite'],
-                os.path.basename(self.rg.sub('.skipcond', name)))
+        self.result = os.path.join(suite_ini['suite'], get_result(name))
+        self.skip_cond = os.path.join(suite_ini['suite'], get_skipcond(name))
         self.tmp_result = os.path.join(self.suite_ini['vardir'],
                                        os.path.basename(self.result))
-        self.reject = self.rg.sub('.reject', name)
+        self.reject = get_reject(name)
         self.is_executed = False
         self.is_executed_ok = None
         self.is_equal_result = None
