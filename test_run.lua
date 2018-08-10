@@ -94,6 +94,7 @@ local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua"'
 local create_cluster_cmd1_return_listen_uri =
     'create server %s with script="%s/%s.lua", return_listen_uri=True'
 local create_cluster_cmd2 = 'start server %s with wait_load=False, wait=False'
+local create_cluster_cmd2_args = create_cluster_cmd2 .. ', args="%s"'
 
 local function create_cluster(self, servers, test_suite, opts)
     local opts = opts or {}
@@ -108,7 +109,13 @@ local function create_cluster(self, servers, test_suite, opts)
         else
             self:cmd(create_cluster_cmd1:format(name, test_suite, name))
         end
-        self:cmd(create_cluster_cmd2:format(name))
+    end
+    for _, name in ipairs(servers) do
+        if opts.args then
+            self:cmd(create_cluster_cmd2_args:format(name, opts.args))
+        else
+            self:cmd(create_cluster_cmd2:format(name))
+        end
     end
 
     if opts.return_listen_uri then
