@@ -1,6 +1,7 @@
 import ConfigParser
 import json
 import os
+import re
 
 import lib
 from lib.colorer import color_stdout
@@ -48,9 +49,11 @@ class TestSuite:
         result = None
         with open(path) as cfg:
             try:
-                result = json.load(cfg)
+                content = cfg.read()
+                content = re.sub(r'^\s*//.*$', '', content, flags=re.M)
+                result = json.loads(content)
             except ValueError:
-                raise RuntimeError('Ivalid multirun json')
+                raise RuntimeError('Invalid multirun json')
         return result
 
     def get_multirun_params(self, test_path):
