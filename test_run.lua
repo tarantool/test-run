@@ -222,7 +222,9 @@ local function get_cfg(self, name)
     return self.run_conf[name]
 end
 
-local function grep_log(self, node, what, bytes)
+local function grep_log(self, node, what, bytes, opts)
+    local opts = opts or {}
+    local noreset = opts.noreset or false
     local filename = self:eval(node, "box.cfg.log")[1]
     local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
 
@@ -269,7 +271,7 @@ local function grep_log(self, node, what, bytes)
                     line = table.concat(buf)
                     buf = nil
                 end
-                if string.match(line, "Starting instance") then
+                if string.match(line, "Starting instance") and not noreset then
                     found = nil -- server was restarted, reset search
                 else
                     found = string.match(line, what) or found
