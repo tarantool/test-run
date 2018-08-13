@@ -222,7 +222,7 @@ local function get_cfg(self, name)
     return self.run_conf[name]
 end
 
-local function grep_log(self, node, what, bytes)
+local function grep_log(self, node, what, bytes, noreset)
     local filename = self:eval(node, "box.cfg.log")[1]
     local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
 
@@ -247,7 +247,8 @@ local function grep_log(self, node, what, bytes)
     if file:seek(-bytes, 'SEEK_END') == nil then
         fail("Failed to seek log file")
     end
-    local found, buf
+    local buf, found = nil
+    local noreset = noreset or false
     repeat -- read file in chunks
         local s = file:read(2048)
         if s == nil then
@@ -269,7 +270,7 @@ local function grep_log(self, node, what, bytes)
                     line = table.concat(buf)
                     buf = nil
                 end
-                if string.match(line, "Starting instance") then
+                if string.match(line, "Starting instance") and not noreset then
                     found = nil -- server was restarted, reset search
                 else
                     found = string.match(line, what) or found
