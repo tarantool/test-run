@@ -1,9 +1,9 @@
 import errno
-import gc
+import gevent
 import glob
+import inspect  # for caller_globals
 import os
 import os.path
-import random
 import re
 import shlex
 import shutil
@@ -11,32 +11,27 @@ import signal
 import subprocess
 import sys
 import time
-
-import gevent
 import yaml
+
 from gevent import socket
+from greenlet import GreenletExit
 
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
 
-import inspect  # for caller_globals
-
-from lib.test import Test
-from lib.server import Server
-from lib.preprocessor import TestState
-from lib.box_connection import BoxConnection
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
+from lib.box_connection import BoxConnection
+from lib.colorer import color_stdout, color_log
+from lib.preprocessor import TestState
+from lib.server import Server
+from lib.test import Test
 from lib.utils import find_port
+from lib.utils import format_process
 from lib.utils import signame
 from lib.utils import warn_unix_socket
-from lib.utils import format_process
-
-from greenlet import greenlet, GreenletExit
 from test import TestRunGreenlet, TestExecutionError
-
-from lib.colorer import color_stdout, color_log
 
 
 def save_join(green_obj, timeout=None):
@@ -88,7 +83,9 @@ class LuaTest(FuncTest):
                 if line.strip() or cmd.getvalue():
                     cmd.write(line)
                 delim_len = -len(ts.delimiter) if len(ts.delimiter) else None
-                if line.endswith(ts.delimiter + '\n') and cmd.getvalue().strip()[:delim_len].strip():
+                end_line = line.endswith(ts.delimiter + '\n')
+                cmd_value = cmd.getvalue().strip()[:delim_len].strip()
+                if end_line and cmd_value:
                     sys.stdout.write(cmd.getvalue())
                     rescom = cmd.getvalue()[:delim_len].replace('\n\n', '\n')
                     result = send_command(rescom)
@@ -134,8 +131,8 @@ class LuaTest(FuncTest):
         server.current_test = self
         cls_name = server.__class__.__name__.lower()
         if 'gdb' in cls_name or 'lldb' in cls_name or 'strace' in cls_name:
-            # don't propagate gdb/lldb/strace mixin to non-default servers, it doesn't
-            # work properly for now
+            # don't propagate gdb/lldb/strace mixin to non-default servers,
+            # it doesn't work properly for now
             # TODO: strace isn't interactive, so it's easy to make it works for
             #       non-default server
             create_server = TarantoolServer
@@ -161,6 +158,7 @@ class LuaTest(FuncTest):
             ts.stop_nondefault()
             raise
 
+
 class PythonTest(FuncTest):
     def execute(self, server):
         server.current_test = self
@@ -169,6 +167,7 @@ class PythonTest(FuncTest):
         # crash was detected (possibly on non-default server)
         if server.current_test.is_crash_reported:
             raise TestExecutionError
+
 
 CON_SWITCH = {
     'lua': AdminAsyncConnection,
@@ -238,7 +237,7 @@ class TarantoolServer(Server):
         "ctl": "tarantoolctl",
     }
 
-    # ----------------------------------PROPERTIES----------------------------------#
+    # ----------------------------PROPERTIES--------------------------------- #
     @property
     def debug(self):
         return self.test_debug()
@@ -291,7 +290,8 @@ class TarantoolServer(Server):
 
     @property
     def logfile_pos(self):
-        if not hasattr(self, '_logfile_pos'): self._logfile_pos = None
+        if not hasattr(self, '_logfile_pos'):
+            self._logfile_pos = None
         return self._logfile_pos
 
     @logfile_pos.setter
@@ -300,7 +300,8 @@ class TarantoolServer(Server):
 
     @property
     def script(self):
-        if not hasattr(self, '_script'): self._script = None
+        if not hasattr(self, '_script'):
+            self._script = None
         return self._script
 
     @script.setter
@@ -314,7 +315,8 @@ class TarantoolServer(Server):
 
     @property
     def _admin(self):
-        if not hasattr(self, 'admin'): self.admin = None
+        if not hasattr(self, 'admin'):
+            self.admin = None
         return self.admin
 
     @_admin.setter
@@ -327,14 +329,15 @@ class TarantoolServer(Server):
 
     @property
     def _iproto(self):
-        if not hasattr(self, 'iproto'): self.iproto = None
+        if not hasattr(self, 'iproto'):
+            self.iproto = None
         return self.iproto
 
     @_iproto.setter
     def _iproto(self, port):
         try:
             port = int(port)
-        except ValueError as e:
+        except ValueError:
             raise ValueError("Bad port number: '%s'" % port)
         if hasattr(self, 'iproto'):
             del self.iproto
@@ -342,18 +345,22 @@ class TarantoolServer(Server):
 
     @property
     def log_des(self):
-        if not hasattr(self, '_log_des'): self._log_des = open(self.logfile, 'a')
+        if not hasattr(self, '_log_des'):
+            self._log_des = open(self.logfile, 'a')
         return self._log_des
 
     @log_des.deleter
     def log_des(self):
-        if not hasattr(self, '_log_des'): return
-        if not self._log_des.closed: self._log_des.closed()
-        delattr(self, _log_des)
+        if not hasattr(self, '_log_des'):
+            return
+        if not self._log_des.closed:
+            self._log_des.closed()
+        delattr(self, '_log_des')
 
     @property
     def rpl_master(self):
-        if not hasattr(self, '_rpl_master'): self._rpl_master = None
+        if not hasattr(self, '_rpl_master'):
+            self._rpl_master = None
         return self._rpl_master
 
     @rpl_master.setter
@@ -363,7 +370,7 @@ class TarantoolServer(Server):
                              ' Server class, his derivation or None')
         self._rpl_master = val
 
-    # ------------------------------------------------------------------------------#
+    # ----------------------------------------------------------------------- #
 
     def __new__(cls, ini=None, *args, **kwargs):
         cls = Server.get_mixed_class(cls, ini)
@@ -451,21 +458,22 @@ class TarantoolServer(Server):
                 ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
                 need_lua_path = True
             if os.access(exe, os.X_OK) and os.access(ctl, os.X_OK):
-                cls.binary      = os.path.abspath(exe)
-                cls.ctl_path    = os.path.abspath(ctl)
+                cls.binary = os.path.abspath(exe)
+                cls.ctl_path = os.path.abspath(ctl)
                 cls.ctl_plugins = os.path.abspath(
                     os.path.join(ctl_dir, '..')
                 )
                 os.environ["PATH"] = os.pathsep.join([
-                        os.path.abspath(ctl_dir),
-                        os.path.abspath(_dir),
-                        os.environ["PATH"]
+                    os.path.abspath(ctl_dir),
+                    os.path.abspath(_dir),
+                    os.environ["PATH"]
                 ])
                 os.environ["TARANTOOLCTL"] = ctl
                 if need_lua_path:
-                    os.environ["LUA_PATH"] = ctl_dir + '/?.lua;' + \
-                                             ctl_dir + '/?/init.lua;' + \
-                                             os.environ.get("LUA_PATH", ";;")
+                    os.environ["LUA_PATH"] = \
+                        ctl_dir + '/?.lua;' + \
+                        ctl_dir + '/?/init.lua;' + \
+                        os.environ.get("LUA_PATH", ";;")
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
@@ -493,12 +501,14 @@ class TarantoolServer(Server):
         color_log(self.binary + '\n', schema='path')
         color_log('    Found tarantoolctl at  ', schema='serv_text')
         color_log(self.ctl_path + '\n', schema='path')
-        color_log('    Creating and populating working directory in ', schema='serv_text')
+        color_log('    Creating and populating working directory in ',
+                  schema='serv_text')
         color_log(self.vardir + ' ...\n', schema='path')
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
-            color_log('    Found old vardir, deleting ...\n', schema='serv_text')
+            color_log('    Found old vardir, deleting ...\n',
+                      schema='serv_text')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
@@ -528,8 +538,8 @@ class TarantoolServer(Server):
                 try:
                     if os.path.isdir(source):
                         shutil.copytree(source,
-                                os.path.join(self.vardir,
-                                             os.path.basename(source)))
+                                        os.path.join(self.vardir,
+                                                     os.path.basename(source)))
                     else:
                         shutil.copy(source, self.vardir)
                 except IOError as e:
@@ -549,7 +559,8 @@ class TarantoolServer(Server):
             return
         if self.status == 'started':
             if not silent:
-                color_stdout('The server is already started.\n', schema='lerror')
+                color_stdout('The server is already started.\n',
+                             schema='lerror')
             return
 
         args = self.prepare_args(args)
@@ -593,11 +604,13 @@ class TarantoolServer(Server):
                 # server fails
                 if self.crash_expected:
                     raise
-                if not self.current_test or not self.current_test.is_crash_reported:
+                if not (self.current_test and
+                        self.current_test.is_crash_reported):
                     if self.current_test:
                         self.current_test.is_crash_reported = True
-                    color_stdout('\n[Instance "{}"] Tarantool server failed to start\n'.format(
-                        self.name), schema='error')
+                    color_stdout('\n[Instance "{0.name}"] Tarantool server '
+                                 'failed to start\n'.format(self),
+                                 schema='error')
                     self.print_log(15)
                 # if the server fails before any test started, we should inform
                 # a caller by the exception
@@ -620,7 +633,7 @@ class TarantoolServer(Server):
                 gevent.sleep(0.1)
 
         if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
-           return
+            return
 
         self.kill_current_test()
 
@@ -657,12 +670,15 @@ class TarantoolServer(Server):
                 self.name, -self.process.returncode,
                 signame(-self.process.returncode)), schema='error')
         else:
-            color_stdout('\n\n[Instance "%s" returns with non-zero exit code: %d]\n' % (
-                self.name, self.process.returncode), schema='error')
+            color_stdout('\n\n[Instance "%s" returns with non-zero exit code: '
+                         '%d]\n' % (self.name, self.process.returncode),
+                         schema='error')
 
         # print assert line if any and return
         if assert_lines:
-            color_stdout('Found assertion fail in the results file [%s]:\n' % self.logfile, schema='error')
+            color_stdout('Found assertion fail in the results file '
+                         '[%s]:\n' % self.logfile,
+                         schema='error')
             sys.stderr.flush()
             for line in assert_lines:
                 sys.stderr.write(line)
@@ -698,13 +714,18 @@ class TarantoolServer(Server):
 
     def stop(self, silent=True):
         if self._start_against_running:
-            color_log('Server [%s] start against running ...\n', schema='test_var')
+            color_log('Server [%s] start against running ...\n',
+                      schema='test_var')
             return
         if self.status != 'started':
             if not silent:
                 raise Exception('Server is not started')
             else:
-                color_log('Server [%s] is not started (status:%s) ...\n' % (self.name, self.status), schema='test_var')
+                color_log(
+                    'Server [{0.name}] is not started '
+                    '(status:{0.status}) ...\n'.format(self),
+                    schema='test_var'
+                )
             return
         if not silent:
             color_stdout('Stopping the server ...\n', schema='serv_text')
@@ -712,8 +733,12 @@ class TarantoolServer(Server):
             color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
-            color_log('TarantoolServer.stop(): stopping the %s\n'
-                % format_process(self.process.pid), schema='test_var')
+            color_log(
+                'TarantoolServer.stop(): stopping the {0}\n'.format(
+                    format_process(self.process.pid)
+                ),
+                schema='test_var'
+            )
             try:
                 self.process.terminate()
             except OSError:
@@ -736,9 +761,13 @@ class TarantoolServer(Server):
         if pid == -1:
             return False
         if not silent:
-            color_stdout('    Found old server, pid {0}, killing ...'.format(pid), schema='info')
+            color_stdout(
+                '    Found old server, pid {0}, killing ...'.format(pid),
+                schema='info'
+            )
         else:
-            color_log('    Found old server, pid {0}, killing ...'.format(pid), schema='info')
+            color_log('    Found old server, pid {0}, killing ...'.format(pid),
+                      schema='info')
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError:
@@ -770,7 +799,9 @@ class TarantoolServer(Server):
                 elif ans in ('loading'):
                     continue
                 else:
-                    raise Exception("Strange output for `box.info.status`: %s" % (ans))
+                    raise Exception(
+                        "Strange output for `box.info.status`: %s" % (ans)
+                    )
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED:
                     time.sleep(0.1)
@@ -783,7 +814,7 @@ class TarantoolServer(Server):
                 time.sleep(0.01)
                 os.kill(pid, 0)
                 continue
-            except OSError as err:
+            except OSError:
                 break
 
     def read_pidfile(self):
@@ -792,7 +823,7 @@ class TarantoolServer(Server):
             try:
                 with open(self.pidfile) as f:
                     pid = int(f.read())
-            except:
+            except Exception:
                 pass
         return pid
 
@@ -800,7 +831,9 @@ class TarantoolServer(Server):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
             print " ".join([os.path.basename(self.binary)] + args[1:])
-        output = subprocess.Popen(args, cwd=self.vardir, stdout=subprocess.PIPE,
+        output = subprocess.Popen(args,
+                                  cwd=self.vardir,
+                                  stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT).stdout.read()
         return output
 
@@ -815,18 +848,27 @@ class TarantoolServer(Server):
     @staticmethod
     def find_tests(test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
-        get_tests = lambda x: sorted(glob.glob(os.path.join(suite_path, x)))
+
+        def get_tests(pattern):
+            return sorted(glob.glob(os.path.join(suite_path, pattern)))
+
         tests = [PythonTest(k, test_suite.args, test_suite.ini)
-                 for k in get_tests("*.test.py")
-                 ]
+                 for k in get_tests("*.test.py")]
+
         for k in get_tests("*.test.lua"):
             runs = test_suite.get_multirun_params(k)
-            is_correct = lambda x: test_suite.args.conf is None or \
-                                   test_suite.args.conf == x
+
+            def is_correct(run_name):
+                return test_suite.args.conf is None or \
+                    test_suite.args.conf == run_name
+
             if runs:
                 tests.extend([LuaTest(
-                    k, test_suite.args,
-                    test_suite.ini, runs[r], r
+                    k,
+                    test_suite.args,
+                    test_suite.ini,
+                    runs[r],
+                    r
                 ) for r in runs.keys() if is_correct(r)])
             else:
                 tests.append(LuaTest(k, test_suite.args, test_suite.ini))
@@ -840,7 +882,7 @@ class TarantoolServer(Server):
                     test_suite.tests.append(test)
 
     def get_param(self, param=None):
-        if not param is None:
+        if param is not None:
             return yaml.load(self.admin("box.info." + param, silent=True))[0]
         return yaml.load(self.admin("box.info", silent=True))
 
