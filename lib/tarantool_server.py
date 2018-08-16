@@ -106,7 +106,14 @@ class LuaTest(FuncTest):
 
         # check that all servers stopped correctly
         for server in check_list:
-            crash_occured = crash_occured or server.process.returncode not in (None, 0, -signal.SIGKILL, -signal.SIGTERM)
+            bad_returncode = server.process.returncode not in (None,
+                                                               0,
+                                                               -signal.SIGKILL,
+                                                               -signal.SIGTERM)
+            # if non-default server crashed but it was expected
+            # don't kill the default server and crash detectors
+            crash_occured = crash_occured or \
+                bad_returncode and not server.crash_expected
 
         for server in check_list:
             server.process.poll()
