@@ -102,6 +102,7 @@ class LuaTest(FuncTest):
 
     def killall_servers(self, server, ts, crash_occured):
         """ kill all servers and crash detectors before stream swap """
+        color_log('Kill all servers ...\n', schema='info')
         check_list = ts.servers.values() + [server, ]
 
         # check that all servers stopped correctly
@@ -697,13 +698,18 @@ class TarantoolServer(Server):
 
     def stop(self, silent=True):
         if self._start_against_running:
+            color_log('Server [%s] start against running ...\n', schema='test_var')
             return
         if self.status != 'started':
             if not silent:
                 raise Exception('Server is not started')
+            else:
+                color_log('Server [%s] is not started (status:%s) ...\n' % (self.name, self.status), schema='test_var')
             return
         if not silent:
             color_stdout('Stopping the server ...\n', schema='serv_text')
+        else:
+            color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
             color_log('TarantoolServer.stop(): stopping the %s\n'
@@ -731,6 +737,8 @@ class TarantoolServer(Server):
             return False
         if not silent:
             color_stdout('    Found old server, pid {0}, killing ...'.format(pid), schema='info')
+        else:
+            color_log('    Found old server, pid {0}, killing ...'.format(pid), schema='info')
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError:
