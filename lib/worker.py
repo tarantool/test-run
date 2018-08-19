@@ -1,17 +1,18 @@
+import collections
+import copy
+import functools
 import os
 import signal
 import traceback
 import yaml
-import copy
-import functools
-import collections
 
 import lib
-from lib.utils import safe_makedirs
-from lib.test_suite import TestSuite
-from lib.test import get_result
-from lib.colorer import color_stdout, color_log
+from lib.colorer import color_log
+from lib.colorer import color_stdout
 from lib.tarantool_server import TarantoolServer
+from lib.test import get_result
+from lib.test_suite import TestSuite
+from lib.utils import safe_makedirs
 
 # Utils
 #######
@@ -287,7 +288,7 @@ class Worker:
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
             raise
-        except Exception as e:
+        except Exception:
             color_stdout(
                 '\nWorker "%s" received the following error; stopping...\n'
                 % self.name + traceback.format_exc() + '\n', schema='error')
@@ -330,7 +331,8 @@ class Worker:
         try:
             self.run_loop(task_queue, result_queue)
         except (KeyboardInterrupt, Exception) as e:
-            if not isinstance(e, KeyboardInterrupt):
+            if not isinstance(e, KeyboardInterrupt) and \
+               not isinstance(e, VoluntaryStopException):
                 color_stdout('Exception: %s\n' % e, schema='error')
             self.stop_worker(task_queue, result_queue, cleanup=False)
 
