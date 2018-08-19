@@ -4,9 +4,12 @@ import sys
 import yaml
 
 import lib
-from lib.worker import get_reproduce_file
-from lib.worker import WorkerOutput, WorkerDone, WorkerTaskResult, WorkerCurrentTask
 from lib.colorer import color_stdout
+from lib.worker import WorkerCurrentTask
+from lib.worker import WorkerDone
+from lib.worker import WorkerOutput
+from lib.worker import WorkerTaskResult
+from lib.worker import get_reproduce_file
 
 
 class BaseWatcher(object):
@@ -170,8 +173,8 @@ class HangError(Exception):
 
 class HangWatcher(BaseWatcher):
     """Terminate all workers if no output received 'no_output_times' time."""
-    def __init__(self, get_not_done_worker_ids, kill_all_workers, warn_timeout,
-            kill_timeout):
+    def __init__(self, get_not_done_worker_ids, kill_all_workers,
+                 warn_timeout, kill_timeout):
         self.get_not_done_worker_ids = get_not_done_worker_ids
         self.kill_all_workers = kill_all_workers
         self.warn_timeout = warn_timeout
@@ -195,17 +198,17 @@ class HangWatcher(BaseWatcher):
         if self.warned_seconds_ago < self.warn_timeout:
             return
 
-        color_stdout("No output during %d seconds. "
-            "Will abort after %d seconds without output. "
-            "List of workers not reporting the status:\n" % (
-                self.inactivity, self.kill_timeout),
-                schema='test_var')
+        color_stdout(
+            "No output during {0.inactivity:.0f} seconds. "
+            "Will abort after {0.kill_timeout:.0f} seconds without output. "
+            "List of workers not reporting the status:\n".format(self),
+            schema='test_var')
 
         hung_tasks = [task for worker_id, task
                       in self.worker_current_task.iteritems()
                       if worker_id in worker_ids]
         for current_task in hung_tasks:
-            color_stdout("[{0:03d}] {1} {2}\n".format(current_task.worker_id,
+            color_stdout("- [{0:03d}, {1}, {2}]\n".format(current_task.worker_id,
                                                       current_task.task_name,
                                                       current_task.task_param),
                          schema='test_var')
@@ -214,7 +217,6 @@ class HangWatcher(BaseWatcher):
                          schema='error')
             lib.utils.print_tail_n(current_task.task_result_filepath,
                                    num_lines=15)
-
 
         self.warned_seconds_ago = 0.0
 

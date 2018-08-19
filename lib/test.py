@@ -1,14 +1,14 @@
+import difflib
+import filecmp
+import gevent
 import os
+import pprint
+import pytap13
 import re
+import shutil
 import sys
 import time
-import filecmp
-import difflib
 import traceback
-import gevent
-import pytap13
-import pprint
-import shutil
 from functools import partial
 
 try:
@@ -17,8 +17,9 @@ except ImportError:
     from StringIO import StringIO
 
 import lib
-from lib.utils import non_empty_valgrind_logs, print_tail_n
 from lib.colorer import color_stdout
+from lib.utils import non_empty_valgrind_logs
+from lib.utils import print_tail_n
 
 
 class TestExecutionError(OSError):
@@ -37,7 +38,10 @@ class TestRunGreenlet(gevent.Greenlet):
         self.callable(*self.callable_args, **self.callable_kwargs)
 
     def __repr__(self):
-            return "<TestRunGreenlet at %s info='%s'>" % (hex(id(self)), getattr(self, "info", None))
+            return "<TestRunGreenlet at {0} info='{1}'>".format(
+                hex(id(self)),
+                getattr(self, "info", None)
+            )
 
 
 class FilteredStream:
@@ -134,7 +138,9 @@ class Test:
 
     def passed(self):
         """Return true if this test was run successfully."""
-        return self.is_executed and self.is_executed_ok and self.is_equal_result
+        return (self.is_executed and
+                self.is_executed_ok and
+                self.is_equal_result)
 
     def execute(self, server):
         # Note: don't forget to set 'server.current_test = self' in
@@ -180,8 +186,9 @@ class Test:
             if e.__class__.__name__ == 'TarantoolStartError':
                 # worker should stop
                 raise
-            color_stdout('\nTest.run() received the following error:\n' +
-                traceback.format_exc() + '\n', schema='error')
+            color_stdout('\nTest.run() received the following error:\n'
+                         '{0}\n'.format(traceback.format_exc()),
+                         schema='error')
             diagnostics = str(e)
         finally:
             if sys.stdout and sys.stdout != save_stdout:
@@ -193,7 +200,8 @@ class Test:
         is_tap = False
         if not self.skip:
             if self.is_executed_ok and os.path.isfile(self.result):
-                self.is_equal_result = filecmp.cmp(self.result, self.tmp_result)
+                self.is_equal_result = filecmp.cmp(self.result,
+                                                   self.tmp_result)
             elif self.is_executed_ok:
                 if lib.Options().args.is_verbose:
                     color_stdout('\n')
@@ -216,12 +224,15 @@ class Test:
             color_stdout("[ skip ]\n", schema='test_skip')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
-        elif self.is_executed_ok and self.is_equal_result and self.is_valgrind_clean:
+        elif (self.is_executed_ok and
+              self.is_equal_result and
+              self.is_valgrind_clean):
             short_status = 'pass'
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
-        elif (self.is_executed_ok and not self.is_equal_result and not
+        elif (self.is_executed_ok and not
+              self.is_equal_result and not
               os.path.isfile(self.result)) and not is_tap:
             shutil.copy(self.tmp_result, self.result)
             short_status = 'new'
@@ -234,9 +245,11 @@ class Test:
             where = ""
             if not self.is_crash_reported and not self.is_executed_ok:
                 self.print_diagnostics(self.reject,
-                    "Test failed! Output from reject file {}:\n".format(self.reject))
+                                       "Test failed! Output from reject file "
+                                       "{0}:\n".format(self.reject))
                 server.print_log(15)
-                where = ": test execution aborted, reason '{0}'".format(diagnostics)
+                where = ": test execution aborted, reason " \
+                        "'{0}'".format(diagnostics)
             elif not self.is_crash_reported and not self.is_equal_result:
                 self.print_unidiff()
                 server.print_log(15)
@@ -245,7 +258,8 @@ class Test:
                 os.remove(self.reject)
                 for log_file in non_empty_logs:
                     self.print_diagnostics(log_file,
-                        "Test failed! Output from log file {}:\n".format(log_file))
+                                           "Test failed! Output from log file "
+                                           "{0}:\n".format(log_file))
                 where = ": there were warnings in the valgrind log file(s)"
         return short_status
 
@@ -261,7 +275,8 @@ class Test:
         to establish the cause of a failure when .test differs
         from .result."""
 
-        color_stdout("\nTest failed! Result content mismatch:\n", schema='error')
+        color_stdout("\nTest failed! Result content mismatch:\n",
+                     schema='error')
         with open(self.result, "r") as result:
             with open(self.reject, "r") as reject:
                 result_time = time.ctime(os.stat(self.result).st_mtime)
@@ -306,7 +321,8 @@ class Test:
     def check_tap_output(self):
         """ Returns is_tap, is_ok """
         if not os.path.isfile(self.tmp_result):
-            color_stdout('\nCannot find %s\n' % self.tmp_result, schema='error')
+            color_stdout('\nCannot find %s\n' % self.tmp_result,
+                         schema='error')
             self.is_crash_reported = True
             return False
         with open(self.tmp_result, 'r') as f:
@@ -315,7 +331,8 @@ class Test:
         try:
             tap.parse(content)
         except ValueError as e:
-            color_stdout('\nTAP13 parse failed: %s\n' % str(e), schema='error')
+            color_stdout('\nTAP13 parse failed: %s\n' % str(e),
+                         schema='error')
             self.is_crash_reported = True
             return False, False
         is_ok = True
@@ -334,6 +351,7 @@ class Test:
                 self.tap_parse_print_yaml(test_case.yaml)
             is_ok = False
         if not is_ok:
-            color_stdout('Rejected result file: %s\n' % self.reject, schema='test_var')
+            color_stdout('Rejected result file: %s\n' % self.reject,
+                         schema='test_var')
             self.is_crash_reported = True
         return True, is_ok
