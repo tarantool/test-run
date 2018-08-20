@@ -99,6 +99,9 @@ class TestSuite:
             self.ini[i] = map(lambda x: os.path.join(suite_path, x),
                     dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
 
+        self.ini.update(
+            dict(show_reproduce_content=self.show_reproduce_content()))
+
     def find_tests(self):
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
@@ -205,12 +208,23 @@ class TestSuite:
         return short_status
 
     def is_parallel(self):
-        val = self.ini.get('is_parallel', 'False').lower()
-        if val == 'true':
-            val = True
-        elif val == 'false':
-            val = False
-        else:
-            raise ConfigurationError()
-            pass
-        return val
+        val = self.ini.get('is_parallel', 'false')
+        if isinstance(val, bool):
+            return val
+        # If value is not boolean it come from ini file, need to
+        # convert string 'True' or 'False' into boolean representation
+        if val.lower() not in ['true', 'false']:
+            raise ConfigurationError('is_parallel', val, "'True' or 'False'")
+        return val.lower() == 'true'
+
+    def show_reproduce_content(self):
+        val = self.ini.get('show_reproduce_content', 'true')
+        if isinstance(val, bool):
+            return val
+        # If value is not boolean it come from ini file, need to
+        # convert string 'True' or 'False' into boolean representation
+        if val.lower() not in ['true', 'false']:
+            raise ConfigurationError('show_reproduce_content',
+                                     val,
+                                     "'True' or 'False'")
+        return val.lower() == 'true'

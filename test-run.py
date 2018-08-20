@@ -151,6 +151,7 @@ def main_loop_consistent(failed_test_ids):
         color_stdout('-' * 75, "\n",       schema='separator')
 
         task_ids = task_group['task_ids']
+        show_reproduce_content = task_group['show_reproduce_content']
         if not task_ids:
             continue
         worker_id = 1
@@ -162,9 +163,10 @@ def main_loop_consistent(failed_test_ids):
                     lib.worker.get_reproduce_file(worker.name)
                 color_stdout('Reproduce file %s\n' %
                              reproduce_file_path, schema='error')
-                color_stdout("---\n", schema='separator')
-                lib.utils.print_tail_n(reproduce_file_path)
-                color_stdout("...\n", schema='separator')
+                if show_reproduce_content:
+                    color_stdout("---\n", schema='separator')
+                    lib.utils.print_tail_n(reproduce_file_path)
+                    color_stdout("...\n", schema='separator')
                 failed_test_ids.append(task_id)
                 if not lib.Options().args.is_force:
                     worker.stop_server(cleanup=False)
