@@ -40,7 +40,9 @@ class StatisticsWatcher(BaseWatcher):
         self.stats[obj.short_status] += 1
 
         if obj.short_status == 'fail':
-            self.failed_tasks.append((obj.task_id, obj.worker_name))
+            self.failed_tasks.append((obj.task_id,
+                                      obj.worker_name,
+                                      obj.show_reproduce_content))
 
     def print_statistics(self):
         """Returns are there failed tasks."""
@@ -53,15 +55,16 @@ class StatisticsWatcher(BaseWatcher):
             return False
 
         color_stdout('Failed tasks:\n', schema='test_var')
-        for task_id, worker_name in self.failed_tasks:
+        for task_id, worker_name, show_reproduce_content in self.failed_tasks:
             logfile = self.get_logfile(worker_name)
-            reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('- %s' % yaml.safe_dump(task_id), schema='test_var')
             color_stdout('# logfile:        %s\n' % logfile)
+            reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
-            color_stdout("---\n", schema='separator')
-            lib.utils.print_tail_n(reproduce_file_path)
-            color_stdout("...\n", schema='separator')
+            if show_reproduce_content:
+                color_stdout("---\n", schema='separator')
+                lib.utils.print_tail_n(reproduce_file_path)
+                color_stdout("...\n", schema='separator')
 
         return True
 

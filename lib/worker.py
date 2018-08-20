@@ -78,6 +78,7 @@ def get_task_groups():
                 'gen_worker': gen_worker,
                 'task_ids': task_ids,
                 'is_parallel': suite.is_parallel(),
+                'show_reproduce_content': suite.show_reproduce_content()
             }
     return res
 
@@ -131,12 +132,14 @@ class WorkerTaskResult(BaseWorkerMessage):
     worker. The short_status (string) field intended to give short note whether
     the task processed successfully or not, but with little more flexibility
     than binary True/False. The task_id (any hashable object) field hold ID of
-    the processed task.
+    the processed task. The show_reproduce_content configuration form suite.ini
     """
-    def __init__(self, worker_id, worker_name, task_id, short_status):
+    def __init__(self, worker_id, worker_name, task_id,
+                 short_status, show_reproduce_content):
         super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
         self.task_id = task_id
+        self.show_reproduce_content = show_reproduce_content
 
 
 class WorkerOutput(BaseWorkerMessage):
@@ -198,7 +201,8 @@ class Worker:
                                  task_name, task_param, task_result_filepath)
 
     def wrap_result(self, task_id, short_status):
-        return WorkerTaskResult(self.id, self.name, task_id, short_status)
+        return WorkerTaskResult(self.id, self.name, task_id, short_status,
+                                self.suite.show_reproduce_content())
 
     def sigterm_handler(self, signum, frame):
         self.sigterm_received = True
