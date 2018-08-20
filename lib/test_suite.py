@@ -4,18 +4,13 @@ import os
 import re
 
 import lib
+from lib.app_server import AppServer
 from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
 from lib.server import Server
 from lib.tarantool_server import TarantoolServer
-from lib.app_server import AppServer
 from lib.unittest_server import UnittestServer
-from lib.utils import non_empty_valgrind_logs
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 class ConfigurationError(RuntimeError):
     def __init__(self, name, value, expected):
@@ -66,7 +61,6 @@ class TestSuite:
         result = self.multi_run.get('*', None)
         return result
 
-
     def __init__(self, suite_path, args):
         """Initialize a test suite: check that it exists and contains
         a syntactically correct configuration file. Then create
@@ -77,7 +71,7 @@ class TestSuite:
         self.suite_path = suite_path
         self.ini["core"] = "tarantool"
 
-        if os.access(suite_path, os.F_OK) == False:
+        if not os.access(suite_path, os.F_OK):
             raise RuntimeError("Suite %s doesn't exist" % repr(suite_path))
 
         # read the suite config
@@ -92,12 +86,16 @@ class TestSuite:
             self.ini['long_run'] = []
 
         for i in ["script"]:
-            self.ini[i] = os.path.join(suite_path, self.ini[i]) if i in self.ini else None
+            self.ini[i] = os.path.join(suite_path, self.ini[i]) \
+                if i in self.ini else None
         for i in ["disabled", "valgrind_disabled", "release_disabled"]:
-            self.ini[i] = dict.fromkeys(self.ini[i].split()) if i in self.ini else dict()
+            self.ini[i] = dict.fromkeys(self.ini[i].split()) \
+                if i in self.ini else dict()
         for i in ["lua_libs"]:
-            self.ini[i] = map(lambda x: os.path.join(suite_path, x),
-                    dict.fromkeys(self.ini[i].split()) if i in self.ini else dict())
+            self.ini[i] = map(
+                lambda x: os.path.join(suite_path, x),
+                dict.fromkeys(self.ini[i].split())
+                if i in self.ini else dict())
 
         self.ini.update(
             dict(show_reproduce_content=self.show_reproduce_content()))
@@ -147,8 +145,8 @@ class TestSuite:
         ]
         for check in checks:
             check_enabled, disabled_tests = check
-            if check_enabled and (test_name in disabled_tests
-                    or tconf in disabled_tests):
+            if check_enabled and (test_name in disabled_tests or
+                                  tconf in disabled_tests):
                 return False
         return True
 
@@ -180,20 +178,15 @@ class TestSuite:
             'new', 'fail', or 'disabled'.
         """
         test.inspector = inspector
-        color_stdout(
-            os.path.join(
-                self.ini['suite'],
-                os.path.basename(test.name)
-            ).ljust(48),
-            schema='t_name'
-        )
+        test_name = os.path.basename(test.name)
+        color_stdout(os.path.join(self.ini['suite'], test_name).ljust(48),
+                     schema='t_name')
         # for better diagnostics in case of a long-running test
 
         conf = ''
         if test.run_params:
             conf = test.conf_name
         color_stdout(conf.ljust(16), schema='test_var')
-        test_name = os.path.basename(test.name)
 
         if self.is_test_enabled(test, conf, server):
             short_status = test.run(server)
