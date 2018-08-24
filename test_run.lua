@@ -123,6 +123,51 @@ local function create_cluster(self, servers, test_suite, opts)
     end
 end
 
+local function is_clean_state(self)
+    local all_ok = true
+    local fun = require('fun')
+
+	box.space._space:pairs():map(function(tuple)
+		return tuple[3]
+	end):filter(function(name)
+        local first_char = string.sub(name, 1, 1)
+        return first_char ~= '_'
+	end):each(function(name)
+		all_ok = false
+		log.error("left garbage space: " .. name)
+	end)
+    local allowed_users = {
+        guest = true,
+        admin = true,
+    }
+	box.space._user:pairs():filter(function(tuple)
+        return tuple[4] == 'user'
+	end):map(function(tuple)
+        return tuple[3]
+	end):filter(function(name)
+        return not allowed_users[name]
+	end):each(function(name)
+		all_ok = false
+		log.error("left garbage user: " .. name)
+	end)
+    local allowed_roles = {
+        public = true,
+        replication = true,
+        super = true,
+    }
+	box.space._user:pairs():filter(function(tuple)
+        return tuple[4] == 'role'
+	end):map(function(tuple)
+        return tuple[3]
+	end):filter(function(name)
+        return not allowed_roles[name]
+	end):each(function(name)
+		all_ok = false
+		log.error("left garbage role: " .. name)
+	end)
+    assert(all_ok)
+end
+
 local drop_cluster_cmd1 = 'stop server %s'
 local drop_cluster_cmd2 = 'cleanup server %s'
 local drop_cluster_cmd3 = 'delete server %s'
@@ -307,6 +352,7 @@ local inspector_methods = {
     wait_cluster_vclock = wait_cluster_vclock,
     --
     grep_log = grep_log,
+    is_clean_state = is_clean_state,
 }
 
 local function inspector_new(host, port)
@@ -317,6 +363,7 @@ local function inspector_new(host, port)
     if inspector.port == nil then
         error('Inspector not started')
     end
+    is_clean_state()
 
     return setmetatable(inspector, { __index = inspector_methods })
 end
