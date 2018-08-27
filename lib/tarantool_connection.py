@@ -25,6 +25,7 @@ import ctypes
 import errno
 import re
 import socket
+import fcntl
 from contextlib import contextmanager
 
 import gevent
@@ -33,6 +34,11 @@ from gevent import socket as gsocket
 from connpool import ConnectionPool
 from test import TestRunGreenlet
 from utils import warn_unix_socket
+
+
+def set_fd_cloexec(socket):
+    flags = fcntl.fcntl(socket, fcntl.F_GETFD)
+    fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
 class TarantoolPool(ConnectionPool):
@@ -50,6 +56,7 @@ class TarantoolPool(ConnectionPool):
         else:
             result = gsocket.create_connection((self.host, self.port))
             result.setsockopt(gsocket.SOL_TCP, gsocket.TCP_NODELAY, 1)
+        set_fd_cloexec(result)
         return result
 
     def _addOne(self):
@@ -111,6 +118,7 @@ class TarantoolConnection(object):
         else:
             self.socket = socket.create_connection((self.host, self.port))
             self.socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+        set_fd_cloexec(self.socket)
         self.is_connected = True
 
     def disconnect(self):
