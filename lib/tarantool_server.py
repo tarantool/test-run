@@ -354,7 +354,7 @@ class TarantoolServer(Server):
         if not hasattr(self, '_log_des'):
             return
         if not self._log_des.closed:
-            self._log_des.closed()
+            self._log_des.close()
         delattr(self, '_log_des')
 
     @property
@@ -586,6 +586,7 @@ class TarantoolServer(Server):
                                         cwd=self.vardir,
                                         stdout=self.log_des,
                                         stderr=self.log_des)
+        del(self.log_des)
 
         # gh-19 crash detection
         self.crash_detector = TestRunGreenlet(self.crash_detect)
