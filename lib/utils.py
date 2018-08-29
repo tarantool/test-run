@@ -3,6 +3,7 @@ import sys
 import collections
 import signal
 import random
+import fcntl
 from gevent import socket
 from lib.colorer import color_stdout
 
@@ -178,3 +179,8 @@ def format_process(pid):
     except (OSError, IOError):
         pass
     return 'process %d [%s; %s]' % (pid, status, cmdline)
+
+
+def set_fd_cloexec(socket):
+    flags = fcntl.fcntl(socket, fcntl.F_GETFD)
+    fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)

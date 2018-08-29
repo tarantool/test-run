@@ -11,6 +11,7 @@ from multiprocessing.queues import SimpleQueue
 
 import listeners
 import lib
+from lib.utils import set_fd_cloexec
 from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
 
@@ -353,6 +354,14 @@ class TaskQueueDispatcher:
             self.randomize = False
         self.result_queue = SimpleQueue()
         self.task_queue = SimpleQueue()
+
+        # Don't expose queues file descriptors over Popen to, say, tarantool
+        # running tests.
+        set_fd_cloexec(self.result_queue._reader.fileno())
+        set_fd_cloexec(self.result_queue._writer.fileno())
+        set_fd_cloexec(self.task_queue._reader.fileno())
+        set_fd_cloexec(self.task_queue._writer.fileno())
+
         for task_id in self.task_ids:
             self.task_queue.put(task_id)
         self.worker_ids = set()

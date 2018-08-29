@@ -25,7 +25,6 @@ import ctypes
 import errno
 import re
 import socket
-import fcntl
 from contextlib import contextmanager
 
 import gevent
@@ -34,11 +33,7 @@ from gevent import socket as gsocket
 from connpool import ConnectionPool
 from test import TestRunGreenlet
 from utils import warn_unix_socket
-
-
-def set_fd_cloexec(socket):
-    flags = fcntl.fcntl(socket, fcntl.F_GETFD)
-    fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
+from utils import set_fd_cloexec
 
 
 class TarantoolPool(ConnectionPool):
