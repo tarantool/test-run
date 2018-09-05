@@ -514,7 +514,9 @@ class TarantoolServer(Server):
         self.copy_files()
 
         if self.use_unix_sockets:
-            self._admin = os.path.join(self.vardir, "socket-admin")
+            path = os.path.join(self.vardir, self.name + ".socket-admin")
+            warn_unix_socket(path)
+            self._admin = path
         else:
             self._admin = find_port()
 
