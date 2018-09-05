@@ -61,6 +61,19 @@ class TestSuite:
         result = self.multi_run.get('*', None)
         return result
 
+    def parse_bool_opt(self, name, default):
+        val = self.ini.get(name)
+        if val is None:
+            self.ini[name] = default
+        elif isinstance(val, bool):
+            pass
+        elif isinstance(val, str) and val.lower() in ('true', 'false'):
+            # If value is not boolean it come from ini file, need to convert
+            # string 'True' or 'False' into boolean representation.
+            self.ini[name] = val.lower() == 'true'
+        else:
+            raise ConfigurationError(name, val, "'True' or 'False'")
+
     def __init__(self, suite_path, args):
         """Initialize a test suite: check that it exists and contains
         a syntactically correct configuration file. Then create
@@ -97,8 +110,9 @@ class TestSuite:
                 dict.fromkeys(self.ini[i].split())
                 if i in self.ini else dict())
 
-        self.ini.update(
-            dict(show_reproduce_content=self.show_reproduce_content()))
+        self.parse_bool_opt('use_unix_sockets', False)
+        self.parse_bool_opt('is_parallel', False)
+        self.parse_bool_opt('show_reproduce_content', True)
 
     def find_tests(self):
         if self.ini['core'] == 'tarantool':
@@ -201,23 +215,7 @@ class TestSuite:
         return short_status
 
     def is_parallel(self):
-        val = self.ini.get('is_parallel', 'false')
-        if isinstance(val, bool):
-            return val
-        # If value is not boolean it come from ini file, need to
-        # convert string 'True' or 'False' into boolean representation
-        if val.lower() not in ['true', 'false']:
-            raise ConfigurationError('is_parallel', val, "'True' or 'False'")
-        return val.lower() == 'true'
+        return self.ini['is_parallel']
 
     def show_reproduce_content(self):
-        val = self.ini.get('show_reproduce_content', 'true')
-        if isinstance(val, bool):
-            return val
-        # If value is not boolean it come from ini file, need to
-        # convert string 'True' or 'False' into boolean representation
-        if val.lower() not in ['true', 'false']:
-            raise ConfigurationError('show_reproduce_content',
-                                     val,
-                                     "'True' or 'False'")
-        return val.lower() == 'true'
+        return self.ini['show_reproduce_content']

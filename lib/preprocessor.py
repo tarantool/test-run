@@ -211,6 +211,7 @@ class TestState(object):
         if 'rpl_master' in opts:
             temp.rpl_master = self.servers[opts['rpl_master']]
         temp.vardir = self.suite_ini['vardir']
+        temp.use_unix_sockets = self.suite_ini['use_unix_sockets']
         temp.inspector_port = int(self.suite_ini.get(
             'inspector_port', temp.DEFAULT_INSPECTOR
         ))
@@ -378,4 +379,5 @@ class TestState(object):
             v.cleanup()
 
     def kill_current_test(self):
-        self.servers['default'].kill_current_test()
+        if self.servers['default']:
+            self.servers['default'].kill_current_test()
