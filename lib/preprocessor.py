@@ -378,4 +378,5 @@ class TestState(object):
             v.cleanup()
 
     def kill_current_test(self):
-        self.servers['default'].kill_current_test()
+        if self.servers['default']:
+            self.servers['default'].kill_current_test()
