@@ -5,6 +5,7 @@ local log = require('log')
 local fiber = require('fiber')
 local fio = require('fio')
 local errno = require('errno')
+local clock = require('clock')
 
 local function cmd(self, msg)
     local sock = socket.tcp_connect(self.host, self.port)
@@ -284,6 +285,47 @@ local function grep_log(self, node, what, bytes, opts)
     return found
 end
 
+-- Block until the condition function returns a positive value
+-- (anything except `nil` and `false`) or until the timeout
+-- exceeds. Return the result of the last invocation of the
+-- condition function (it is `false` or `nil` in case of exiting
+-- by the timeout).
+local function wait_cond(self, cond, timeout, delay)
+    assert(type(cond) == 'function')
+    assert(timeout ~= nil)
+
+    local delay = delay or 0.001
+
+    local start_time = clock.monotonic()
+    local res = {cond()}
+
+    while not res[1] do
+        local work_time = clock.monotonic() - start_time
+        if work_time > timeout then
+            return unpack(res)
+        end
+        fiber.sleep(delay)
+        res = {cond()}
+    end
+
+    return unpack(res)
+end
+
+-- Wrapper for grep_log, wait until expected log entry is appear
+-- in a server log file.
+local function wait_log(self, node, what, bytes, timeout, opts)
+    assert(timeout ~= nil)
+
+    local opts = opts or {}
+    local delay = opts.delay
+
+    local cond = function()
+        return grep_log(self, node, what, bytes, opts)
+    end
+
+    return wait_cond(self, cond, timeout, delay)
+end
+
 local inspector_methods = {
     cmd = cmd,
     eval = eval,
@@ -307,6 +349,8 @@ local inspector_methods = {
     wait_cluster_vclock = wait_cluster_vclock,
     --
     grep_log = grep_log,
+    wait_cond = wait_cond,
+    wait_log = wait_log,
 }
 
 local function inspector_new(host, port)
