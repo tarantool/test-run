@@ -76,7 +76,7 @@ local function wait_vclock(self, node, to_vclock)
         local ok = true
         for server_id, to_lsn in pairs(to_vclock) do
             local lsn = vclock[server_id]
-            if lsn < to_lsn then
+            if lsn == nil or lsn < to_lsn then
                 ok = false
                 break
             end
