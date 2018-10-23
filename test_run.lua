@@ -285,24 +285,37 @@ local function grep_log(self, node, what, bytes, opts)
     return found
 end
 
--- Checks fn with delay until timeout or fn returns true, otherwise returns false
-local function wait_cond(self, fn, timeout, delay)
+-- Checks cmp(fn()) with delay until timeout or returns fn().
+-- Comparator cmp should return true if it what we waiting for.
+local function wait_cond(self, fn, timeout, delay, cmp)
+    assert(type(fn) == 'function')
     assert(timeout ~= nil)
     delay = delay or 0.001
     local t1 = clock.monotonic()
-    while not fn() do
+    local cmp = cmp or function(val) return val end
+    local fn_rv = fn()
+    local cpm_rv = cmp(fn_rv)
+    while not cpm_rv do
         local work_time = clock.monotonic() - t1
         if work_time > timeout then
-            return false
+            return fn_rv
         end
         fiber.sleep(delay)
+        fn_rv = fn()
+        cpm_rv = cmp(fn_rv)
     end
-    return true
+    return fn_rv
 end
 
--- Wrapper for grep_log, wait until expected log entry is appear in server log file
+-- Wrapper for grep_log, wait until expected log entry is appear
+-- in server log file.
 local function wait_log(self, node, what, bytes, timeout, opts)
-    return wait_cond(self, function() return grep_log(self, node, what, bytes, opts) ~= nil end, timeout)
+    local opts = opts or {}
+    local cond = function()
+        return grep_log(self, node, what, bytes, opts)
+    end
+    local cmp = opts.cmp or function(val) return val ~= nil end
+    return wait_cond(self, cond, timeout, opts.delay, cmp)
 end
 
 local inspector_methods = {
