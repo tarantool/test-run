@@ -370,7 +370,7 @@ class TestState(object):
                 self.connections.pop(k)
 
     def cleanup_nondefault(self):
-        color_log('\nDEBUG: TestState[%s].cleanup()\n' % hex(id(self)),
+        color_log('\nDEBUG: TestState[%s].cleanup_nondefault()\n' % hex(id(self)),
                   schema='test_var')
         for k, v in self.servers.iteritems():
             # don't cleanup the default server
