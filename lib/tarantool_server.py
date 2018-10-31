@@ -505,7 +505,7 @@ class TarantoolServer(Server):
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
-            color_log('    Found old vardir, deleting ...\n',
+            color_log('    Found old workdir, deleting ...\n',
                       schema='serv_text')
             self.kill_old_server()
             self.cleanup()
