@@ -28,6 +28,8 @@ def run_server(execs, cwd, server, logfile, retval):
 class AppTest(Test):
     def execute(self, server):
         server.current_test = self
+        if self.suite_ini['pre_cleanup']:
+            server.pre_cleanup()
         ts = TestState(self.suite_ini, None, TarantoolServer,
                        self.run_params,
                        default_server_no_connect=server)
@@ -57,11 +59,6 @@ class AppServer(Server):
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
-        self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.vylog", "*.inprogress",
-            "*.sup", "*.lua", "*.pid"
-        ]
-        self.cleanup()
         self.builddir = ini['builddir']
         self.debug = False
         self.lua_libs = ini['lua_libs']

@@ -71,6 +71,13 @@ class LuaTest(FuncTest):
                 result = '[Lost current connection]\n'
             return result
 
+        if self.suite_ini['pre_cleanup']:
+            result = send_command("require('pre_cleanup').cleanup()") \
+                .replace("\r\n", "\n")
+            if result != '---\n...\n':
+                sys.stdout.write(result)
+                return
+
         for line in open(self.name, 'r'):
             if not line.endswith('\n'):
                 line += '\n'
@@ -129,6 +136,8 @@ class LuaTest(FuncTest):
 
     def execute(self, server):
         server.current_test = self
+        if self.suite_ini['pre_cleanup']:
+            server.pre_cleanup()
         cls_name = server.__class__.__name__.lower()
         if 'gdb' in cls_name or 'lldb' in cls_name or 'strace' in cls_name:
             # don't propagate gdb/lldb/strace mixin to non-default servers,
@@ -396,9 +405,6 @@ class TarantoolServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.sourcedir = os.path.abspath(os.path.join(os.path.basename(
             sys.argv[0]), "..", ".."))
-        self.re_vardir_cleanup += [
-            "*.snap", "*.xlog", "*.vylog", "*.inprogress",
-            "*.sup", "*.lua", "*.pid", "[0-9]*/"]
         self.name = "default"
         self.conf = {}
         self.status = None
@@ -551,9 +557,25 @@ class TarantoolServer(Server):
         shutil.copy('.tarantoolctl', self.vardir)
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
+        # Need to use get here because of nondefault servers doesn't have ini.
+        if self.ini.get('pre_cleanup', False):
+            shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pre_cleanup.lua'),
+                        self.vardir)
 
     def prepare_args(self, args=[]):
         return [self.ctl_path, 'start', os.path.basename(self.script)] + args
+
+    def pre_cleanup(self):
+        # Don't delete snap and logs for 'default' tarantool server
+        # because it works during worker lifetime
+        pass
+
+    def cleanup(self, *args, **kwargs):
+        # For `core = tarantool` tests default worker runs on
+        # subdirectory created by tarantoolctl by using script name
+        # from suite.ini file.
+        super(TarantoolServer, self).cleanup(dirname=self.name,
+                                             *args, **kwargs)
 
     def start(self, silent=True, wait=True, wait_load=True, rais=True, args=[],
               **kwargs):
@@ -708,12 +730,6 @@ class TarantoolServer(Server):
 
     def wait_stop(self):
         self.process.wait()
-
-    def cleanup(self, full=False):
-        try:
-            shutil.rmtree(os.path.join(self.vardir, self.name))
-        except OSError:
-            pass
 
     def stop(self, silent=True):
         if self._start_against_running:

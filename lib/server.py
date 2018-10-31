@@ -11,6 +11,10 @@ from lib.colorer import color_stdout
 from lib.utils import print_tail_n
 
 
+DEFAULT_CHECKPOINT_PATTERNS = ["*.snap", "*.xlog", "*.vylog", "*.inprogress",
+                               "[0-9]*/"]
+
+
 class Server(object):
     """Server represents a single server instance. Normally, the
     program operates with only one server, but in future we may add
@@ -88,12 +92,19 @@ class Server(object):
     def prepare_args(self, args=[]):
         return args
 
-    def cleanup(self, full=False):
+    def pre_cleanup(self):
+        self.cleanup()
+
+    def cleanup(self, full=False, dirname='.', patterns=DEFAULT_CHECKPOINT_PATTERNS):
+        waldir = os.path.join(self.vardir, dirname)
         if full:
-            shutil.rmtree(self.vardir)
+            try:
+                shutil.rmtree(waldir)
+            except OSError:
+                pass
             return
-        for re in self.re_vardir_cleanup:
-            for f in glob.glob(os.path.join(self.vardir, re)):
+        for pattern in patterns:
+            for f in glob.glob(os.path.join(waldir, pattern)):
                 if os.path.isdir(f):
                     shutil.rmtree(f)
                 else:
