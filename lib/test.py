@@ -99,7 +99,7 @@ get_result = partial(get_filename_by_test, '.result')
 get_skipcond = partial(get_filename_by_test, '.skipcond')
 
 
-class Test:
+class Test(object):
     """An individual test file. A test object can run itself
     and remembers completion state of the run.
 
@@ -146,6 +146,8 @@ class Test:
         # Note: don't forget to set 'server.current_test = self' in
         # inherited classes. Crash reporting relying on that.
         server.current_test = self
+        if self.suite_ini['pre_cleanup']:
+            server.pre_cleanup()
 
     def run(self, server):
         """ Execute the test assuming it's a python program.  If the test

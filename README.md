@@ -83,7 +83,7 @@ replica.admin("box.select(0, 0, 1)")
 con2 = AdminConnection('localhost', server.admin.port)
 con2("box.info.lsn")
 replica.stop()
-replica.cleanup(True)
+replica.cleanup()
 con2.disconnect()
 ```
 

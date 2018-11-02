@@ -50,13 +50,7 @@ def save_join(green_obj, timeout=None):
     return False
 
 
-class FuncTest(Test):
-    def execute(self, server):
-        server.current_test = self
-        execfile(self.name, dict(locals(), **server.__dict__))
-
-
-class LuaTest(FuncTest):
+class LuaTest(Test):
     TIMEOUT = 60 * 10
 
     def exec_loop(self, ts):
@@ -135,9 +129,7 @@ class LuaTest(FuncTest):
                     save_join(server.crash_detector)
 
     def execute(self, server):
-        server.current_test = self
-        if self.suite_ini['pre_cleanup']:
-            server.pre_cleanup()
+        super(LuaTest, self).execute(server)
         cls_name = server.__class__.__name__.lower()
         if 'gdb' in cls_name or 'lldb' in cls_name or 'strace' in cls_name:
             # don't propagate gdb/lldb/strace mixin to non-default servers,
@@ -168,9 +160,9 @@ class LuaTest(FuncTest):
             raise
 
 
-class PythonTest(FuncTest):
+class PythonTest(Test):
     def execute(self, server):
-        server.current_test = self
+        super(PythonTest, self).execute(server)
         execfile(self.name, dict(locals(), test_run_current_test=self,
                                  **server.__dict__))
         # crash was detected (possibly on non-default server)
