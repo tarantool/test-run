@@ -80,7 +80,7 @@ class Server(object):
             'inspector_port', self.DEFAULT_INSPECTOR
         ))
 
-        # filled in {Test,FuncTest,LuaTest,PythonTest}.execute()
+        # filled in {Test,AppTest,LuaTest,PythonTest}.execute()
         # or passed through execfile() for PythonTest (see
         # TarantoolServer.__init__).
         self.current_test = None
@@ -95,15 +95,9 @@ class Server(object):
     def pre_cleanup(self):
         self.cleanup()
 
-    def cleanup(self, full=False, dirname='.', patterns=DEFAULT_CHECKPOINT_PATTERNS):
+    def cleanup(self, dirname='.'):
         waldir = os.path.join(self.vardir, dirname)
-        if full:
-            try:
-                shutil.rmtree(waldir)
-            except OSError:
-                pass
-            return
-        for pattern in patterns:
+        for pattern in DEFAULT_CHECKPOINT_PATTERNS:
             for f in glob.glob(os.path.join(waldir, pattern)):
                 if os.path.isdir(f):
                     shutil.rmtree(f)
