@@ -44,14 +44,23 @@ class TarantoolPool(ConnectionPool):
 
     def _new_connection(self):
         result = None
+        # https://github.com/tarantool/tarantool/issues/3806
+        # We should set FD_CLOEXEC before connect(), because connect() is
+        # blocking operation and with gevent it can wakeup another greenlet,
+        # including one in which we do Popen. When FD_CLOEXEC was set after
+        # connect() we observed socket file descriptors leaking into tarantool
+        # server in case of unix socket. It was not observed in case of tcp
+        # sockets for unknown reason, so now we leave setting FD_CLOEXEC after
+        # connect for tcp sockets and fix it only for unix sockets.
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
             warn_unix_socket(self.port)
             result = gsocket.socket(gsocket.AF_UNIX, gsocket.SOCK_STREAM)
+            set_fd_cloexec(result.fileno())
             result.connect(self.port)
         else:
             result = gsocket.create_connection((self.host, self.port))
             result.setsockopt(gsocket.SOL_TCP, gsocket.TCP_NODELAY, 1)
-        set_fd_cloexec(result)
+            set_fd_cloexec(result.fileno())
         return result
 
     def _addOne(self):
@@ -107,13 +116,15 @@ class TarantoolConnection(object):
             warn_unix_socket(self.port)
 
     def connect(self):
+        # See comment in TarantoolPool._new_connection().
         if self.host == 'unix/' or re.search(r'^/', str(self.port)):
             self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            set_fd_cloexec(self.socket.fileno())
             self.socket.connect(self.port)
         else:
             self.socket = socket.create_connection((self.host, self.port))
             self.socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-        set_fd_cloexec(self.socket)
+            set_fd_cloexec(self.socket.fileno())
         self.is_connected = True
 
     def disconnect(self):
