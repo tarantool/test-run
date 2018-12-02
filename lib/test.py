@@ -115,9 +115,8 @@ class Test(object):
         self.suite_ini = suite_ini
         self.result = os.path.join(suite_ini['suite'], get_result(name))
         self.skip_cond = os.path.join(suite_ini['suite'], get_skipcond(name))
-        self.tmp_result = os.path.join(self.suite_ini['vardir'],
-                                       os.path.basename(self.result))
-        self.reject = get_reject(name)
+        self.tmp_result = os.path.join(suite_ini['vardir'], get_result(name))
+        self.reject = os.path.join(suite_ini['suite'], get_reject(name))
         self.is_executed = False
         self.is_executed_ok = None
         self.is_equal_result = None
