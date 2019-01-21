@@ -211,10 +211,9 @@ class HangWatcher(BaseWatcher):
                       in self.worker_current_task.iteritems()
                       if worker_id in worker_ids]
         for current_task in hung_tasks:
-            color_stdout("- [{0:03d}, {1}, {2}]\n".format(current_task.worker_id,
-                                                      current_task.task_name,
-                                                      current_task.task_param),
-                         schema='test_var')
+            color_stdout("- [{0:03d}, {1}, {2}]\n".format(
+                current_task.worker_id, current_task.task_name,
+                current_task.task_param), schema='test_var')
             color_stdout("Last 15 lines of result file "
                          "[{0}]\n".format(current_task.task_result_filepath),
                          schema='error')
