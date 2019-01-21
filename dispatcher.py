@@ -120,8 +120,7 @@ class Dispatcher:
             not args.gdb and \
             not args.gdbserver and \
             not args.lldb and \
-            not args.valgrind and \
-            not args.long
+            not args.valgrind
         watch_fail = not lib.Options().args.is_force
 
         log_output_watcher = listeners.LogOutputWatcher()
@@ -134,7 +133,7 @@ class Dispatcher:
                 self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
-            warn_timeout = 10.0
+            warn_timeout = 60.0 if args.long else 10.0
             no_output_timeout = float(args.no_output_timeout or 120)
             hang_watcher = listeners.HangWatcher(
                 output_watcher.not_done_worker_ids, self.kill_all_workers,
