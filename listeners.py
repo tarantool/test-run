@@ -210,21 +210,22 @@ class HangWatcher(BaseWatcher):
         hung_tasks = [task for worker_id, task
                       in self.worker_current_task.iteritems()
                       if worker_id in worker_ids]
-        for current_task in hung_tasks:
-            color_stdout("- [{0:03d}, {1}, {2}]\n".format(
-                current_task.worker_id, current_task.task_name,
-                current_task.task_param), schema='test_var')
-            color_stdout("Last 15 lines of result file "
-                         "[{0}]\n".format(current_task.task_result_filepath),
-                         schema='error')
-            lib.utils.print_tail_n(current_task.task_result_filepath,
-                                   num_lines=15)
+        for task in hung_tasks:
+            with open(task.task_result_filepath, 'r') as f:
+                lines = sum(1 for _ in f)
+            color_stdout("- {0} [{1}, {2}] at {3}:{4}\n".format(
+                task.worker_name, task.task_name, task.task_param,
+                task.task_result_filepath, lines), schema='test_var')
 
         self.warned_seconds_ago = 0.0
 
         if self.inactivity < self.kill_timeout:
             return
 
+        for task in hung_tasks:
+            color_stdout("Result file [{0}]:\n".format(
+                task.task_result_filepath), schema='error')
+            lib.utils.print_tail_n(task.task_result_filepath)
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n',
