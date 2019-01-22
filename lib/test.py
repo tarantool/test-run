@@ -1,4 +1,3 @@
-import difflib
 import filecmp
 import gevent
 import os
@@ -7,7 +6,6 @@ import pytap13
 import re
 import shutil
 import sys
-import time
 import traceback
 from functools import partial
 
@@ -20,6 +18,7 @@ import lib
 from lib.colorer import color_stdout
 from lib.utils import non_empty_valgrind_logs
 from lib.utils import print_tail_n
+from lib.utils import print_unidiff as utils_print_unidiff
 
 
 class TestExecutionError(OSError):
@@ -278,18 +277,7 @@ class Test(object):
 
         color_stdout("\nTest failed! Result content mismatch:\n",
                      schema='error')
-        with open(self.result, "r") as result:
-            with open(self.reject, "r") as reject:
-                result_time = time.ctime(os.stat(self.result).st_mtime)
-                reject_time = time.ctime(os.stat(self.reject).st_mtime)
-                diff = difflib.unified_diff(result.readlines(),
-                                            reject.readlines(),
-                                            self.result,
-                                            self.reject,
-                                            result_time,
-                                            reject_time)
-
-                color_stdout.writeout_unidiff(diff)
+        utils_print_unidiff(self.result, self.reject)
 
     def tap_parse_print_yaml(self, yml):
         if 'expected' in yml and 'got' in yml:

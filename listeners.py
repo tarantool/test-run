@@ -201,35 +201,37 @@ class HangWatcher(BaseWatcher):
         if self.warned_seconds_ago < self.warn_timeout:
             return
 
+        is_warning = self.inactivity < self.kill_timeout
+
         color_stdout(
             "No output during {0.inactivity:.0f} seconds. "
             "Will abort after {0.kill_timeout:.0f} seconds without output. "
             "List of workers not reporting the status:\n".format(self),
-            schema='test_var')
+            schema=('test_var' if is_warning else 'error'))
 
         hung_tasks = [task for worker_id, task
                       in self.worker_current_task.iteritems()
                       if worker_id in worker_ids]
         for task in hung_tasks:
-            with open(task.task_result_filepath, 'r') as f:
+            with open(task.task_tmp_result, 'r') as f:
                 lines = sum(1 for _ in f)
             color_stdout("- {0} [{1}, {2}] at {3}:{4}\n".format(
                 task.worker_name, task.task_name, task.task_param,
-                task.task_result_filepath, lines), schema='test_var')
+                task.task_tmp_result, lines),
+                schema=('test_var' if is_warning else 'error'))
 
         self.warned_seconds_ago = 0.0
 
-        if self.inactivity < self.kill_timeout:
+        if is_warning:
             return
 
         for task in hung_tasks:
-            color_stdout("Result file [{0}]:\n".format(
-                task.task_result_filepath), schema='error')
-            lib.utils.print_tail_n(task.task_result_filepath)
+            color_stdout("Test hung! Result content mismatch:\n",
+                         schema='error')
+            lib.utils.print_unidiff(task.task_result, task.task_tmp_result)
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
-                     'exiting...\n',
-                     schema='test_var')
+                     'exiting...\n', schema='error')
         self.kill_all_workers()
 
         raise HangError()
