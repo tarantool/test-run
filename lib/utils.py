@@ -4,6 +4,8 @@ import collections
 import signal
 import random
 import fcntl
+import difflib
+import time
 from gevent import socket
 from lib.colorer import color_stdout
 
@@ -184,3 +186,17 @@ def format_process(pid):
 def set_fd_cloexec(socket):
     flags = fcntl.fcntl(socket, fcntl.F_GETFD)
     fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
+
+
+def print_unidiff(filepath_a, filepath_b):
+    with open(filepath_a, 'r') as a:
+        with open(filepath_b, 'r') as b:
+            time_a = time.ctime(os.stat(filepath_a).st_mtime)
+            time_b = time.ctime(os.stat(filepath_b).st_mtime)
+            diff = difflib.unified_diff(a.readlines(),
+                                        b.readlines(),
+                                        filepath_a,
+                                        filepath_b,
+                                        time_a,
+                                        time_b)
+            color_stdout.writeout_unidiff(diff)

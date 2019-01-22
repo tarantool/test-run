@@ -168,11 +168,12 @@ class WorkerCurrentTask(BaseWorkerMessage):
     to show which parallel tests can affect failed test.
     """
     def __init__(self, worker_id, worker_name,
-                 task_name, task_param, task_result_filepath):
+                 task_name, task_param, task_result, task_tmp_result):
         super(WorkerCurrentTask, self).__init__(worker_id, worker_name)
         self.task_name = task_name
         self.task_param = task_param
-        self.task_result_filepath = task_result_filepath
+        self.task_result = task_result
+        self.task_tmp_result = task_tmp_result
 
 # Worker
 ########
@@ -195,10 +196,12 @@ class Worker:
 
     def current_task(self, task_id):
         task_name, task_param = task_id
-        task_result_filepath = os.path.join(self.suite.ini['vardir'],
-                                            get_result(task_name))
-        return WorkerCurrentTask(self.id, self.name,
-                                 task_name, task_param, task_result_filepath)
+        task_result = os.path.join(self.suite.ini['suite'],
+                                   get_result(task_name))
+        task_tmp_result = os.path.join(self.suite.ini['vardir'],
+                                       get_result(task_name))
+        return WorkerCurrentTask(self.id, self.name, task_name, task_param,
+                                 task_result, task_tmp_result)
 
     def wrap_result(self, task_id, short_status):
         return WorkerTaskResult(self.id, self.name, task_id, short_status,
