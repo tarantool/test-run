@@ -7,6 +7,7 @@ from lib.server_mixins import GdbMixin
 from lib.server_mixins import GdbServerMixin
 from lib.server_mixins import LLdbMixin
 from lib.server_mixins import StraceMixin
+from lib.server_mixins import LuacovMixin
 from lib.colorer import color_stdout
 from lib.utils import print_tail_n
 
@@ -61,6 +62,8 @@ class Server(object):
             cls = type('LLdb' + cls.__name__, (LLdbMixin, cls), {})
         elif 'strace' in ini and ini['strace']:
             cls = type('Strace' + cls.__name__, (StraceMixin, cls), {})
+        elif 'luacov' in ini and ini['luacov']:
+            cls = type('Luacov' + cls.__name__, (LuacovMixin, cls), {})
 
         return cls
 
