@@ -102,7 +102,6 @@ class Options:
                 --gdb, --gdbserver and --strace.
                 Default: false.""")
 
-
         parser.add_argument(
                 "--valgrind",
                 dest = "valgrind",
@@ -184,6 +183,14 @@ class Options:
                 --valgrind, --long options is passed).
                 Note: The option works now only with parallel testing.""")
 
+        parser.add_argument(
+                "--luacov",
+                dest = "luacov",
+                action = "store_true",
+                default = False,
+                help = """Run the server under 'luacov'.
+                Default: false.""")
+
         self.args = parser.parse_args()
         self.check()
 
@@ -201,6 +208,3 @@ class Options:
 
         if check_error:
             exit(-1)
-
-
-

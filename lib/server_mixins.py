@@ -206,6 +206,7 @@ class GdbMixin(DebugMixin):
             """
     }
 
+
 # this would be good for running unit tests:
 # https://cygwin.com/ml/gdb-patches/2015-03/msg01051.html
 class GdbServerMixin(DebugMixin):
@@ -218,6 +219,7 @@ class GdbServerMixin(DebugMixin):
             """gdbserver :{gdbserver_port} {binary} {args} -- {gdbserver_opts}
             """
     }
+
 
 class LLdbMixin(DebugMixin):
     debugger_args = {
@@ -232,3 +234,12 @@ class LLdbMixin(DebugMixin):
                -o 'process launch -o {logfile} -e {logfile}'
             """
     }
+
+
+class LuacovMixin(Mixin):
+    def prepare_args(self, args=[]):
+        orig_args = super(LuacovMixin, self).prepare_args(args)
+        return ['tarantool',
+                '-e', '_G.TEST_RUN_LUACOV=true',
+                '-e', 'jit.off()',
+                '-l', 'luacov'] + orig_args
