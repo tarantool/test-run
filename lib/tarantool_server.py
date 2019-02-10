@@ -336,10 +336,6 @@ class TarantoolServer(Server):
 
     @_iproto.setter
     def _iproto(self, port):
-        try:
-            port = int(port)
-        except ValueError:
-            raise ValueError("Bad port number: '%s'" % port)
         if hasattr(self, 'iproto'):
             del self.iproto
         self.iproto = BoxConnection('localhost', port)
@@ -389,6 +385,7 @@ class TarantoolServer(Server):
             'valgrind': False,
             'vardir': None,
             'use_unix_sockets': False,
+            'use_unix_sockets_iproto': False,
             'tarantool_port': None,
             'strace': False
         }
@@ -410,6 +407,7 @@ class TarantoolServer(Server):
         self.valgrind = ini['valgrind']
         self.strace = ini['strace']
         self.use_unix_sockets = ini['use_unix_sockets']
+        self.use_unix_sockets_iproto = ini['use_unix_sockets_iproto']
         self._start_against_running = ini['tarantool_port']
         self.crash_detector = None
         # use this option with inspector to enable crashes in test
@@ -518,7 +516,12 @@ class TarantoolServer(Server):
         else:
             self._admin = find_port()
 
-        self._iproto = find_port()
+        if self.use_unix_sockets_iproto:
+            path = os.path.join(self.vardir, self.name + ".socket-iproto")
+            warn_unix_socket(path)
+            self._iproto = path
+        else:
+            self._iproto = find_port()
 
         # these sockets will be created by tarantool itself
         path = os.path.join(self.vardir, self.name + '.control')
