@@ -214,6 +214,7 @@ class TestState(object):
             temp.rpl_master = self.servers[opts['rpl_master']]
         temp.vardir = self.suite_ini['vardir']
         temp.use_unix_sockets = self.suite_ini['use_unix_sockets']
+        temp.use_unix_sockets_iproto = self.suite_ini['use_unix_sockets_iproto']
         temp.inspector_port = int(self.suite_ini.get(
             'inspector_port', temp.DEFAULT_INSPECTOR
         ))
