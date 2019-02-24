@@ -12,6 +12,13 @@ local function cleanup(self)
         box.space[name]:drop()
     end)
 
+    local cluster = box.space._cluster:select()
+    for _, tuple in pairs(cluster) do
+        if tuple[1] ~= box.info.id then
+            box.space._cluster:delete(tuple[1])
+        end
+    end
+
     local _USER_TYPE = 4
     local _USER_NAME = 3
 
