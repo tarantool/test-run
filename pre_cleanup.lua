@@ -1,4 +1,14 @@
-local function cleanup(self)
+-- Copy of cleanup_cluster() from test_run.lua.
+local function cleanup_cluster()
+    local cluster = box.space._cluster:select()
+    for _, tuple in pairs(cluster) do
+        if tuple[1] ~= box.info.id then
+            box.space._cluster:delete(tuple[1])
+        end
+    end
+end
+
+local function cleanup()
     local _SPACE_NAME = 3
 
     box.space._space:pairs():map(function(tuple)
@@ -60,6 +70,8 @@ local function cleanup(self)
     end):each(function(tuple)
         box.schema.func.drop(name)
     end)
+
+    cleanup_cluster()
 
     local cleanup_list = function(list, allowed)
         for k, _ in pairs(list) do
