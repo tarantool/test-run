@@ -15,7 +15,7 @@ __all__ = ['Options']
 
 def setenv():
     """Find where is tarantool dir by check_file"""
-    check_file = 'src/fiber.h'
+    check_file = 'src/trivia/util.h'
     path = os.path.abspath('../')
     while path != '/':
         if os.path.isfile('%s/%s' % (path, check_file)):
