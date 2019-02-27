@@ -8,7 +8,7 @@ local function cleanup_cluster()
     end
 end
 
-local function cleanup()
+local function clean()
     local _SPACE_NAME = 3
 
     box.space._space:pairs():map(function(tuple)
@@ -220,5 +220,5 @@ local function cleanup()
 end
 
 return {
-    cleanup = cleanup;
+    clean = clean;
 }
