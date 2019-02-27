@@ -110,7 +110,7 @@ class TestSuite:
                 dict.fromkeys(self.ini[i].split())
                 if i in self.ini else dict())
 
-        self.parse_bool_opt('pre_cleanup', False)
+        self.parse_bool_opt('pretest_clean', False)
         self.parse_bool_opt('use_unix_sockets', False)
         self.parse_bool_opt('use_unix_sockets_iproto', False)
         self.parse_bool_opt('is_parallel', False)

@@ -97,7 +97,7 @@ class Server(object):
     def prepare_args(self, args=[]):
         return args
 
-    def pre_cleanup(self):
+    def pretest_clean(self):
         self.cleanup()
 
     def cleanup(self, dirname='.'):

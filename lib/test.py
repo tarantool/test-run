@@ -144,8 +144,8 @@ class Test(object):
         # Note: don't forget to set 'server.current_test = self' in
         # inherited classes. Crash reporting relying on that.
         server.current_test = self
-        if self.suite_ini['pre_cleanup']:
-            server.pre_cleanup()
+        if self.suite_ini['pretest_clean']:
+            server.pretest_clean()
 
     def run(self, server):
         """ Execute the test assuming it's a python program.  If the test

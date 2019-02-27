@@ -65,8 +65,8 @@ class LuaTest(Test):
                 result = '[Lost current connection]\n'
             return result
 
-        if self.suite_ini['pre_cleanup']:
-            result = send_command("require('pre_cleanup').cleanup()") \
+        if self.suite_ini['pretest_clean']:
+            result = send_command("require('pretest_clean').clean()") \
                 .replace("\r\n", "\n")
             if result != '---\n...\n':
                 sys.stdout.write(result)
@@ -553,16 +553,16 @@ class TarantoolServer(Server):
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
         # Need to use get here because of nondefault servers doesn't have ini.
-        if self.ini.get('pre_cleanup', False):
-            shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pre_cleanup.lua'),
+        if self.ini.get('pretest_clean', False):
+            shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pretest_clean.lua'),
                         self.vardir)
 
     def prepare_args(self, args=[]):
         return [self.ctl_path, 'start', os.path.basename(self.script)] + args
 
-    def pre_cleanup(self):
+    def pretest_clean(self):
         # Don't delete snap and logs for 'default' tarantool server
-        # because it works during worker lifetime
+        # because it works during worker lifetime.
         pass
 
     def cleanup(self, *args, **kwargs):
