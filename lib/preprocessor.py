@@ -5,6 +5,7 @@ from collections import deque
 
 import yaml
 from gevent import socket
+import six
 
 from lib.admin_connection import AdminAsyncConnection
 from lib.colorer import color_log
@@ -348,9 +349,18 @@ class TestState(object):
     def variable(self, ctype, ref, ret):
         if ctype == 'set':
             self.curcon[0].reconnect()
-            self.curcon[0]('{0}={1}'.format(ref, eval(ret[1:-1], {}, self.environ.__dict__)), silent=True)
+            result = eval(ret[1:-1], {}, self.environ.__dict__)
+            if isinstance(result, six.integer_types):
+                cmd = '{0}={1}'.format(ref, result)
+            elif isinstance(result, six.string_types):
+                cmd = '{0}="{1}"'.format(ref, result)
+            else:
+                raise LuaPreprocessorException(
+                    "Wrong result type for variable {0}".format(ref))
+            self.curcon[0](cmd, silent=True)
         else:
-            raise LuaPreprocessorException("Wrong command for variables: {0}".format(repr(ctype)))
+            raise LuaPreprocessorException(
+                "Wrong command for variables: {0}".format(repr(ctype)))
 
     def __call__(self, string):
         string = string[3:].strip()
