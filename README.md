@@ -20,6 +20,7 @@ and a number of fields:
 * `long_run` - mark tests as long, enabled only with `--long` option (delimited
   with the space, e.g. `long_run=t1.test.lua t2.test.lua`)
 * `config` - test configuration file name
+* `pretest_clean` - see [pretest_clean](#pretest_clean)
 
 Field `core` must be one of:
 
@@ -305,3 +306,45 @@ test_run:cmd('setopt delimiter ""');
 -- create 30 replicas for current tarantool
 join(test_run, 30)
 ```
+
+### pretest_clean
+
+Add the following line to `suite.ini` to enable this option for a test suite:
+
+```
+pretest_clean = True
+```
+
+The behaviour of this option varies across test suite types (`core = tarantool /
+app / unit`).
+
+For a `core = tarantool` test suite enabling of this option will lead to
+execution of a special clean function before each Lua test. The
+`pretest_clean.lua` file is copied into a test directory (`var/ddd-suite-name`)
+and `require('pretest_clean').clean()` is invoked before each test.
+
+This function performs the following steps:
+
+* drop all non-system spaces;
+* delete all users except 'guest' and 'admin';
+* delete all roles except 'public', 'replicaiton' and 'super';
+* delete all `box.space._func` records except `box.schema.user.info`;
+* delete all `box.space._cluster` records except one for a current instance;
+* remove all global variables except ones that tarantool had at start (it uses a
+  predefined list, see the source);
+* unload all packages except built-in ones (see the source for the list).
+
+Nothing will be done before a Python test.
+
+For a `core = app` test suite enabling of this option will lead to removing
+tarantool WAL and snapshot files before each test.
+
+The following files will be removed:
+
+* `*.snap`
+* `*.xlog`
+* `*.vylog`
+* `*.inprogress`
+* `[0-9]*/`
+
+For a `core = unit` test suite this option does not change any behaviour.
