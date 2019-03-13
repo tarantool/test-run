@@ -14,7 +14,7 @@ class UnitTest(Test):
     def execute(self, server):
         server.current_test = self
         execs = server.prepare_args()
-        proc = Popen(execs, stdout=PIPE, stderr=STDOUT)
+        proc = Popen(execs, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
         sys.stdout.write(proc.communicate()[0])
 
 class UnittestServer(Server):
