@@ -67,7 +67,7 @@ local function clean()
         return name
     end):filter(function(name)
         return not allowed_funcs[name]
-    end):each(function(tuple)
+    end):each(function(name)
         box.schema.func.drop(name)
     end)
 
