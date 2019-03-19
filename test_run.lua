@@ -169,6 +169,20 @@ local function wait_fullmesh(self, servers)
                 while true do
                     local cmd = wait_fullmesh_cmd:format(server_id)
                     local info = self:eval(server2, cmd)[1]
+                    if info ~= nil and info.upstream ~= nil then
+                        if info.upstream.status == 'stopped' then
+                            log.info("fullmesh failed to connect %s -> %s",
+                                     ": status %s : message %s",
+                                     server2, server,
+                                     tostring(info.upstream.status),
+                                     tostring(info.upstream.message))
+                            return false
+                        end
+                        log.info("connecting %s -> %s : status %s : message %s",
+                                 server2, server,
+                                 tostring(info.upstream.status),
+                                 tostring(info.upstream.message))
+                    end
                     if info ~= nil and (info.status == 'follow' or
                                         (info.upstream ~= nil and
                                          info.upstream.status == 'follow')) then
