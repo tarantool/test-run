@@ -292,8 +292,8 @@ end
 -- by the timeout).
 local function wait_cond(self, cond, timeout, delay)
     assert(type(cond) == 'function')
-    assert(timeout ~= nil)
 
+    local timeout = timeout or 60
     local delay = delay or 0.001
 
     local start_time = clock.monotonic()
