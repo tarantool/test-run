@@ -197,6 +197,18 @@ local function wait_fullmesh(self, servers)
     log.info("full mesh connected")
 end
 
+local function recreate_cluster(self, servers, test_suite, opts)
+    self:drop_cluster(servers)
+    self:create_cluster(servers, test_suite, opts)
+end
+
+local function init_cluster(self, servers, test_suite, opts)
+    self:create_cluster(servers, test_suite, opts)
+    while self:wait_fullmesh(servers) == false do
+        self:recreate_cluster(servers, test_suite, opts)
+    end
+end
+
 local function get_cluster_vclock(self, servers)
     local vclock = {}
     for _, name in pairs(servers) do
@@ -359,6 +371,8 @@ local inspector_methods = {
     drop_cluster = drop_cluster,
     cleanup_cluster = cleanup_cluster,
     wait_fullmesh = wait_fullmesh,
+    recreate_cluster = recreate_cluster,
+    init_cluster = init_cluster,
     get_cluster_vclock = get_cluster_vclock,
     wait_cluster_vclock = wait_cluster_vclock,
     --
