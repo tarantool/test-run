@@ -69,7 +69,7 @@ class ExecMixIn(object):
                 break
 
         try:
-            yaml.load(res)
+            yaml.safe_load(res)
         finally:
             if not silent:
                 sys.stdout.write(res.replace("\r\n", "\n"))

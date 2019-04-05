@@ -70,7 +70,7 @@ class TAP13(object):
                 if RE_YAMLISH_END.match(line):
                     test = self.tests[-1]
                     try:
-                        test.yaml = yaml.load(test._yaml_buffer.getvalue())
+                        test.yaml = yaml.safe_load(test._yaml_buffer.getvalue())
                     except Exception as e:
                         if not self.strict:
                             continue

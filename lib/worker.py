@@ -36,7 +36,7 @@ def parse_reproduce_file(filepath):
         return reproduce
     try:
         with open(filepath, 'r') as f:
-            for task_id in yaml.load(f):
+            for task_id in yaml.safe_load(f):
                 task_name, task_conf = task_id
                 reproduce.append((task_name, task_conf))
     except IOError:
