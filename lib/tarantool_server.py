@@ -45,8 +45,8 @@ def save_join(green_obj, timeout=None):
         green_obj.join(timeout=timeout)
     except GreenletExit:
         return True
-    # We don't catch TarantoolStartError here, because it catched in start()
-    # and crash_detect() methods to report replica crash.
+    # We don't catch TarantoolStartError here to propagate it to a parent
+    # greenlet to report a (default or non-default) tarantool server fail.
     return False
 
 
@@ -158,6 +158,14 @@ class LuaTest(Test):
 
             ts.stop_nondefault()
             raise
+        except TarantoolStartError as e:
+            if not self.is_crash_reported:
+                self.is_crash_reported = True
+                color_stdout('\n[Instance "{0}"] Failed to start tarantool '
+                             'server from a test\n'.format(e.name),
+                             schema='error')
+                server.print_log(15)
+            server.kill_current_test()
 
 
 class PythonTest(Test):
@@ -177,7 +185,8 @@ CON_SWITCH = {
 
 
 class TarantoolStartError(OSError):
-    pass
+    def __init__(self, name=None):
+        self.name = name
 
 
 class TarantoolLog(object):
@@ -206,7 +215,7 @@ class TarantoolLog(object):
                 if pos != -1:
                     return pos
 
-    def seek_wait(self, msg, proc=None):
+    def seek_wait(self, msg, proc=None, name=None):
         while True:
             if os.path.exists(self.path):
                 break
@@ -218,7 +227,7 @@ class TarantoolLog(object):
             while True:
                 if not (proc is None):
                     if not (proc.poll() is None):
-                        raise TarantoolStartError
+                        raise TarantoolStartError(name)
                 log_str = f.readline()
                 if not log_str:
                     time.sleep(0.001)
@@ -799,8 +808,8 @@ class TarantoolServer(Server):
         """
         if wait_load:
             msg = 'entering the event loop|will retry binding|hot standby mode'
-            self.logfile_pos.seek_wait(
-                msg, self.process if not self.gdb and not self.lldb else None)
+            p = self.process if not self.gdb and not self.lldb else None
+            self.logfile_pos.seek_wait(msg, p, self.name)
         while True:
             try:
                 temp = AdminConnection('localhost', self.admin.port)
