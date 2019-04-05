@@ -341,7 +341,7 @@ class TestState(object):
         result = self.servers[name].admin(
             '%s%s' % (expr, self.delimiter), silent=silent
         )
-        result = yaml.load(result)
+        result = yaml.safe_load(result)
         if not result:
             result = []
         return result

@@ -805,9 +805,9 @@ class TarantoolServer(Server):
             try:
                 temp = AdminConnection('localhost', self.admin.port)
                 if not wait_load:
-                    ans = yaml.load(temp.execute("2 + 2"))
+                    ans = yaml.safe_load(temp.execute("2 + 2"))
                     return True
-                ans = yaml.load(temp.execute('box.info.status'))[0]
+                ans = yaml.safe_load(temp.execute('box.info.status'))[0]
                 if ans in ('running', 'hot_standby', 'orphan'):
                     return True
                 elif ans in ('loading'):
@@ -897,8 +897,8 @@ class TarantoolServer(Server):
 
     def get_param(self, param=None):
         if param is not None:
-            return yaml.load(self.admin("box.info." + param, silent=True))[0]
-        return yaml.load(self.admin("box.info", silent=True))
+            return yaml.safe_load(self.admin("box.info." + param, silent=True))[0]
+        return yaml.safe_load(self.admin("box.info", silent=True))
 
     def get_lsn(self, node_id):
         nodes = self.get_param("vclock")
