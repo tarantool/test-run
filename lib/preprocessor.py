@@ -288,11 +288,12 @@ class TestState(object):
         if 'cleanup' in opts:
             self.server_cleanup(ctype, sname, opts)
             self.server_deploy(ctype, sname, opts)
-        self.server_start(ctype, sname, opts)
-        self.switch(sname)
-
-        # remove proxy
-        self.server_stop('stop', 'proxy', {})
+        try:
+            self.server_start(ctype, sname, opts)
+            self.switch(sname)
+        finally:
+            # remove proxy
+            self.server_stop('stop', 'proxy', {})
 
     def server(self, ctype, sname, opts):
         attr = 'server_%s' % ctype
