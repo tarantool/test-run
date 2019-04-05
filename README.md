@@ -334,6 +334,8 @@ This function performs the following steps:
   predefined list, see the source);
 * unload all packages except built-in ones (see the source for the list).
 
+Set _G.protected_globals to list of names to protect custom globals.
+
 Nothing will be done before a Python test.
 
 For a `core = app` test suite enabling of this option will lead to removing

@@ -8,6 +8,14 @@ local function cleanup_cluster()
     end
 end
 
+local function cleanup_list(list, allowed)
+    for k, _ in pairs(list) do
+        if not allowed[k] then
+            list[k] = nil
+        end
+    end
+end
+
 local function clean()
     local _SPACE_NAME = 3
 
@@ -73,14 +81,6 @@ local function clean()
 
     cleanup_cluster()
 
-    local cleanup_list = function(list, allowed)
-        for k, _ in pairs(list) do
-            if not allowed[k] then
-                list[k] = nil
-            end
-        end
-    end
-
     local allowed_globals = {
         -- modules
         bit = true,
@@ -137,7 +137,11 @@ local function clean()
         role_check_grant_revoke_of_sys_priv = true,
         tutorial = true,
         update_format = true,
+        protected_globals = true,
     }
+    for _, name in ipairs(rawget(_G, 'protected_globals') or {}) do
+        allowed_globals[name] = true
+    end
     cleanup_list(_G, allowed_globals)
 
     local allowed_packages = {
