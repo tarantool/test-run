@@ -179,14 +179,16 @@ class TestSuite:
         return inspector
 
     def stop_server(self, server, inspector, silent=False, cleanup=True):
-        server.stop(silent=silent)
+        if server:
+            server.stop(silent=silent)
+        if inspector:
+            inspector.stop()
         # don't delete core files or state of the data dir
         # in case of exception, which is raised when the
         # server crashes
-        if inspector:
-            inspector.stop()
-        if cleanup:
+        if cleanup and inspector:
             inspector.cleanup_nondefault()
+        if cleanup and server:
             server.cleanup()
 
     def run_test(self, test, server, inspector):
