@@ -9,7 +9,9 @@ from gevent.subprocess import Popen, PIPE
 from lib.colorer import color_log
 from lib.preprocessor import TestState
 from lib.server import Server
-from lib.tarantool_server import Test, TarantoolServer
+from lib.tarantool_server import Test
+from lib.tarantool_server import TarantoolServer
+from lib.tarantool_server import TarantoolStartError
 from lib.utils import find_port
 from lib.utils import format_process
 from test import TestRunGreenlet, TestExecutionError
@@ -38,9 +40,13 @@ class AppTest(Test):
         tarantool = TestRunGreenlet(run_server, execs, server.vardir, server,
                                     server.logfile, retval)
         self.current_test_greenlet = tarantool
-        tarantool.start()
 
-        tarantool.join()
+        try:
+            tarantool.start()
+            tarantool.join()
+        except TarantoolStartError:
+            # A non-default server failed to start.
+            raise TestExecutionError
         if retval['returncode'] != 0:
             raise TestExecutionError
 
