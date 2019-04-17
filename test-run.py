@@ -107,20 +107,20 @@ def main_loop_parallel():
         dispatcher.wait_processes()
         color_stdout('-' * 81, "\n", schema='separator')
         has_failed = dispatcher.statistics.print_statistics()
-        has_undone = dispatcher.report_undone(verbose=is_force)
+        has_undone = dispatcher.report_undone(verbose=True)
         if has_failed:
             return EXIT_FAILED_TEST
-        if is_force and has_undone:
+        if has_undone:
             return EXIT_NOTDONE_TEST
     except KeyboardInterrupt:
         color_stdout('-' * 81, "\n", schema='separator')
         dispatcher.statistics.print_statistics()
-        dispatcher.report_undone(verbose=is_force)
+        dispatcher.report_undone(verbose=False)
         raise
     except HangError:
         color_stdout('-' * 81, "\n", schema='separator')
         dispatcher.statistics.print_statistics()
-        dispatcher.report_undone(verbose=is_force)
+        dispatcher.report_undone(verbose=True)
         return EXIT_HANG
     return EXIT_SUCCESS
 
