@@ -237,14 +237,15 @@ class Dispatcher:
             return False
         if verbose:
             color_stdout(
-                'The following tasks were dispatched on some worker task '
+                '[Internal test-run error] '
+                'The following tasks were dispatched to some worker task '
                 'queue, but were not reported as done (does not matters '
                 'success or fail):\n', schema='test_var')
             for task_id in undone:
                 color_stdout('- %s' % yaml.safe_dump(task_id))
         else:
-            color_stdout("Count of didn't processed tasks: %d\n"
-                         % len(undone), schema='test_var')
+            # Visually continue StatisticsWatcher.print_statistics() output.
+            color_stdout('* undone: %d\n' % len(undone), schema='test_var')
         return True
 
     def wait(self):
