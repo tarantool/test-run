@@ -1,3 +1,5 @@
+--- Utils provided by test-run.
+
 local socket = require('socket')
 local json = require('json')
 local yaml = require('yaml')
@@ -227,6 +229,85 @@ local function switch(self, node)
     return self:cmd(switch_cmd3:format(node))
 end
 
+local function log_box_info_replication_cond(id, field, ok, info, opts)
+    local exp = json.encode({
+        status = opts.status,
+        message_re = opts.message_re,
+    })
+    local got = json.encode({
+        status = info.status,
+        message = info.message,
+    })
+    log.info('wait_%s(%d, ...); exp = %s; got = %s; result = %s', field, id,
+        exp, got, tostring(ok))
+end
+
+local function gen_box_info_replication_cond(id, field, opts)
+    return function()
+        local info = box.info.replication[id][field]
+        local ok = true
+        if opts.status ~= nil then
+            ok = ok and info.status == opts.status
+        end
+        if opts.message_re ~= nil then
+            -- regex match
+            ok = ok and info.message ~= nil and info.message:match(
+                opts.message_re)
+        elseif type(opts.message_re) ~= 'nil' then
+            -- expect nil or box.NULL if opts.message_re is box.NULL
+            ok = ok and info.message == nil
+        end
+        log_box_info_replication_cond(id, field, not not ok, info, opts)
+        if not ok then return false, box.info.replication[id] end
+        return true
+    end
+end
+
+--- Wait for upstream status.
+---
+--- If `opts.status` is `nil` or `box.NULL` an upstream status is
+--- not checked.
+---
+--- If `opts.message_re` is `nil` an upstream message is not
+--- checked.
+---
+--- If `opts.message_re` is `box.NULL` an upstream message is
+--- expected to be `nil` or `box.NULL`.
+---
+--- @tparam table self test-run instance
+--- @tparam number id box.info.replication key
+--- @tparam[opt] table opts values to wait for
+--- @tparam[opt] string opts.status upstream status
+--- @tparam[opt] string opts.message_re upstream message (regex)
+---
+--- @return `true` at success, `false` at error
+--- @return `nil` at success, `box.info.replication[id]` at error
+local function wait_upstream(self, id, opts)
+    local opts = opts or {}
+    assert(type(opts) == 'table')
+    local cond = gen_box_info_replication_cond(id, 'upstream', opts)
+    return self:wait_cond(cond)
+end
+
+--- Wait for downstream status.
+---
+--- See @{wait_upstream} for parameters and return values.
+---
+--- @tparam table self
+--- @tparam number id
+--- @tparam[opt] table opts
+--- @tparam[opt] string opts.status
+--- @tparam[opt] string opts.message_re
+---
+--- @return
+--- @return
+local function wait_downstream(self, id, opts)
+    local opts = opts or {}
+    assert(type(opts) == 'table')
+    local cond = gen_box_info_replication_cond(id, 'downstream', opts)
+    return self:wait_cond(cond)
+end
+
 local get_cfg_cmd = 'config %s'
 
 local function get_cfg(self, name)
@@ -360,6 +441,8 @@ local inspector_methods = {
     wait_fullmesh = wait_fullmesh,
     get_cluster_vclock = get_cluster_vclock,
     wait_cluster_vclock = wait_cluster_vclock,
+    wait_upstream = wait_upstream,
+    wait_downstream = wait_downstream,
     --
     grep_log = grep_log,
     wait_cond = wait_cond,
