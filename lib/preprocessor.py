@@ -9,6 +9,7 @@ import six
 
 from lib.admin_connection import AdminAsyncConnection
 from lib.colorer import color_log
+from lib.utils import signum
 
 
 class Namespace(object):
@@ -194,7 +195,17 @@ class TestState(object):
             raise LuaPreprocessorException('Can\'t stop nonexistent server {0}'.format(repr(sname)))
         self.connections[sname].disconnect()
         self.connections.pop(sname)
-        self.servers[sname].stop()
+        if 'signal' in opts:
+            # convert to an integer if a number is passed, leave a string
+            # otherwise
+            try:
+                signal = int(opts['signal'])
+            except ValueError:
+                signal = opts['signal']
+            self.servers[sname].stop(silent=True, signal=signum(signal))
+        else:
+            # use default signal
+            self.servers[sname].stop(silent=True)
 
     def server_create(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_create(%s, %s, %s)\n' % (

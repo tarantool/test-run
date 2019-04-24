@@ -256,7 +256,9 @@ __Server directives:__
     * `script = '<path>'` - script to start
     * `rpl_master = <server>` - replication master server name
 * `start server <name>` - Run server `<name>`
-* `stop server <name>` - Stop server `<name>`
+* `stop server <name> [with signal=<signal>]` - Stop server `<name>`
+    * `<signal>` is a signal name (with or without 'SIG' prefix, uppercased) or
+      a signal number to use instead of default SIGTERM
 * `cleanup server <name>` - Cleanup (basically after server has been stopped)
 * `restart server <name>` - Restart server `<name>` (you can restart yourself
   from lua!)
