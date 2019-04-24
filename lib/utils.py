@@ -1,5 +1,6 @@
 import os
 import sys
+import six
 import collections
 import signal
 import random
@@ -8,6 +9,12 @@ import difflib
 import time
 from gevent import socket
 from lib.colorer import color_stdout
+try:
+    # Python3.5 or above
+    from signal import Signals
+except ImportError:
+    # Python2
+    Signals = None
 
 
 UNIX_SOCKET_LEN_LIMIT = 107
@@ -115,11 +122,38 @@ def find_in_path(name):
             return exe
     return ''
 
+
 # http://stackoverflow.com/a/2549950
-SIGNAMES = dict((v, k) for k, v in reversed(sorted(signal.__dict__.items()))
-    if k.startswith('SIG') and not k.startswith('SIG_'))
-def signame(signum):
-    return SIGNAMES[signum]
+SIGNAMES = dict((int(v), k) for k, v in reversed(sorted(
+    signal.__dict__.items())) if k.startswith('SIG') and
+    not k.startswith('SIG_'))
+SIGNUMS = dict((k, int(v)) for k, v in reversed(sorted(
+    signal.__dict__.items())) if k.startswith('SIG') and
+    not k.startswith('SIG_'))
+
+
+def signame(signal):
+    if isinstance(signal, six.integer_types):
+        return SIGNAMES[signal]
+    if Signals and isinstance(signal, Signals):
+        return SIGNAMES[int(signal)]
+    if isinstance(signal, six.string_types):
+        return signal
+    raise TypeError('signame(): signal argument of unexpected type: {}'.format(
+                    str(type(signal))))
+
+
+def signum(signal):
+    if isinstance(signal, six.integer_types):
+        return signal
+    if Signals and isinstance(signal, Signals):
+        return int(signal)
+    if isinstance(signal, six.string_types):
+        if not signal.startswith('SIG'):
+            signal = 'SIG' + signal
+        return SIGNUMS[signal]
+    raise TypeError('signum(): signal argument of unexpected type: {}'.format(
+                    str(type(signal))))
 
 
 def warn_unix_sockets_at_start(vardir):

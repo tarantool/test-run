@@ -735,7 +735,11 @@ class TarantoolServer(Server):
     def wait_stop(self):
         self.process.wait()
 
-    def stop(self, silent=True):
+    def stop(self, silent=True, signal=signal.SIGTERM):
+        """ Kill tarantool server using specified signal (SIGTERM by default)
+
+            signal - a number of a signal
+        """
         if self._start_against_running:
             color_log('Server [%s] start against running ...\n',
                       schema='test_var')
@@ -756,14 +760,12 @@ class TarantoolServer(Server):
             color_log('Stopping the server ...\n', schema='serv_text')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
-            color_log(
-                'TarantoolServer.stop(): stopping the {0}\n'.format(
-                    format_process(self.process.pid)
-                ),
-                schema='test_var'
-            )
+            color_log('TarantoolServer.stop(): stopping the {0}\n'.format(
+                      format_process(self.process.pid)), schema='test_var')
             try:
-                self.process.terminate()
+                color_log('Sending signal {0} ({1}) to process {2}\n'.format(
+                          signal, signame(signal), self.process.pid))
+                self.process.send_signal(signal)
             except OSError:
                 pass
             if self.crash_detector is not None:
