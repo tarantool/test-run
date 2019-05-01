@@ -50,11 +50,11 @@ configuration):
 ```json
 {
     "my.test.lua": {
-        "first": {"a": 1, "b": 2}, 
+        "first": {"a": 1, "b": 2},
         "second": {"a": 1, "b": 3}
     },
     "*": {
-        "memtx": {"engine": "memtx"}, 
+        "memtx": {"engine": "memtx"},
         "sophia": {"engine": "sophia"}
     }
 }
@@ -247,31 +247,31 @@ test_run:cmd("<command>")
 
 __Base directives:__
 
-* `setopt delimiter '<delimiter>'` - Sets delimiter to <delimiter>\n
+* `setopt delimiter '<delimiter>'` - Sets delimiter to `<delimiter>`\n
 
 __Server directives:__
 
-* `create server <name> with ...` - Create server with name <name>, where `...`
+* `create server <name> with ...` - Create server with name `<name>`, where `...`
   may be:
     * `script = '<path>'` - script to start
     * `rpl_master = <server>` - replication master server name
-* `start server <name>` - Run server <name>
-* `stop server <name> ` - Stop server <name> 
-* `cleanup server <name> ` - Cleanup (basically after server has been stopped)
-* `restart server <name>` - Restart server <name> (you can restart yourself
+* `start server <name>` - Run server `<name>`
+* `stop server <name>` - Stop server `<name>`
+* `cleanup server <name>` - Cleanup (basically after server has been stopped)
+* `restart server <name>` - Restart server `<name>` (you can restart yourself
   from lua!)
 
 __Connection switch:__
 
-* `switch <name>` - Switch connection to server <name> and add test run into
+* `switch <name>` - Switch connection to server `<name>` and add test run into
   global scope
 
 __Connection directives(low level):__
 
 * `create connection <name-con> to <name-serv>` - create connection named
-  <name-con> to <name-serv> server
-* `drop connection <name>` - Turn connection <name> off and delete it
-* `set connection <name>` - Set connection <name> to be main, for next commands
+  `<name-con>` to `<name-serv>` server
+* `drop connection <name>` - Turn connection `<name>` off and delete it
+* `set connection <name>` - Set connection `<name>` to be main, for next commands
 
 __Filter directives:__
 
