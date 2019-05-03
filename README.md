@@ -26,7 +26,7 @@ Field `core` must be one of:
 
 * `tarantool` - Test-Suite for Functional Testing
 * `app` - Another functional Test-Suite
-* `unit` - Unit-Testing Test Suite
+* `unittest` - Unit-Testing Test Suite
 
 ### Test
 
@@ -318,7 +318,7 @@ pretest_clean = True
 ```
 
 The behaviour of this option varies across test suite types (`core = tarantool /
-app / unit`).
+app / unittest`).
 
 For a `core = tarantool` test suite enabling of this option will lead to
 execution of a special clean function before each Lua test. The
@@ -351,4 +351,4 @@ The following files will be removed:
 * `*.inprogress`
 * `[0-9]*/`
 
-For a `core = unit` test suite this option does not change any behaviour.
+For a `core = unittest` test suite this option does not change any behaviour.
