@@ -223,14 +223,28 @@ def set_fd_cloexec(socket):
 
 
 def print_unidiff(filepath_a, filepath_b):
-    with open(filepath_a, 'r') as a:
-        with open(filepath_b, 'r') as b:
-            time_a = time.ctime(os.stat(filepath_a).st_mtime)
-            time_b = time.ctime(os.stat(filepath_b).st_mtime)
-            diff = difflib.unified_diff(a.readlines(),
-                                        b.readlines(),
-                                        filepath_a,
-                                        filepath_b,
-                                        time_a,
-                                        time_b)
-            color_stdout.writeout_unidiff(diff)
+    def process_file(filepath):
+        fh = None
+        try:
+            fh = open(filepath, 'r')
+            lines = fh.readlines()
+            ctime = time.ctime(os.stat(filepath).st_mtime)
+        except Exception:
+            if not os.path.exists(filepath):
+                color_stdout('[File does not exists: {}]'.format(filepath),
+                             schema='error')
+            lines = []
+            ctime = time.ctime()
+        if fh:
+            fh.close()
+        return lines, ctime
+
+    lines_a, time_a = process_file(filepath_a)
+    lines_b, time_b = process_file(filepath_b)
+    diff = difflib.unified_diff(lines_a,
+                                lines_b,
+                                filepath_a,
+                                filepath_b,
+                                time_a,
+                                time_b)
+    color_stdout.writeout_unidiff(diff)
