@@ -107,7 +107,8 @@ def main_loop_parallel():
         dispatcher.wait_processes()
         color_stdout('-' * 81, "\n", schema='separator')
         has_failed = dispatcher.statistics.print_statistics()
-        has_undone = dispatcher.report_undone(verbose=True)
+        has_undone = dispatcher.report_undone(
+            verbose=bool(is_force or not has_failed))
         if has_failed:
             return EXIT_FAILED_TEST
         if has_undone:
@@ -120,7 +121,7 @@ def main_loop_parallel():
     except HangError:
         color_stdout('-' * 81, "\n", schema='separator')
         dispatcher.statistics.print_statistics()
-        dispatcher.report_undone(verbose=True)
+        dispatcher.report_undone(verbose=False)
         return EXIT_HANG
     return EXIT_SUCCESS
 
