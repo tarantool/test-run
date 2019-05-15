@@ -101,7 +101,8 @@ class LuaTest(Test):
     def killall_servers(self, server, ts, crash_occured):
         """ kill all servers and crash detectors before stream swap """
         color_log('Kill all servers ...\n', schema='info')
-        check_list = ts.servers.values() + [server, ]
+        server_list = ts.servers.values() + [server, ]
+        check_list = [s for s in server_list if 'process' in s.__dict__]
 
         # check that all servers stopped correctly
         for server in check_list:
