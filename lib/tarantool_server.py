@@ -159,12 +159,9 @@ class LuaTest(Test):
             ts.stop_nondefault()
             raise
         except TarantoolStartError as e:
-            if not self.is_crash_reported:
-                self.is_crash_reported = True
-                color_stdout('\n[Instance "{0}"] Failed to start tarantool '
-                             'server from a test\n'.format(e.name),
-                             schema='error')
-                server.print_log(15)
+            color_stdout('\n[Instance "{0}"] Failed to start tarantool '
+                         'instance "{1}"\n'.format(server.name, e.name),
+                         schema='error')
             server.kill_current_test()
 
 
@@ -625,10 +622,6 @@ class TarantoolServer(Server):
             try:
                 self.wait_until_started(wait_load)
             except TarantoolStartError:
-                # Raise exception when caller ask for it (e.g. in case of
-                # non-default servers)
-                if rais:
-                    raise
                 # Python tests expect we raise an exception when non-default
                 # server fails
                 if self.crash_expected:
@@ -641,6 +634,10 @@ class TarantoolServer(Server):
                                  'failed to start\n'.format(self),
                                  schema='error')
                     self.print_log(15)
+                # Raise exception when caller ask for it (e.g. in case of
+                # non-default servers)
+                if rais:
+                    raise
                 # if the server fails before any test started, we should inform
                 # a caller by the exception
                 if not self.current_test:
