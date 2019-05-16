@@ -20,16 +20,19 @@ class TcpPortDispatcher:
     """ Helper class holds available and occupied TCP port ranges. This ranges
     intended to distributes between workers.
     """
-    def __init__(self):
-        self.range_size = 1000
-        self.ranges_cnt = 60
-        self.lowest_port = 3000
+    def __init__(self, range_count):
+        lowest_port = 3000
+        highest_port = 59999
+        port_count = highest_port - lowest_port + 1
+        range_size = port_count // range_count
+
         self.available_ranges = set()
-        for i in range(self.ranges_cnt):
-            start_port = self.lowest_port + i * self.range_size
-            end_port = start_port + self.range_size - 1
+        for i in range(range_count):
+            start_port = lowest_port + i * range_size
+            end_port = start_port + range_size - 1
             tcp_port_range = (start_port, end_port)
             self.available_ranges.add(tcp_port_range)
+
         self.acquired_ranges = dict()
 
     def acquire_range(self, _id):
@@ -100,7 +103,8 @@ class Dispatcher:
         self.worker_id_to_pid = dict()
 
         self.randomize = randomize
-        self.tcp_port_dispatcher = TcpPortDispatcher()
+        self.tcp_port_dispatcher = TcpPortDispatcher(
+            range_count=max_workers_cnt)
 
     def terminate_all_workers(self):
         for process in self.processes:
