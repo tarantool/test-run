@@ -199,7 +199,10 @@ class Test(object):
 
         is_tap = False
         if not self.skip:
-            if self.is_executed_ok and os.path.isfile(self.result):
+            if not os.path.exists(self.tmp_result):
+                self.is_executed_ok = False
+                self.is_equal_result = False
+            elif self.is_executed_ok and os.path.isfile(self.result):
                 self.is_equal_result = filecmp.cmp(self.result,
                                                    self.tmp_result)
             elif self.is_executed_ok:
@@ -238,12 +241,17 @@ class Test(object):
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
         else:
-            shutil.copy(self.tmp_result, self.reject)
+            has_result = os.path.exists(self.tmp_result)
+            if has_result:
+                shutil.copy(self.tmp_result, self.reject)
             short_status = 'fail'
             color_stdout("[ fail ]\n", schema='test_fail')
 
             where = ""
-            if not self.is_crash_reported and not self.is_executed_ok:
+            if not self.is_crash_reported and not has_result:
+                color_stdout('\nCannot open %s\n' % self.tmp_result,
+                             schema='error')
+            elif not self.is_crash_reported and not self.is_executed_ok:
                 self.print_diagnostics(self.reject,
                                        "Test failed! Output from reject file "
                                        "{0}:\n".format(self.reject))
@@ -309,11 +317,6 @@ class Test(object):
 
     def check_tap_output(self):
         """ Returns is_tap, is_ok """
-        if not os.path.isfile(self.tmp_result):
-            color_stdout('\nCannot find %s\n' % self.tmp_result,
-                         schema='error')
-            self.is_crash_reported = True
-            return False
         with open(self.tmp_result, 'r') as f:
             content = f.read()
         tap = pytap13.TAP13()
