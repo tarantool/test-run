@@ -294,7 +294,7 @@ class TarantoolServer(Server):
 
     @property
     def script_dst(self):
-        return os.path.join(self.vardir, os.path.basename(self.script))
+        return os.path.join(self.vardir, self.name + '.lua')
 
     @property
     def logfile_pos(self):
@@ -319,7 +319,8 @@ class TarantoolServer(Server):
                 delattr(self, '_script')
             return
         self._script = os.path.abspath(val)
-        self.name = os.path.basename(self._script).split('.')[0]
+	if self.name == 'default' :
+	    self.name = os.path.basename(self._script).split('.')[0]
 
     @property
     def _admin(self):
@@ -565,7 +566,7 @@ class TarantoolServer(Server):
                         self.vardir)
 
     def prepare_args(self, args=[]):
-        return [self.ctl_path, 'start', os.path.basename(self.script)] + args
+        return [self.ctl_path, 'start', self.name + '.lua'] + args
 
     def pretest_clean(self):
         # Don't delete snap and logs for 'default' tarantool server
