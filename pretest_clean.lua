@@ -221,6 +221,11 @@ local function clean()
         'box.space._func:count() should be only one')
     assert(box.space._cluster:count() == 1,
         'box.space._cluster:count() should be only one')
+
+    -- Ensure all traces of a previous test are gone: open
+    -- iterators and so on. They can affect statistics counters
+    -- that may be important for a test.
+    collectgarbage()
 end
 
 return {
