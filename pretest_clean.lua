@@ -160,6 +160,7 @@ local function clean()
         crypto = true,
         csv = true,
         debug = true,
+        decimal = true,
         digest = true,
         errno = true,
         ffi = true,
