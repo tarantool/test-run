@@ -30,9 +30,9 @@ Field `core` must be one of:
 
 ### Test
 
-Each test consists of files `*.test(.lua|.py)?`, `*.result`, and may have skip
-condition file `*.skipcond`.  On first run (without `.result`) `.result` is
-generated from output.  Each run, in the beggining, `.skipcond` file is
+Each test consists of files `*.test(.lua|.sql|.py)?`, `*.result`, and may have
+skip condition file `*.skipcond`.  On first run (without `.result`) `.result`
+is generated from output.  Each run, in the beggining, `.skipcond` file is
 executed. In the local env there's object `self`, that's `Test` object. If test
 must be skipped - you must put `self.skip = 1` in this file. Next,
 `.test(.lua|.py)?` is executed and file `.reject` is created, then `.reject` is
@@ -67,6 +67,11 @@ engine = test_run:get_cfg('engine')
 -- first run engine is 'memtx'
 -- second run engine is 'sophia'
 ```
+
+"engine" value has a special meaning for *.test.sql files: if it is "memtx" or
+"vinyl", then the corresponding engine will be set using "pragma
+sql_default_engine='memtx|vinyl'" command before executing commands from a test
+file.
 
 #### Python
 
@@ -233,6 +238,21 @@ test
 - 'function: 0x40e533b8'
 ...
 ```
+
+It is possible to use backslash at and of a line to carry it.
+
+```lua
+function echo(...) \
+    return ...     \
+end
+```
+
+#### SQL
+
+*.test.sql files are just SQL statements written line-by-line.
+
+It is possible to mix SQL and Lua commands using `\set language lua` and `\set
+language sql` commands.
 
 ##### Interaction with the test environment
 

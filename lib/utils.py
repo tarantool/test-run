@@ -252,3 +252,9 @@ def print_unidiff(filepath_a, filepath_b):
                                 time_a,
                                 time_b)
     color_stdout.writeout_unidiff(diff)
+
+
+def prefix_each_line(prefix, data):
+    data = data.rstrip('\n')
+    lines = [(line + '\n') for line in data.split('\n')]
+    return prefix + prefix.join(lines)

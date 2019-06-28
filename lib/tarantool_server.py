@@ -31,6 +31,7 @@ from lib.utils import find_port
 from lib.utils import format_process
 from lib.utils import signame
 from lib.utils import warn_unix_socket
+from lib.utils import prefix_each_line
 from test import TestRunGreenlet, TestExecutionError
 
 
@@ -51,51 +52,246 @@ def save_join(green_obj, timeout=None):
 
 
 class LuaTest(Test):
+    """ Handle *.test.lua and *.test.sql test files. """
+
     TIMEOUT = 60 * 10
+    RESULT_FILE_VERSION_INITIAL = 1
+    RESULT_FILE_VERSION_DEFAULT = 2
+    RESULT_FILE_VERSION_LINE_RE = re.compile(
+        r'^-- test-run result file version (?P<version>\d+)$')
+    RESULT_FILE_VERSION_TEMPLATE = '-- test-run result file version {}'
+
+    def __init__(self, *args, **kwargs):
+        super(LuaTest, self).__init__(*args, **kwargs)
+        if self.name.endswith('.test.lua'):
+            self.default_language = 'lua'
+        else:
+            assert self.name.endswith('.test.sql')
+            self.default_language = 'sql'
+        self.result_file_version = self.result_file_version()
+
+    def result_file_version(self):
+        """ If a result file is not exists, return a default
+            version (last known by test-run).
+            If it exists, but does not contain a valid result file
+            header, return 1.
+            If it contains a version, return the version.
+        """
+        if not os.path.isfile(self.result):
+            return self.RESULT_FILE_VERSION_DEFAULT
+
+        with open(self.result, 'r') as f:
+            line = f.readline().rstrip('\n')
+
+            # An empty line or EOF.
+            if not line:
+                return self.RESULT_FILE_VERSION_INITIAL
+
+            # No result file header.
+            m = self.RESULT_FILE_VERSION_LINE_RE.match(line)
+            if not m:
+                return self.RESULT_FILE_VERSION_INITIAL
+
+            # A version should be integer.
+            try:
+                return int(m.group('version'))
+            except ValueError:
+                return self.RESULT_FILE_VERSION_INITIAL
+
+    def write_result_file_version_line(self):
+        # The initial version of a result file does not have a
+        # version line.
+        if self.result_file_version < 2:
+            return
+        sys.stdout.write(self.RESULT_FILE_VERSION_TEMPLATE.format(
+                         self.result_file_version) + '\n')
+
+    def execute_pretest_clean(self, ts):
+        """ Clean globals, loaded packages, spaces, users, roles
+            and so on before each test if the option is set.
+
+            Return True as success (or if this feature is disabled
+            in suite.ini) and False in case of an error.
+        """
+        if not self.suite_ini['pretest_clean']:
+            return True
+
+        command = "require('pretest_clean').clean()"
+        result = self.send_command(command, ts, 'lua')
+        result = result.replace('\r\n', '\n')
+        if result != '---\n...\n':
+            sys.stdout.write(result)
+            return False
+
+        return True
+
+    def execute_pragma_sql_default_engine(self, ts):
+        """ Set default engine for an SQL test if it is provided
+            in a configuration.
+
+            Return True if the command is successful or when it is
+            not performed, otherwise (when got an unexpected
+            result for the command) return False.
+        """
+        # Pass the command only for *.test.sql test files, because
+        # hence we sure tarantool supports SQL.
+        if self.default_language != 'sql':
+            return True
+
+        # Skip if no 'memtx' or 'vinyl' engine is provided.
+        ok = self.run_params and 'engine' in self.run_params and \
+            self.run_params['engine'] in ('memtx', 'vinyl')
+        if not ok:
+            return True
+
+        engine = self.run_params['engine']
+        command = "pragma sql_default_engine='{}'".format(engine)
+        result = self.send_command(command, ts, 'sql')
+        result = result.replace('\r\n', '\n')
+        if result != '---\n- row_count: 0\n...\n':
+            sys.stdout.write(result)
+            return False
+
+        return True
+
+    def set_language(self, ts, language):
+        for conn in ts.curcon:
+            conn(r'\set language ' + language, silent=True)
+
+    def send_command(self, command, ts, language=None):
+        if language:
+            self.set_language(ts, language)
+        result = ts.curcon[0](command, silent=True)
+        for conn in ts.curcon[1:]:
+            conn(command, silent=True)
+        # gh-24 fix
+        if result is None:
+            result = '[Lost current connection]\n'
+        return result
+
+    def flush(self, ts, command_log, command_exe):
+        # Write a command to a result file.
+        command = command_log.getvalue()
+        sys.stdout.write(command)
+
+        # Drop a previous command.
+        command_log.seek(0)
+        command_log.truncate()
+
+        if not command_exe:
+            return
+
+        # Send a command to tarantool console.
+        result = self.send_command(command_exe.getvalue(), ts)
+
+        # Convert and prettify a command result.
+        result = result.replace('\r\n', '\n')
+        if self.result_file_version >= 2:
+            result = prefix_each_line(' | ', result)
+
+        # Write a result of the command to a result file.
+        sys.stdout.write(result)
+
+        # Drop a previous command.
+        command_exe.seek(0)
+        command_exe.truncate()
 
     def exec_loop(self, ts):
-        cmd = None
+        self.write_result_file_version_line()
+        if not self.execute_pretest_clean(ts):
+            return
+        if not self.execute_pragma_sql_default_engine(ts):
+            return
 
-        def send_command(command):
-            result = ts.curcon[0](command, silent=True)
-            for conn in ts.curcon[1:]:
-                conn(command, silent=True)
-            # gh-24 fix
-            if result is None:
-                result = '[Lost current connection]\n'
-            return result
+        # Set default language for the test.
+        self.set_language(ts, self.default_language)
 
-        if self.suite_ini['pretest_clean']:
-            result = send_command("require('pretest_clean').clean()") \
-                .replace("\r\n", "\n")
-            if result != '---\n...\n':
-                sys.stdout.write(result)
-                return
+        # Use two buffers: one to commands that are logged in a
+        # result file and another that contains commands that
+        # actually executed on a tarantool console.
+        command_log = StringIO()
+        command_exe = StringIO()
+
+        # A newline from a source that is not end of a command is
+        # replaced with the following symbols.
+        newline_log = '\n'
+        newline_exe = ' '
+
+        # A backslash from a source is replaced with the following
+        # symbols.
+        backslash_log = '\\'
+        backslash_exe = ''
+
+        # A newline that marks end of a command is replaced with
+        # the following symbols.
+        eoc_log = '\n'
+        eoc_exe = '\n'
 
         for line in open(self.name, 'r'):
-            if not line.endswith('\n'):
-                line += '\n'
-            # context switch for inspector after each line
-            if not cmd:
-                cmd = StringIO()
-            if line.find('--') == 0:
-                sys.stdout.write(line)
-            else:
-                if line.strip() or cmd.getvalue():
-                    cmd.write(line)
-                delim_len = -len(ts.delimiter) if len(ts.delimiter) else None
-                end_line = line.endswith(ts.delimiter + '\n')
-                cmd_value = cmd.getvalue().strip()[:delim_len].strip()
-                if end_line and cmd_value:
-                    sys.stdout.write(cmd.getvalue())
-                    rescom = cmd.getvalue()[:delim_len].replace('\n\n', '\n')
-                    result = send_command(rescom)
-                    sys.stdout.write(result.replace("\r\n", "\n"))
-                    cmd.close()
-                    cmd = None
-            # join inspector handler
+            # Normalize a line.
+            line = line.rstrip('\n')
+
+            # Show empty lines / comments in a result file, but
+            # don't send them to tarantool.
+            line_is_empty = line.strip() == ''
+            if line_is_empty or line.find('--') == 0:
+                if self.result_file_version >= 2:
+                    command_log.write(line + eoc_log)
+                    self.flush(ts, command_log, None)
+                elif line_is_empty:
+                    # Compatibility mode: don't add empty lines to
+                    # a result file in except when a delimiter is
+                    # set.
+                    if command_log.getvalue():
+                        command_log.write(eoc_log)
+                else:
+                    # Compatibility mode: write a comment and only
+                    # then a command before it when a delimiter is
+                    # set.
+                    sys.stdout.write(line + eoc_log)
+                self.inspector.sem.wait()
+                continue
+
+            # A delimiter is set and found at end of the line:
+            # send the command.
+            if ts.delimiter and line.endswith(ts.delimiter):
+                delimiter_len = len(ts.delimiter)
+                command_log.write(line + eoc_log)
+                command_exe.write(line[:-delimiter_len] + eoc_exe)
+                self.flush(ts, command_log, command_exe)
+                self.inspector.sem.wait()
+                continue
+
+            # A backslash found at end of the line: continue
+            # collecting input. Send / log a backslash as is when
+            # it is inside a block with set delimiter.
+            if line.endswith('\\') and not ts.delimiter:
+                command_log.write(line[:-1] + backslash_log + newline_log)
+                command_exe.write(line[:-1] + backslash_exe + newline_exe)
+                self.inspector.sem.wait()
+                continue
+
+            # A delimiter is set, but not found at the end of the
+            # line: continue collecting input.
+            if ts.delimiter:
+                command_log.write(line + newline_log)
+                command_exe.write(line + newline_exe)
+                self.inspector.sem.wait()
+                continue
+
+            # A delimiter is not set, backslash is not found at
+            # end of the line: send the command.
+            command_log.write(line + eoc_log)
+            command_exe.write(line + eoc_exe)
+            self.flush(ts, command_log, command_exe)
             self.inspector.sem.wait()
-        # stop any servers created by the test, except the default one
+
+        # Free StringIO() buffers.
+        command_log.close()
+        command_exe.close()
+
+        # Stop any servers created by the test, except the default
+        # one.
         ts.stop_nondefault()
 
     def killall_servers(self, server, ts, crash_occured):
@@ -167,6 +363,8 @@ class LuaTest(Test):
 
 
 class PythonTest(Test):
+    """ Handle *.test.py test files. """
+
     def execute(self, server):
         super(PythonTest, self).execute(server)
         execfile(self.name, dict(locals(), test_run_current_test=self,
@@ -872,13 +1070,21 @@ class TarantoolServer(Server):
     def find_tests(test_suite, suite_path):
         test_suite.ini['suite'] = suite_path
 
-        def get_tests(pattern):
-            return sorted(glob.glob(os.path.join(suite_path, pattern)))
+        def get_tests(*patterns):
+            res = []
+            for pattern in patterns:
+                path_pattern = os.path.join(suite_path, pattern)
+                res.extend(sorted(glob.glob(path_pattern)))
+            return res
 
+        # Add Python tests.
         tests = [PythonTest(k, test_suite.args, test_suite.ini)
                  for k in get_tests("*.test.py")]
 
-        for k in get_tests("*.test.lua"):
+        # Add Lua and SQL tests. One test can appear several times
+        # with different configuration names (as configured in a
+        # file set by 'config' suite.ini option, usually *.cfg).
+        for k in get_tests("*.test.lua", "*.test.sql"):
             runs = test_suite.get_multirun_params(k)
 
             def is_correct(run_name):

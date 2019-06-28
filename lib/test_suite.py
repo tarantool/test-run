@@ -174,6 +174,7 @@ class TestSuite:
         inspector.start()
         # fixme: remove this string if we fix all legacy tests
         suite_name = os.path.basename(self.suite_path)
+        # Set 'lua' type for *.test.lua and *.test.sql test files.
         server.tests_type = 'python' if suite_name.endswith('-py') else 'lua'
         server.deploy(silent=False)
         return inspector

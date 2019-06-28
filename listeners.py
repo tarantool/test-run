@@ -10,6 +10,7 @@ from lib.worker import WorkerDone
 from lib.worker import WorkerOutput
 from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
+from lib.utils import prefix_each_line
 
 
 class BaseWatcher(object):
@@ -116,10 +117,7 @@ class OutputWatcher(BaseWatcher):
     def add_prefix(output, worker_id):
         prefix_max_len = len('[xxx] ')
         prefix = ('[%03d] ' % worker_id).ljust(prefix_max_len)
-        output = output.rstrip('\n')
-        lines = [(line + '\n') for line in output.split('\n')]
-        output = prefix + prefix.join(lines)
-        return output
+        return prefix_each_line(prefix, output)
 
     @staticmethod
     def _write(output, worker_id):
