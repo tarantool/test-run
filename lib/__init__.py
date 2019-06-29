@@ -7,8 +7,6 @@ from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
 from utils import warn_unix_sockets_at_start
 
-from lib.colorer import color_stdout
-
 
 __all__ = ['Options']
 

@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE, STDOUT
 from lib.server import Server
 from lib.tarantool_server import Test
 
+
 class UnitTest(Test):
     def __init__(self, *args, **kwargs):
         Test.__init__(self, *args, **kwargs)
@@ -17,6 +18,7 @@ class UnitTest(Test):
         proc = Popen(execs, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
         sys.stdout.write(proc.communicate()[0])
 
+
 class UnittestServer(Server):
     """A dummy server implementation for unit test suite"""
     def __new__(cls, ini=None, *args, **kwargs):
@@ -26,9 +28,8 @@ class UnittestServer(Server):
     def __init__(self, _ini=None, test_suite=None):
         if _ini is None:
             _ini = {}
-        ini = {
-            'vardir': None,
-        }; ini.update(_ini)
+        ini = {'vardir': None}
+        ini.update(_ini)
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
@@ -45,7 +46,9 @@ class UnittestServer(Server):
         return UnittestServer.prepare_args(self)[0]
 
     def prepare_args(self, args=[]):
-        return [os.path.join(self.builddir, "test", self.current_test.name)] + args
+        executable_path = os.path.join(self.builddir, "test",
+                                       self.current_test.name)
+        return [executable_path] + args
 
     def deploy(self, vardir=None, silent=True, wait=True):
         self.vardir = vardir
@@ -66,12 +69,16 @@ class UnittestServer(Server):
             return answer
 
         test_suite.ini['suite'] = suite_path
-        tests = glob.glob(os.path.join(suite_path, "*.test" ))
+        tests = glob.glob(os.path.join(suite_path, "*.test"))
 
         if not tests:
-            tests = glob.glob(os.path.join(test_suite.args.builddir, 'test', suite_path, '*.test'))
-        test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini) for k in sorted(tests)]
-        test_suite.tests = sum([patterned(x, test_suite.args.tests) for x in test_suite.tests], [])
+            executable_path_glob = os.path.join(test_suite.args.builddir,
+                                                'test', suite_path, '*.test')
+            tests = glob.glob(executable_path_glob)
+        test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini)
+                            for k in sorted(tests)]
+        test_suite.tests = sum([patterned(x, test_suite.args.tests)
+                                for x in test_suite.tests], [])
 
     def print_log(self, lines):
         pass

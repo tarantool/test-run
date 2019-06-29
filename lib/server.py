@@ -125,7 +125,8 @@ class Server(object):
         pass
 
     def print_log(self, lines=None):
-        msg = '\n{prefix} of Tarantool Log file [Instance "{instance}"][{logfile}]:\n'.format(
+        msg = ('\n{prefix} of Tarantool Log file [Instance "{instance}"]' +
+               '[{logfile}]:\n').format(
             prefix="Last {0} lines".format(lines) if lines else "Output",
             instance=self.name,
             logfile=self.logfile or 'null')

@@ -26,7 +26,8 @@ class LuaPreprocessorException(Exception):
 
 
 class TestState(object):
-    def __init__(self, suite_ini, default_server, create_server, params={}, **kwargs):
+    def __init__(self, suite_ini, default_server, create_server, params={},
+                 **kwargs):
         self.delimiter = ''
         self.suite_ini = suite_ini
         self.environ = Namespace()
@@ -44,7 +45,8 @@ class TestState(object):
             setattr(nmsp, 'listen', default_server.iproto.uri)
             setattr(self.environ, 'default', nmsp)
         # for propagating 'current_test' to non-default servers
-        self.default_server_no_connect = kwargs.get('default_server_no_connect')
+        self.default_server_no_connect = kwargs.get(
+            'default_server_no_connect')
 
     def parse_preprocessor(self, string):
         token_store = deque()
@@ -56,10 +58,12 @@ class TestState(object):
         if token == 'setopt':
             option = lexer.get_token()
             if not option:
-                raise LuaPreprocessorException("Wrong token for setopt: expected option name")
+                raise LuaPreprocessorException(
+                    "Wrong token for setopt: expected option name")
             value = lexer.get_token()
             if not value:
-                raise LuaPreprocessorException("Wrong token for setopt: expected option value")
+                raise LuaPreprocessorException(
+                    "Wrong token for setopt: expected option value")
             return self.options(option, value)
         elif token == 'eval':
             name = lexer.get_token()
@@ -79,7 +83,8 @@ class TestState(object):
             stype = token_store.popleft()
             sname = lexer.get_token()
             if not sname:
-                raise LuaPreprocessorException("Wrong token for server: expected name")
+                raise LuaPreprocessorException(
+                    "Wrong token for server: expected name")
             options = {}
             temp = lexer.get_token()
             if not temp:
@@ -95,13 +100,16 @@ class TestState(object):
                     options[k] = v
                     lexer.get_token()
             else:
-                raise LuaPreprocessorException("Wrong token for server: expected 'with', got {0}".format(repr(temp)))
+                raise LuaPreprocessorException(
+                    "Wrong token for server: expected 'with', got {0}".format(
+                        repr(temp)))
             return self.server(stype, sname, options)
         elif token == 'connection':
             ctype = token_store.popleft()
             cname = [lexer.get_token()]
             if not cname[0]:
-                raise LuaPreprocessorException("Wrong token for connection: expected name")
+                raise LuaPreprocessorException(
+                    "Wrong token for connection: expected name")
             cargs = None
             temp = lexer.get_token()
             if temp == 'to':
@@ -115,7 +123,9 @@ class TestState(object):
                         continue
                     cname.append(a)
             elif temp:
-                raise LuaPreprocessorException("Wrong token for server: expected 'to' or ',', got {0}".format(repr(temp)))
+                raise LuaPreprocessorException(
+                    ("Wrong token for server: expected 'to' or ',', " +
+                     "got {0}").format(repr(temp)))
             return self.connection(ctype, cname, cargs)
         elif token == 'filter':
             ftype = token_store.popleft()
@@ -125,12 +135,16 @@ class TestState(object):
             if temp:
                 ref = temp
                 if not temp:
-                    raise LuaPreprocessorException("Wrong token for filter: expected filter1")
+                    raise LuaPreprocessorException(
+                        "Wrong token for filter: expected filter1")
                 if lexer.get_token() != 'to':
-                    raise LuaPreprocessorException("Wrong token for filter: expected 'to', got {0}".format(repr(temp)))
+                    raise LuaPreprocessorException(
+                        ("Wrong token for filter: expected 'to', " +
+                         "got {0}").format(repr(temp)))
                 temp = lexer.get_token()
                 if not temp:
-                    raise LuaPreprocessorException("Wrong token for filter: expected filter2")
+                    raise LuaPreprocessorException(
+                        "Wrong token for filter: expected filter2")
                 ret = temp
             return self.filter(ftype, ref, ret)
         elif token == 'variable':
@@ -138,24 +152,29 @@ class TestState(object):
             ref = lexer.get_token()
             temp = lexer.get_token()
             if temp != 'to':
-                raise LuaPreprocessorException("Wrong token for filter: exptected 'to', got {0}".format(repr(temp)))
+                raise LuaPreprocessorException(
+                    "Wrong token for filter: exptected 'to', got {0}".format(
+                        repr(temp)))
             ret = lexer.get_token()
             return self.variable(ftype, ref, ret)
         else:
-            raise LuaPreprocessorException("Wrong command: {0}".format(repr(lexer.instream.getvalue())))
+            raise LuaPreprocessorException(
+                "Wrong command: {0}".format(repr(lexer.instream.getvalue())))
 
     def options(self, key, value):
         if key == 'delimiter':
             self.delimiter = value[1:-1]
         else:
-            raise LuaPreprocessorException("Wrong option: {0}".format(repr(key)))
+            raise LuaPreprocessorException(
+                "Wrong option: {0}".format(repr(key)))
 
     def server_start(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_start(%s, %s, %s)\n' % (
             hex(id(self)), str(ctype), str(sname), str(opts)),
             schema='test_var')
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t start nonexistent server {0}'.format(repr(sname)))
+            raise LuaPreprocessorException(
+                'Can\'t start nonexistent server {0}'.format(repr(sname)))
         wait = True
         if 'wait' in opts and opts['wait'] == 'False':
             wait = False
@@ -185,14 +204,17 @@ class TestState(object):
             try:
                 self.connections[sname]('return true', silent=True)
             except socket.error as e:
-                LuaPreprocessorException('Can\'t start server {0}'.format(repr(sname)))
+                LuaPreprocessorException(
+                    'Can\'t start server {0}'.format(repr(sname)))
         return not crash_occured
 
     def server_stop(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
-            hex(id(self)), str(ctype), str(sname), str(opts)), schema='test_var')
+            hex(id(self)), str(ctype), str(sname), str(opts)),
+            schema='test_var')
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t stop nonexistent server {0}'.format(repr(sname)))
+            raise LuaPreprocessorException(
+                'Can\'t stop nonexistent server {0}'.format(repr(sname)))
         self.connections[sname].disconnect()
         self.connections.pop(sname)
         if 'signal' in opts:
@@ -212,7 +234,8 @@ class TestState(object):
             hex(id(self)), str(ctype), str(sname), str(opts)),
             schema='test_var')
         if sname in self.servers:
-            raise LuaPreprocessorException('Server {0} already exists'.format(repr(sname)))
+            raise LuaPreprocessorException(
+                'Server {0} already exists'.format(repr(sname)))
         temp = self.create_server()
         temp.name = sname
         if 'need_init' in opts:
@@ -226,7 +249,8 @@ class TestState(object):
             temp.rpl_master = self.servers[opts['rpl_master']]
         temp.vardir = self.suite_ini['vardir']
         temp.use_unix_sockets = self.suite_ini['use_unix_sockets']
-        temp.use_unix_sockets_iproto = self.suite_ini['use_unix_sockets_iproto']
+        temp.use_unix_sockets_iproto = \
+            self.suite_ini['use_unix_sockets_iproto']
         temp.inspector_port = int(self.suite_ini.get(
             'inspector_port', temp.DEFAULT_INSPECTOR
         ))
@@ -261,7 +285,8 @@ class TestState(object):
 
     def server_cleanup(self, ctype, sname, opts):
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t cleanup nonexistent server {0}'.format(repr(sname)))
+            raise LuaPreprocessorException(
+                'Can\'t cleanup nonexistent server {0}'.format(repr(sname)))
         self.servers[sname].cleanup()
         if sname != 'default':
             if hasattr(self.environ, sname):
@@ -271,7 +296,8 @@ class TestState(object):
 
     def server_delete(self, ctype, sname, opts):
         if sname not in self.servers:
-            raise LuaPreprocessorException('Can\'t cleanup nonexistent server {0}'.format(repr(sname)))
+            raise LuaPreprocessorException(
+                'Can\'t cleanup nonexistent server {0}'.format(repr(sname)))
         self.servers[sname].cleanup()
         if sname != 'default':
             if hasattr(self.environ, sname):
@@ -320,23 +346,32 @@ class TestState(object):
         cname = cnames[0]
         if ctype == 'create':
             if sname not in self.servers:
-                raise LuaPreprocessorException('Can\'t create connection to nonexistent server {0}'.format(repr(sname)))
+                raise LuaPreprocessorException(
+                    ('Can\'t create connection to nonexistent server ' +
+                     '{0}').format(repr(sname)))
             if cname in self.connections:
-                raise LuaPreprocessorException('Connection {0} already exists'.format(repr(cname)))
-            self.connections[cname] = AdminAsyncConnection('localhost', self.servers[sname].admin.port)
+                raise LuaPreprocessorException(
+                    'Connection {0} already exists'.format(repr(cname)))
+            self.connections[cname] = AdminAsyncConnection(
+                'localhost', self.servers[sname].admin.port)
             self.connections[cname].connect()
         elif ctype == 'drop':
             if cname not in self.connections:
-                raise LuaPreprocessorException('Can\'t drop nonexistent connection {0}'.format(repr(cname)))
+                raise LuaPreprocessorException(
+                    'Can\'t drop nonexistent connection {0}'.format(
+                        repr(cname)))
             self.connections[cname].disconnect()
             self.connections.pop(cname)
         elif ctype == 'set':
             for i in cnames:
                 if i not in self.connections:
-                    raise LuaPreprocessorException('Can\'t set nonexistent connection {0}'.format(repr(cname)))
+                    raise LuaPreprocessorException(
+                        'Can\'t set nonexistent connection {0}'.format(
+                            repr(cname)))
             self.curcon = [self.connections[i] for i in cnames]
         else:
-            raise LuaPreprocessorException('Unknown command for connection: {0}'.format(repr(ctype)))
+            raise LuaPreprocessorException(
+                'Unknown command for connection: {0}'.format(repr(ctype)))
 
     def filter(self, ctype, ref, ret):
         if ctype == 'push':
@@ -346,7 +381,8 @@ class TestState(object):
         elif ctype == 'clear':
             sys.stdout.clear_all_filters()
         else:
-            raise LuaPreprocessorException("Wrong command for filters: {0}".format(repr(ctype)))
+            raise LuaPreprocessorException(
+                "Wrong command for filters: {0}".format(repr(ctype)))
 
     def lua_eval(self, name, expr, silent=True):
         self.servers[name].admin.reconnect()
@@ -393,8 +429,8 @@ class TestState(object):
                 self.connections.pop(k)
 
     def cleanup_nondefault(self):
-        color_log('\nDEBUG: TestState[%s].cleanup_nondefault()\n' % hex(id(self)),
-                  schema='test_var')
+        color_log('\nDEBUG: TestState[%s].cleanup_nondefault()\n' %
+                  hex(id(self)), schema='test_var')
         for k, v in self.servers.iteritems():
             # don't cleanup the default server
             if k == 'default':

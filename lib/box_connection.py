@@ -20,29 +20,29 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-import os
-import sys
+
 import errno
 import ctypes
 import socket
-import struct
-import warnings
 
 from tarantool_connection import TarantoolConnection
 
-#monkey patch tarantool and msgpack
+# monkey patch tarantool and msgpack
 from lib.utils import check_libs
 check_libs()
 
-from tarantool import Connection as tnt_connection
-from tarantool import Schema
+from tarantool import Connection as tnt_connection  # noqa: E402
+from tarantool import Schema                        # noqa: E402
+
 
 SEPARATOR = '\n'
+
 
 class BoxConnection(TarantoolConnection):
     def __init__(self, host, port):
         super(BoxConnection, self).__init__(host, port)
-        self.py_con = tnt_connection(host, port, connect_now=False, socket_timeout=100)
+        self.py_con = tnt_connection(host, port, connect_now=False,
+                                     socket_timeout=100)
         self.py_con.error = False
         self.sort = False
 
@@ -64,10 +64,8 @@ class BoxConnection(TarantoolConnection):
         self.py_con.schema = Schema(schemadict)
 
     def check_connection(self):
-        rc = self.py_con._sys_recv(
-            self.py_con._socket.fileno(), '  ', 1,
-            socket.MSG_DONTWAIT | socket.MSG_PEEK
-        )
+        self.py_con._sys_recv(self.py_con._socket.fileno(), '  ', 1,
+                              socket.MSG_DONTWAIT | socket.MSG_PEEK)
         if ctypes.get_errno() == errno.EAGAIN:
             ctypes.set_errno(0)
             return True
@@ -80,7 +78,6 @@ class BoxConnection(TarantoolConnection):
             print command
         cmd = command.replace(SEPARATOR, ' ') + SEPARATOR
         response = self.py_con.call(cmd)
-        result = str(response)
         if not silent:
             print response
         return response
