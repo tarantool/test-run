@@ -906,7 +906,8 @@ class TarantoolServer(Server):
 
     def get_param(self, param=None):
         if param is not None:
-            return yaml.safe_load(self.admin("box.info." + param, silent=True))[0]
+            return yaml.safe_load(self.admin("box.info." + param,
+                                  silent=True))[0]
         return yaml.safe_load(self.admin("box.info", silent=True))
 
     def get_lsn(self, node_id):

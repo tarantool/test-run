@@ -32,114 +32,115 @@ class Options:
         """Add all program options, with their defaults."""
 
         parser = argparse.ArgumentParser(
-                description = "Tarantool regression test suite front-end.")
+            description="Tarantool regression test suite front-end.")
 
-        parser.epilog = "For a complete description, use 'pydoc ./" +\
-                os.path.basename(sys.argv[0]) + "'"
+        parser.epilog = "For a complete description, use 'pydoc ./" + \
+            os.path.basename(sys.argv[0]) + "'"
 
         parser.add_argument(
                 "tests",
                 metavar="test",
                 nargs="*",
-                default = env_list('TEST_RUN_TESTS', ['']),
-                help="""Can be empty. List of test names, to look for in suites. Each
-                name is used as a substring to look for in the path to test file,
-                e.g. "show" will run all tests that have "show" in their name in all
-                suites, "box/show" will only enable tests starting with "show" in
-                "box" suite. Default: run all tests in all specified suites.""")
+                default=env_list('TEST_RUN_TESTS', ['']),
+                help="""Can be empty. List of test names, to look for in
+                suites. Each name is used as a substring to look for in the
+                path to test file, e.g. "show" will run all tests that have
+                "show" in their name in all suites, "box/show" will only enable
+                tests starting with "show" in "box" suite. Default: run all
+                tests in all specified suites.""")
 
         parser.add_argument(
                 "--suite",
-                dest = 'suites',
-                metavar = "suite",
+                dest='suites',
+                metavar="suite",
                 nargs="*",
-                default = [],
-                help = """List of test suites to look for tests in. Default: "" -
+                default=[],
+                help="""List of test suites to look for tests in. Default: "" -
                 means find all available.""")
 
         parser.add_argument(
                 "--verbose",
-                dest = 'is_verbose',
-                action = "store_true",
-                default = False,
-                help = """Print TAP13 test output to log.
+                dest='is_verbose',
+                action="store_true",
+                default=False,
+                help="""Print TAP13 test output to log.
                 Default: false.""")
 
         parser.add_argument(
                 "--force",
-                dest = "is_force",
-                action = "store_true",
-                default = False,
-                help = """Go on with other tests in case of an individual test failure.
+                dest="is_force",
+                action="store_true",
+                default=False,
+                help="""Go on with other tests in case of an individual test failure.
                 Default: false.""")
 
         parser.add_argument(
                 "--gdb",
-                dest = "gdb",
-                action = "store_true",
-                default = False,
-                help = """Start the server under 'gdb' debugger in detached
+                dest="gdb",
+                action="store_true",
+                default=False,
+                help="""Start the server under 'gdb' debugger in detached
                 Screen. This option is mutually exclusive with --valgrind,
                 --gdbserver, --lldb and --strace.
                 Default: false.""")
 
         parser.add_argument(
                 "--gdbserver",
-                dest = "gdbserver",
-                action = "store_true",
-                default = False,
-                help = """Start the server under 'gdbserver'. This option is
+                dest="gdbserver",
+                action="store_true",
+                default=False,
+                help="""Start the server under 'gdbserver'. This option is
                 mutually exclusive with --valgrind, --gdb, --lldb and --strace.
                 Default: false.""")
 
         parser.add_argument(
                 "--lldb",
-                dest = "lldb",
-                action = "store_true",
-                default = False,
-                help = """Start the server under 'lldb' debugger in detached
+                dest="lldb",
+                action="store_true",
+                default=False,
+                help="""Start the server under 'lldb' debugger in detached
                 Screen. This option is mutually exclusive with --valgrind,
                 --gdb, --gdbserver and --strace.
                 Default: false.""")
 
         parser.add_argument(
                 "--valgrind",
-                dest = "valgrind",
-                action = "store_true",
-                default = False,
-                help = """Run the server under 'valgrind'. This option is
+                dest="valgrind",
+                action="store_true",
+                default=False,
+                help="""Run the server under 'valgrind'. This option is
                 mutually exclusive with --gdb, --gdbserver, --lldb and
                 --strace.
                 Default: false.""")
 
         parser.add_argument(
                 "--strace",
-                dest = "strace",
-                action = "store_true",
-                default = False,
-                help = """Run the server under 'strace'. This option is mutually
+                dest="strace",
+                action="store_true",
+                default=False,
+                help="""Run the server under 'strace'. This option is mutually
                 exclusive with --valgrind, --gdb, --gdbserver, --lldb and
                 --strace.
                 Default: false.""")
 
         parser.add_argument(
                 "--builddir",
-                dest = "builddir",
-                default = "..",
-                help = """Path to project build directory. Default: ".." """)
+                dest="builddir",
+                default="..",
+                help="""Path to project build directory. Default: ".." """)
 
         parser.add_argument(
                 "--tarantool-port",
-                dest = "tarantool_port",
-                default = None,
-                help = """Listen port number to run tests against. Admin port
+                dest="tarantool_port",
+                default=None,
+                help="""Listen port number to run tests against. Admin port
                 number must be listen + 1""")
 
         parser.add_argument(
                 "--vardir",
-                dest = "vardir",
-                default = "var",
-                help = """Path to data directory. Default: var.""")
+                dest="vardir",
+                default="var",
+                help="""Path to data directory. Default: var.""")
         parser.add_argument(
                "--long",
                dest="long",
@@ -185,10 +186,10 @@ class Options:
 
         parser.add_argument(
                 "--luacov",
-                dest = "luacov",
-                action = "store_true",
-                default = False,
-                help = """Run the server under 'luacov'.
+                dest="luacov",
+                action="store_true",
+                default=False,
+                help="""Run the server under 'luacov'.
                 Default: false.""")
 
         self.args = parser.parse_args()

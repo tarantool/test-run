@@ -3,7 +3,7 @@ import logging
 import gevent
 try:
     from gevent.lock import BoundedSemaphore
-except:
+except ImportError:
     from gevent.coros import BoundedSemaphore  # before gevent-1.0
 from gevent import socket
 from collections import deque
@@ -101,7 +101,7 @@ class ConnectionPool(object):
             greenlet = TestRunGreenlet(self._addOne)
             greenlet.start_later(1)
             raise
-        except:
+        except:  # noqa: E722
             self.conn.append(c)
             self.lock.release()
             raise

@@ -304,7 +304,6 @@ class Dispatcher:
     def flush_ready(self, inputs):
         """Write output from workers to stdout."""
         # leave only output listeners in self.listeners
-        save_listeners = self.listeners
         new_listeners = []
         for listener in self.listeners:
             if isinstance(listener, (listeners.LogOutputWatcher,

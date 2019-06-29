@@ -89,7 +89,7 @@ class FilteredStream:
 
 
 def get_filename_by_test(postfix, test_name):
-    rg = re.compile('\.test.*')
+    rg = re.compile(r'\.test.*')
     return os.path.basename(rg.sub(postfix, test_name))
 
 

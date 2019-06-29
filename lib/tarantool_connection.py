@@ -89,7 +89,7 @@ class TarantoolPool(ConnectionPool):
             greenlet = TestRunGreenlet(self._addOne)
             greenlet.start_later(1)
             raise
-        except:
+        except:  # noqa: E722
             self.conn.append(c)
             self.lock.release()
             raise
@@ -99,6 +99,7 @@ class TarantoolPool(ConnectionPool):
 
     def close_all(self):
         self.conn.clear()
+
 
 class TarantoolConnection(object):
     @property
@@ -138,9 +139,11 @@ class TarantoolConnection(object):
 
     def opt_reconnect(self):
         """ On a socket which was disconnected, recv of 0 bytes immediately
-            returns with no data. On a socket which is alive, it returns EAGAIN.
-            Make use of this property and detect whether or not the socket is
-            dead. Reconnect a dead socket, do nothing if the socket is good."""
+            returns with no data. On a socket which is alive, it returns
+            EAGAIN. Make use of this property and detect whether or not the
+            socket is dead. Reconnect a dead socket, do nothing if the socket
+            is good.
+        """
         try:
             if not self.is_connected or self.socket.recv(
                     1, socket.MSG_DONTWAIT | socket.MSG_PEEK) == '':
@@ -168,6 +171,7 @@ class TarantoolConnection(object):
     def __call__(self, command, silent=False, simple=False):
         return self.execute(command, silent)
 
+
 class TarantoolAsyncConnection(TarantoolConnection):
     pool = TarantoolPool
 
@@ -194,4 +198,3 @@ class TarantoolAsyncConnection(TarantoolConnection):
 
     def execute(self, command, silent=True):
         return self.execute_no_reconnect(command, silent)
-

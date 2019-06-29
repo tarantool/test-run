@@ -21,7 +21,6 @@ UNIX_SOCKET_LEN_LIMIT = 107
 
 
 def check_libs():
-
     deps = [
         ('msgpack', 'msgpack-python'),
         ('tarantool', 'tarantool-python')
@@ -37,9 +36,11 @@ def check_libs():
         try:
             __import__(mod_name)
         except ImportError as e:
-            color_stdout("\n\nNo %s library found\n" % mod_name, schema='error')
+            color_stdout("\n\nNo %s library found\n" % mod_name,
+                         schema='error')
             print(e)
             sys.exit(1)
+
 
 def non_empty_valgrind_logs(paths_to_log):
     """ Check that there were no warnings in the log."""
@@ -49,8 +50,11 @@ def non_empty_valgrind_logs(paths_to_log):
             non_empty_logs.append(path_to_log)
     return non_empty_logs
 
+
 def print_tail_n(filename, num_lines=None):
-    """Print N last lines of a file. If num_lines is not set, prints the whole file"""
+    """ Print N last lines of a file. If num_lines is not set,
+    prints the whole file.
+    """
     with open(filename, "r") as logfile:
         tail_n = collections.deque(logfile, num_lines)
         for line in tail_n:
@@ -76,7 +80,7 @@ def check_port(port, rais=True, ipv4=True, ipv6=True):
         else:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(port)
-    except socket.error as e:
+    except socket.error:
         if rais:
             raise RuntimeError(
                 "The server is already running on port {0}".format(port))

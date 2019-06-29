@@ -22,7 +22,8 @@ class ValgrindMixin(Mixin):
         "suppress_name": "tarantool.sup"
     }
 
-    def format_valgrind_log_path(self, suite_name, test_name, conf, server_name, num):
+    def format_valgrind_log_path(self, suite_name, test_name, conf,
+                                 server_name, num):
         basename = '{}.{}.{}.{}.{}.valgrind.log'.format(
             suite_name, test_name, conf, server_name, str(num))
         return os.path.join(self.vardir, basename)
@@ -61,11 +62,15 @@ class ValgrindMixin(Mixin):
         suite_name = os.path.basename(self.test_suite.suite_path)
         if for_test:
             test_name = os.path.basename(self.current_test.name)
-            default_tmpl = self.format_valgrind_log_path(suite_name, 'default', '*', '*', '*')
-            non_default_tmpl = self.format_valgrind_log_path(suite_name, test_name, '*', '*', '*')
-            return sorted(glob.glob(default_tmpl) + glob.glob(non_default_tmpl))
+            default_tmpl = self.format_valgrind_log_path(
+                suite_name, 'default', '*', '*', '*')
+            non_default_tmpl = self.format_valgrind_log_path(
+                suite_name, test_name, '*', '*', '*')
+            return sorted(glob.glob(default_tmpl) +
+                          glob.glob(non_default_tmpl))
         else:
-            suite_tmpl = self.format_valgrind_log_path(suite_name, '*', '*', '*', '*')
+            suite_tmpl = self.format_valgrind_log_path(
+                suite_name, '*', '*', '*', '*')
             return sorted(glob.glob(suite_tmpl))
 
     @property
@@ -110,9 +115,11 @@ class ValgrindMixin(Mixin):
             return
 
         lines_cnt = 50
-        color_stdout('\n\nValgrind for [Instance "%s"] returns non-zero exit code: %d\n' % (
-            self.name, self.process.returncode), schema='error')
-        color_stdout("It's known that it can be valgrind's \"the 'impossible' happened\" error\n", schema='error')
+        color_stdout(('\n\nValgrind for [Instance "%s"] returns non-zero ' +
+                     'exit code: %d\n') % (self.name, self.process.returncode),
+                     schema='error')
+        color_stdout("It's known that it can be valgrind's " +
+                     "\"the 'impossible' happened\" error\n", schema='error')
         color_stdout('Last %d lines of valgring log file [%s]:\n' % (
             lines_cnt, self.valgrind_log), schema='error')
         print_tail_n(self.valgrind_log, lines_cnt)
