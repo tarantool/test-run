@@ -144,6 +144,14 @@ local function clean()
     end
     cleanup_list(_G, allowed_globals)
 
+    -- Strict module tracks declared global variables when the
+    -- strict mode is enabled, so we need to flush its internal
+    -- state.
+    local mt = getmetatable(_G)
+    if mt ~= nil and type(mt.__declared) == 'table' then
+        cleanup_list(mt.__declared, allowed_globals)
+    end
+
     local allowed_packages = {
         ['_G'] = true,
         bit = true,
