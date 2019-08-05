@@ -129,6 +129,8 @@ local function clean()
         ['LIKELIHOOD'] = true,
         ['LIKELY'] = true,
         ['UNLIKELY'] = true,
+        ['GREATEST'] = true,
+        ['LEAST'] = true,
         ['_sql_stat_get'] = true,
         ['_sql_stat_push'] = true,
         ['_sql_stat_init'] = true,
