@@ -24,8 +24,6 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import re
 import sys
 
-import yaml
-
 from tarantool_connection import TarantoolConnection
 from tarantool_connection import TarantoolPool
 from tarantool_connection import TarantoolAsyncConnection
@@ -75,11 +73,8 @@ class ExecMixIn(object):
             if (res.rfind("\n...\n") >= 0 or res.rfind("\r\n...\r\n") >= 0):
                 break
 
-        try:
-            yaml.safe_load(res)
-        finally:
-            if not silent:
-                sys.stdout.write(res.replace("\r\n", "\n"))
+        if not silent:
+            sys.stdout.write(res.replace("\r\n", "\n"))
         return res
 
 
