@@ -15,6 +15,7 @@ import yaml
 
 from gevent import socket
 from greenlet import GreenletExit
+from threading import Timer
 
 try:
     from cStringIO import StringIO
@@ -23,7 +24,9 @@ except ImportError:
 
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.box_connection import BoxConnection
-from lib.colorer import color_stdout, color_log
+from lib.colorer import color_stdout
+from lib.colorer import color_log
+from lib.colorer import qa_notice
 from lib.preprocessor import TestState
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
@@ -1018,9 +1021,26 @@ class TarantoolServer(Server):
                 self.process.send_signal(signal)
             except OSError:
                 pass
+
+            # Waiting for stopping the server. If the timeout
+            # reached, send SIGKILL.
+            timeout = 5
+
+            def kill():
+                qa_notice('The server \'{}\' does not stop during {} '
+                          'seconds after the {} ({}) signal.\n'
+                          'Info: {}\n'
+                          'Sending SIGKILL...'.format(
+                              self.name, timeout, signal, signame(signal),
+                              format_process(self.process.pid)))
+                self.process.kill()
+
+            timer = Timer(timeout, kill)
+            timer.start()
             if self.crash_detector is not None:
                 save_join(self.crash_detector)
             self.wait_stop()
+            timer.cancel()
 
         self.status = None
         if re.search(r'^/', str(self._admin.port)):
