@@ -197,6 +197,10 @@ class Dispatcher:
         task_queue_disp = self.find_nonempty_task_queue_disp()
         if not task_queue_disp:
             return False
+        # self.max_workers_cnt can be changed in
+        # find_nonempty_task_queue_disp()
+        if self.workers_cnt >= self.max_workers_cnt:
+            return False
         tcp_port_range = self.tcp_port_dispatcher.acquire_range(
             self.worker_next_id)
         process = task_queue_disp.add_worker(self.worker_next_id,
