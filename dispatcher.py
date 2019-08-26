@@ -56,8 +56,10 @@ class Dispatcher:
     ```
     task_groups = {
         'some_key_1': {
-            'gen_worker': gen_worker_1,
-            'task_ids': task_ids_1,
+            'gen_worker': function,
+            'task_ids': list,
+            'is_parallel': bool,
+            'show_reproduce_content': bool,
         }
         ...
     }

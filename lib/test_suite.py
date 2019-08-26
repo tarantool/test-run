@@ -101,7 +101,8 @@ class TestSuite:
         for i in ["script"]:
             self.ini[i] = os.path.join(suite_path, self.ini[i]) \
                 if i in self.ini else None
-        for i in ["disabled", "valgrind_disabled", "release_disabled"]:
+        for i in ["disabled", "valgrind_disabled", "release_disabled",
+                  "fragile"]:
             self.ini[i] = dict.fromkeys(self.ini[i].split()) \
                 if i in self.ini else dict()
         for i in ["lua_libs"]:
@@ -116,7 +117,15 @@ class TestSuite:
         self.parse_bool_opt('is_parallel', False)
         self.parse_bool_opt('show_reproduce_content', True)
 
-    def find_tests(self):
+        # XXX: Refactor *Server.find_tests() to return a value
+        # instead of direct changing of test_suite.tests and get
+        # rid of all other side effects.
+        self.tests_are_collected = False
+
+    def collect_tests(self):
+        if self.tests_are_collected:
+            return self.tests
+
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'app':
@@ -125,7 +134,9 @@ class TestSuite:
             UnittestServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'stress':
             # parallel tests are not supported and disabled for now
-            return []
+            self.tests = []
+            self.tests_are_collected = True
+            return self.tests
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
@@ -140,7 +151,24 @@ class TestSuite:
             )
             color_stdout(": ", self.ini["description"], ".\n",
                          schema='ts_text')
+        self.tests_are_collected = True
         return self.tests
+
+    def stable_tests(self):
+        self.collect_tests()
+        res = []
+        for test in self.tests:
+            if os.path.basename(test.name) not in self.ini['fragile']:
+                res.append(test)
+        return res
+
+    def fragile_tests(self):
+        self.collect_tests()
+        res = []
+        for test in self.tests:
+            if os.path.basename(test.name) in self.ini['fragile']:
+                res.append(test)
+        return res
 
     def gen_server(self):
         try:
