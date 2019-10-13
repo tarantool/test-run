@@ -234,10 +234,10 @@ local function log_box_info_replication_cond(id, field, ok, info, opts)
         status = opts.status,
         message_re = opts.message_re,
     })
-    local got = json.encode({
+    local got = json.encode(info ~= nil and {
         status = info.status,
         message = info.message,
-    })
+    } or nil)
     log.info('wait_%s(%d, ...); exp = %s; got = %s; result = %s', field, id,
         exp, got, tostring(ok))
 end
@@ -245,7 +245,7 @@ end
 local function gen_box_info_replication_cond(id, field, opts)
     return function()
         local info = box.info.replication[id][field]
-        local ok = true
+        local ok = info ~= nil
         if opts.status ~= nil then
             ok = ok and info.status == opts.status
         end
@@ -264,6 +264,10 @@ local function gen_box_info_replication_cond(id, field, opts)
 end
 
 --- Wait for upstream status.
+---
+--- The function waits until information about an upstream with
+--- provided id will appear (regardless of passed options) and
+--- then waits for a certain state of the upstream if requested.
 ---
 --- If `opts.status` is `nil` or `box.NULL` an upstream status is
 --- not checked.
