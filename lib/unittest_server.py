@@ -75,6 +75,8 @@ class UnittestServer(Server):
             executable_path_glob = os.path.join(test_suite.args.builddir,
                                                 'test', suite_path, '*.test')
             tests = glob.glob(executable_path_glob)
+
+        tests = Server.exclude_tests(tests, test_suite.args.exclude)
         test_suite.tests = [UnitTest(k, test_suite.args, test_suite.ini)
                             for k in sorted(tests)]
         test_suite.tests = sum([patterned(x, test_suite.args.tests)

@@ -50,6 +50,15 @@ class Options:
                 tests in all specified suites.""")
 
         parser.add_argument(
+                "--exclude",
+                action='append',
+                default=env_list('TEST_RUN_EXCLUDE', []),
+                help="""Set an exclusion pattern. When a full test name (say,
+                app-tap/string.test.lua) contains the pattern as a substring,
+                the test will be excluded from execution. The option can be
+                passed several times.""")
+
+        parser.add_argument(
                 "--suite",
                 dest='suites',
                 metavar="suite",
@@ -192,6 +201,9 @@ class Options:
                 help="""Run the server under 'luacov'.
                 Default: false.""")
 
+        # XXX: We can use parser.parse_intermixed_args() on
+        # Python 3.7 to understand commands like
+        # ./test-run.py foo --exclude bar baz
         self.args = parser.parse_args()
         self.check()
 

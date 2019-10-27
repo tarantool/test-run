@@ -135,3 +135,17 @@ class Server(object):
             print_tail_n(self.logfile, lines)
         else:
             color_stdout("    Can't find log:\n", schema='error')
+
+    @staticmethod
+    def exclude_tests(test_names, exclude_patterns):
+        def match_any(test_name, patterns):
+            for pattern in patterns:
+                if pattern in test_name:
+                    return True
+            return False
+
+        res = []
+        for test_name in test_names:
+            if not match_any(test_name, exclude_patterns):
+                res.append(test_name)
+        return res
