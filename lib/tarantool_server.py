@@ -1075,7 +1075,7 @@ class TarantoolServer(Server):
             for pattern in patterns:
                 path_pattern = os.path.join(suite_path, pattern)
                 res.extend(sorted(glob.glob(path_pattern)))
-            return res
+            return Server.exclude_tests(res, test_suite.args.exclude)
 
         # Add Python tests.
         tests = [PythonTest(k, test_suite.args, test_suite.ini)
