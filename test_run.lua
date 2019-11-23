@@ -11,6 +11,9 @@ local clock = require('clock')
 
 local function cmd(self, msg)
     local sock = socket.tcp_connect(self.host, self.port)
+    while sock == nil do
+        sock = socket.tcp_connect(self.host, self.port)
+    end
     local data = msg .. '\n'
     sock:send(data)
 
