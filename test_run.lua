@@ -10,7 +10,9 @@ local errno = require('errno')
 local clock = require('clock')
 
 local function cmd(self, msg)
-    local sock = socket.tcp_connect(self.host, self.port)
+    local sock = self:wait_cond(function()
+        return socket.tcp_connect(self.host, self.port)
+    end, 100)
     local data = msg .. '\n'
     sock:send(data)
 
