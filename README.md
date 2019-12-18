@@ -37,8 +37,9 @@ executed. In the local env there's object `self`, that's `Test` object. If test
 must be skipped - you must put `self.skip = 1` in this file. Next,
 `.test(.lua|.py)?` is executed and file `.reject` is created, then `.reject` is
 compared with `.result`. If something differs, then 15 last string of this diff
-file are printed and `.reject` file is saving in the folder, where `.result`
-file is. If not, then `.reject` is deleted.
+file are printed and `.reject` file is saving in the '<vardir>/<suite>' subfolder
+given in options or set localy as 'var/<suite>' by default. If not, then
+`.reject` is deleted.
 
 ### Test configuration
 

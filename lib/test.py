@@ -115,7 +115,8 @@ class Test(object):
         self.result = os.path.join(suite_ini['suite'], get_result(name))
         self.skip_cond = os.path.join(suite_ini['suite'], get_skipcond(name))
         self.tmp_result = os.path.join(suite_ini['vardir'], get_result(name))
-        self.reject = os.path.join(suite_ini['suite'], get_reject(name))
+        self.var_suite_path = os.path.join(suite_ini['vardir'], suite_ini['suite'])
+        self.reject = os.path.join(self.var_suite_path, get_reject(name))
         self.is_executed = False
         self.is_executed_ok = None
         self.is_equal_result = None
@@ -221,6 +222,9 @@ class Test(object):
             self.is_valgrind_clean = not bool(non_empty_logs)
 
         short_status = None
+
+        if not os.path.exists(self.var_suite_path):
+            os.mkdir(self.var_suite_path)
 
         if self.skip:
             short_status = 'skip'
