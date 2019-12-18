@@ -9,6 +9,7 @@ import sys
 import traceback
 from functools import partial
 from hashlib import md5
+from utils import safe_makedirs
 
 try:
     from cStringIO import StringIO
@@ -114,7 +115,9 @@ class Test(object):
         self.result = os.path.join(suite_ini['suite'], get_result(name))
         self.skip_cond = os.path.join(suite_ini['suite'], get_skipcond(name))
         self.tmp_result = os.path.join(suite_ini['vardir'], get_result(name))
-        self.reject = os.path.join(suite_ini['suite'], get_reject(name))
+        self.var_suite_path = os.path.join(suite_ini['vardir'], 'rejects',
+                                           suite_ini['suite'])
+        self.reject = os.path.join(self.var_suite_path, get_reject(name))
         self.is_executed = False
         self.is_executed_ok = None
         self.is_equal_result = None
@@ -253,6 +256,7 @@ class Test(object):
         else:
             has_result = os.path.exists(self.tmp_result)
             if has_result:
+                safe_makedirs(self.var_suite_path)
                 shutil.copy(self.tmp_result, self.reject)
                 with open(self.tmp_result, mode='rb') as result_file:
                     result_checksum = md5(result_file.read()).hexdigest()
