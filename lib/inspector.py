@@ -55,10 +55,12 @@ class TarantoolInspector(StreamServer):
 
     def start(self):
         super(TarantoolInspector, self).start()
-        os.environ['INSPECTOR'] = str(self.server_port)
+        os.environ['INSPECTOR_HOST'] = str(self.server_host)
+        os.environ['INSPECTOR_PORT'] = str(self.server_port)
 
     def stop(self):
-        del os.environ['INSPECTOR']
+        del os.environ['INSPECTOR_HOST']
+        del os.environ['INSPECTOR_PORT']
 
     def set_parser(self, parser):
         self.parser = parser
