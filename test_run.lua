@@ -458,8 +458,8 @@ local inspector_methods = {
 local function inspector_new(host, port)
     local inspector = {}
 
-    inspector.host = host or 'localhost'
-    inspector.port = port or tonumber(os.getenv('INSPECTOR'))
+    inspector.host = host or os.getenv('INSPECTOR_HOST') or 'localhost'
+    inspector.port = port or tonumber(os.getenv('INSPECTOR_PORT'))
     if inspector.port == nil then
         error('Inspector not started')
     end
