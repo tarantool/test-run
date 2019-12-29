@@ -145,6 +145,14 @@ class LuaTest(Test):
             return True
 
         engine = self.run_params['engine']
+        command = ("UPDATE \"_session_settings\" SET \"value\" = '{}' " +
+                   "WHERE \"name\" = 'sql_default_engine';").format(engine)
+        result = self.send_command(command, ts, 'sql')
+        result = result.replace('\r\n', '\n')
+        if result != '---\n- row_count: 1\n...\n' and result != "---\n- " +\
+           "null\n- Space '_session_settings' does not exist\n...\n":
+            sys.stdout.write(result)
+            return False
         command = "pragma sql_default_engine='{}'".format(engine)
         result = self.send_command(command, ts, 'sql')
         result = result.replace('\r\n', '\n')
