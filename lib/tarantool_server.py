@@ -145,14 +145,27 @@ class LuaTest(Test):
             return True
 
         engine = self.run_params['engine']
-        command = "pragma sql_default_engine='{}'".format(engine)
-        result = self.send_command(command, ts, 'sql')
-        result = result.replace('\r\n', '\n')
-        if result != '---\n- row_count: 0\n...\n':
-            sys.stdout.write(result)
-            return False
 
-        return True
+        # Probe the new way. Pass through on any error.
+        command_new = ("UPDATE \"_session_settings\" SET \"value\" = '{}' " +
+                       "WHERE \"name\" = 'sql_default_engine'").format(engine)
+        result_new = self.send_command(command_new, ts, 'sql')
+        result_new = result_new.replace('\r\n', '\n')
+        if result_new == '---\n- row_count: 1\n...\n':
+            return True
+
+        # Probe the old way. Fail the test on an error.
+        command_old = "pragma sql_default_engine='{}'".format(engine)
+        result_old = self.send_command(command_old, ts, 'sql')
+        result_old = result_old.replace('\r\n', '\n')
+        if result_old == '---\n- row_count: 0\n...\n':
+            return True
+
+        sys.stdout.write(command_new)
+        sys.stdout.write(result_new)
+        sys.stdout.write(command_old)
+        sys.stdout.write(result_old)
+        return False
 
     def set_language(self, ts, language):
         for conn in ts.curcon:

@@ -69,9 +69,15 @@ engine = test_run:get_cfg('engine')
 ```
 
 "engine" value has a special meaning for *.test.sql files: if it is "memtx" or
-"vinyl", then the corresponding engine will be set using "pragma
-sql_default_engine='memtx|vinyl'" command before executing commands from a test
-file.
+"vinyl", then the corresponding default engine will be set before executing
+commands from a test file. An engine is set with the following commands:
+
+```sql
+UPDATE "_session_settings" SET "value" = 'memtx|vinyl' WHERE "name" = 'sql_default_engine'
+pragma sql_default_engine='memtx|vinyl'
+```
+
+If the first fails, then the second will be executed. When both fails, fail the test.
 
 #### Python
 
