@@ -326,7 +326,8 @@ end
 local function grep_log(self, node, what, bytes, opts)
     local opts = opts or {}
     local noreset = opts.noreset or false
-    local filename = self:eval(node, "box.cfg.log")[1]
+    -- if instance has crashed provide filename to use grep_log
+    local filename = opts.filename or self:eval(node, "box.cfg.log")[1]
     local file = fio.open(filename, {'O_RDONLY', 'O_NONBLOCK'})
 
     local function fail(msg)
