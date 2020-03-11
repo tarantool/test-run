@@ -1,5 +1,6 @@
+from __future__ import absolute_import
+
 import os
-import shlex
 import sys
 from collections import deque
 
@@ -7,10 +8,32 @@ import yaml
 from gevent import socket
 import six
 
-from lib.admin_connection import AdminAsyncConnection
-from lib.colorer import color_log
-from lib.utils import signum
+from .admin_connection import AdminAsyncConnection
+from .colorer import color_log
+from .utils import signum
 
+# if sys.version_info[0] == 2:
+#     from shlex import shlex
+# else:
+#     from shlex import shlex as shlex_unicode
+# 
+#     class BInStream:
+#         def __init__(self, b):
+#             self.b = b
+# 
+#         def getvalue(self):
+#             return self.b
+# 
+#     class BShLex:
+#         def __init__(self, b):
+#             self.parser = shlex_unicode(b.decode('utf-8'))
+#             self.instream = BInStream(b)
+# 
+#         def get_token(self):
+#             return self.parser.get_token().encode('utf-8')
+# 
+#     def shlex(b):
+#         return BShLex(b)
 
 class Namespace(object):
     pass
@@ -50,7 +73,7 @@ class TestState(object):
 
     def parse_preprocessor(self, string):
         token_store = deque()
-        lexer = shlex.shlex(string)
+        lexer = shlex(string)
         lexer.commenters = []
         token = lexer.get_token()
         if not token:
@@ -203,7 +226,7 @@ class TestState(object):
             self.connections[sname] = self.servers[sname].admin
             try:
                 self.connections[sname]('return true', silent=True)
-            except socket.error as e:
+            except socket.error:
                 LuaPreprocessorException(
                     'Can\'t start server {0}'.format(repr(sname)))
         return not crash_occured
@@ -419,7 +442,7 @@ class TestState(object):
                   % hex(id(self)), schema='test_var')
         if sys.stdout.__class__.__name__ == 'FilteredStream':
             sys.stdout.clear_all_filters()
-        for k, v in self.servers.iteritems():
+        for k, v in six.iteritems(self.servers):
             # don't stop the default server
             if k == 'default':
                 continue
@@ -431,7 +454,7 @@ class TestState(object):
     def cleanup_nondefault(self):
         color_log('\nDEBUG: TestState[%s].cleanup_nondefault()\n' %
                   hex(id(self)), schema='test_var')
-        for k, v in self.servers.iteritems():
+        for k, v in six.iteritems(self.servers):
             # don't cleanup the default server
             if k == 'default':
                 continue

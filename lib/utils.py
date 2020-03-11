@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import six
@@ -8,7 +10,7 @@ import fcntl
 import difflib
 import time
 from gevent import socket
-from lib.colorer import color_stdout
+
 try:
     # Python3.5 or above
     from signal import Signals
@@ -16,6 +18,7 @@ except ImportError:
     # Python2
     Signals = None
 
+from .colorer import color_stdout
 
 UNIX_SOCKET_LEN_LIMIT = 107
 
@@ -66,7 +69,7 @@ def check_port(port, rais=True, ipv4=True, ipv6=True):
     connections (UNIX Sockets in case of file path). False -- otherwise.
     """
     try:
-        if isinstance(port, (int, long)):
+        if isinstance(port, six.integer_types):
             if ipv4:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.bind(('127.0.0.1', port))

@@ -1,6 +1,10 @@
+from __future__ import absolute_import
+
 import os
 import sys
-from lib.singleton import Singleton
+from six import add_metaclass
+
+from .singleton import Singleton
 
 
 # Use it to print messages on the screen and to the worker's log.
@@ -89,13 +93,13 @@ class SchemaPretty(CSchema):
     }
 
 
+@add_metaclass(Singleton)
 class Colorer(object):
     """
     Colorer/Styler based on VT220+ specifications (Not full). Based on:
     1. ftp://ftp.cs.utk.edu/pub/shuford/terminal/dec_vt220_codes.txt
     2. http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
     """
-    __metaclass__ = Singleton
     fgcolor = {
         "black":     '0;30',
         "red":       '0;31',

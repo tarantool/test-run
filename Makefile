@@ -3,4 +3,4 @@ default:
 
 .PHONY: lint
 lint:
-	python2 -m flake8 *.py lib/*.py
+	python -m flake8 *.py lib/*.py

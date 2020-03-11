@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import collections
 import copy
 import functools
@@ -5,27 +7,28 @@ import os
 import signal
 import traceback
 import yaml
+import six
 
-import lib
-from lib.colorer import color_log
-from lib.colorer import color_stdout
-from lib.tarantool_server import TarantoolServer
-from lib.test import get_result
-from lib.test_suite import TestSuite
-from lib.utils import safe_makedirs
+from . import Options
+from .colorer import color_log
+from .colorer import color_stdout
+from .tarantool_server import TarantoolServer
+from .test import get_result
+from .test_suite import TestSuite
+from .utils import safe_makedirs
 
 # Utils
 #######
 
 
 def find_suites():
-    suite_names = lib.Options().args.suites
+    suite_names = Options().args.suites
     if suite_names == []:
         for root, dirs, names in os.walk(os.getcwd(), followlinks=True):
             if "suite.ini" in names:
                 suite_names.append(os.path.basename(root))
 
-    suites = [TestSuite(suite_name, lib.Options().args)
+    suites = [TestSuite(suite_name, Options().args)
               for suite_name in sorted(suite_names)]
     return suites
 
@@ -47,7 +50,7 @@ def parse_reproduce_file(filepath):
 
 
 def get_reproduce_file(worker_name):
-    main_vardir = os.path.realpath(lib.Options().args.vardir)
+    main_vardir = os.path.realpath(Options().args.vardir)
     reproduce_dir = os.path.join(main_vardir, 'reproduce')
     return os.path.join(reproduce_dir, '%s.list.yaml' % worker_name)
 
@@ -99,11 +102,11 @@ def reproduce_task_groups(task_groups):
     this group as in the reproduce file.
     """
     found_keys = []
-    reproduce = parse_reproduce_file(lib.Options().args.reproduce)
+    reproduce = parse_reproduce_file(Options().args.reproduce)
     if not reproduce:
         raise ValueError('[reproduce] Tests list cannot be empty')
     for i, task_id in enumerate(reproduce):
-        for key, task_group in task_groups.items():
+        for key, task_group in six.iteritems(task_groups):
             if task_id in task_group['task_ids']:
                 found_keys.append(key)
                 break
@@ -328,7 +331,7 @@ class Worker:
             result_queue.put(self.current_task(task_id))
             short_status = self.run_task(task_id)
             result_queue.put(self.wrap_result(task_id, short_status))
-            if not lib.Options().args.is_force and short_status == 'fail':
+            if not Options().args.is_force and short_status == 'fail':
                 color_stdout(
                     'Worker "%s" got failed test; stopping the server...\n'
                     % self.name, schema='test_var')

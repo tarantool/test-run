@@ -1,15 +1,24 @@
-import ConfigParser
+from __future__ import print_function
+from __future__ import absolute_import
+
+try:
+    # Python3
+    import configparser
+except ImportError:
+    # Python2
+    import ConfigParser as configparser  # noqa: F401
+
 import json
 import os
 import re
 
-import lib
-from lib.app_server import AppServer
-from lib.colorer import color_stdout
-from lib.inspector import TarantoolInspector
-from lib.server import Server
-from lib.tarantool_server import TarantoolServer
-from lib.unittest_server import UnittestServer
+from . import Options
+from .app_server import AppServer
+from .colorer import color_stdout
+from .inspector import TarantoolInspector
+from .server import Server
+from .tarantool_server import TarantoolServer
+from .unittest_server import UnittestServer
 
 
 class ConfigurationError(RuntimeError):
@@ -88,7 +97,7 @@ class TestSuite:
             raise RuntimeError("Suite %s doesn't exist" % repr(suite_path))
 
         # read the suite config
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(os.path.join(suite_path, "suite.ini"))
         self.ini.update(dict(config.items("default")))
         self.ini.update(self.args.__dict__)
@@ -140,7 +149,7 @@ class TestSuite:
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
-        if not lib.Options().args.reproduce:
+        if not Options().args.reproduce:
             color_stdout("Collecting tests in ", schema='ts_text')
             color_stdout(
                 '%s (Found %s tests)' % (
@@ -174,7 +183,7 @@ class TestSuite:
         try:
             return Server(self.ini, test_suite=self)
         except Exception as e:
-            print e
+            print(e)
             raise RuntimeError("Unknown server: core = {0}".format(
                                self.ini["core"]))
 
@@ -242,7 +251,7 @@ class TestSuite:
             short_status = 'disabled'
 
         # cleanup only if test passed or if --force mode enabled
-        if lib.Options().args.is_force or short_status == 'pass':
+        if Options().args.is_force or short_status == 'pass':
             inspector.cleanup_nondefault()
 
         return short_status

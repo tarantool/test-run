@@ -1,9 +1,12 @@
+from __future__ import absolute_import
+
 import os
 import re
 import sys
 import yaml
+import six
 
-import lib
+from lib import Options
 from lib.colorer import color_stdout
 from lib.worker import WorkerCurrentTask
 from lib.worker import WorkerDone
@@ -11,6 +14,8 @@ from lib.worker import WorkerOutput
 from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
 from lib.utils import prefix_each_line
+from lib.utils import print_tail_n
+from lib.utils import print_unidiff
 
 
 class BaseWatcher(object):
@@ -49,7 +54,7 @@ class StatisticsWatcher(BaseWatcher):
         """Returns are there failed tasks."""
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
-        for short_status, cnt in self.stats.items():
+        for short_status, cnt in six.iteritems(self.stats):
             color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
         if not self.failed_tasks:
@@ -64,7 +69,7 @@ class StatisticsWatcher(BaseWatcher):
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
             if show_reproduce_content:
                 color_stdout("---\n", schema='separator')
-                lib.utils.print_tail_n(reproduce_file_path)
+                print_tail_n(reproduce_file_path)
                 color_stdout("...\n", schema='separator')
 
         return True
@@ -73,7 +78,7 @@ class StatisticsWatcher(BaseWatcher):
 class LogOutputWatcher(BaseWatcher):
     def __init__(self):
         self.fds = dict()
-        self.logdir = os.path.join(lib.Options().args.vardir, 'log')
+        self.logdir = os.path.join(Options().args.vardir, 'log')
         try:
             os.makedirs(self.logdir)
         except OSError:
@@ -148,7 +153,7 @@ class OutputWatcher(BaseWatcher):
             self.buffer[obj.worker_id] = bufferized + obj.output
 
     def not_done_worker_ids(self):
-        return self.buffer.keys()
+        return list(self.buffer.keys())
 
 
 class FailWatcher(BaseWatcher):
@@ -208,7 +213,7 @@ class HangWatcher(BaseWatcher):
             schema=('test_var' if is_warning else 'error'))
 
         hung_tasks = [task for worker_id, task
-                      in self.worker_current_task.iteritems()
+                      in six.iteritems(self.worker_current_task)
                       if worker_id in worker_ids]
         for task in hung_tasks:
             with open(task.task_tmp_result, 'r') as f:
@@ -226,7 +231,7 @@ class HangWatcher(BaseWatcher):
         for task in hung_tasks:
             color_stdout("Test hung! Result content mismatch:\n",
                          schema='error')
-            lib.utils.print_unidiff(task.task_result, task.task_tmp_result)
+            print_unidiff(task.task_result, task.task_tmp_result)
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n', schema='error')

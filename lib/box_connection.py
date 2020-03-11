@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -21,21 +24,28 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+import os
+import sys
 import errno
 import ctypes
 import socket
 
-from tarantool_connection import TarantoolConnection
-
-# monkey patch tarantool and msgpack
-from lib.utils import check_libs
-check_libs()
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    'tarantool-python'))
 
 from tarantool import Connection as tnt_connection  # noqa: E402
 from tarantool import Schema                        # noqa: E402
 
+from .tarantool_connection import TarantoolConnection
+from .utils import check_libs
+
 
 SEPARATOR = '\n'
+
+
+# monkey patch tarantool and msgpack
+check_libs()
 
 
 class BoxConnection(TarantoolConnection):
@@ -75,11 +85,11 @@ class BoxConnection(TarantoolConnection):
         if not command:
             return
         if not silent:
-            print command
+            print(command)
         cmd = command.replace(SEPARATOR, ' ') + SEPARATOR
         response = self.py_con.call(cmd)
         if not silent:
-            print response
+            print(response)
         return response
 
     def execute(self, command, silent=True):
@@ -88,8 +98,8 @@ class BoxConnection(TarantoolConnection):
     def call(self, command, *args):
         if not command:
             return
-        print 'call ', command, args
+        print('call ', command, args)
         response = self.py_con.call(command, *args)
         result = str(response)
-        print result
+        print(result)
         return result

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 import errno
 import gevent
 import glob
@@ -12,27 +15,32 @@ import subprocess
 import sys
 import time
 import yaml
+import six
 
 from gevent import socket
 from greenlet import GreenletExit
 
 try:
-    from cStringIO import StringIO
+    # Python 3
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    # Python 2
+    try:
+        from CStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
 
-from lib.admin_connection import AdminConnection, AdminAsyncConnection
-from lib.box_connection import BoxConnection
-from lib.colorer import color_stdout, color_log
-from lib.preprocessor import TestState
-from lib.server import Server
-from lib.test import Test
-from lib.utils import find_port
-from lib.utils import format_process
-from lib.utils import signame
-from lib.utils import warn_unix_socket
-from lib.utils import prefix_each_line
-from test import TestRunGreenlet, TestExecutionError
+from .admin_connection import AdminConnection, AdminAsyncConnection
+from .box_connection import BoxConnection
+from .colorer import color_stdout, color_log
+from .preprocessor import TestState
+from .server import Server
+from .test import Test, TestRunGreenlet, TestExecutionError
+from .utils import find_port
+from .utils import format_process
+from .utils import signame
+from .utils import warn_unix_socket
+from .utils import prefix_each_line
 
 
 def save_join(green_obj, timeout=None):
@@ -380,8 +388,11 @@ class PythonTest(Test):
 
     def execute(self, server):
         super(PythonTest, self).execute(server)
-        execfile(self.name, dict(locals(), test_run_current_test=self,
-                                 **server.__dict__))
+        new_globals = dict(locals(), test_run_current_test=self,
+                           **server.__dict__)
+        with open(self.name) as f:
+            code = compile(f.read(), self.name)
+            exec(code, new_globals)
         # crash was detected (possibly on non-default server)
         if server.current_test.is_crash_reported:
             raise TestExecutionError
@@ -752,7 +763,7 @@ class TarantoolServer(Server):
     def copy_files(self):
         if self.script:
             shutil.copy(self.script, self.script_dst)
-            os.chmod(self.script_dst, 0777)
+            os.chmod(self.script_dst, 0o777)
         if self.lua_libs:
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
@@ -1064,7 +1075,7 @@ class TarantoolServer(Server):
     def test_option_get(self, option_list_str, silent=False):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
-            print " ".join([os.path.basename(self.binary)] + args[1:])
+            print(" ".join([os.path.basename(self.binary)] + args[1:]))
         output = subprocess.Popen(args,
                                   cwd=self.vardir,
                                   stdout=subprocess.PIPE,
@@ -1072,7 +1083,7 @@ class TarantoolServer(Server):
         return output
 
     def test_option(self, option_list_str):
-        print self.test_option_get(option_list_str)
+        print(self.test_option_get(option_list_str))
 
     def test_debug(self):
         if re.findall(r"-Debug", self.test_option_get("-V", True), re.I):
@@ -1111,7 +1122,7 @@ class TarantoolServer(Server):
                     test_suite.ini,
                     runs[r],
                     r
-                ) for r in runs.keys() if is_correct(r)])
+                ) for r in six.iterkeys(runs) if is_correct(r)])
             else:
                 tests.append(LuaTest(k, test_suite.args, test_suite.ini))
 

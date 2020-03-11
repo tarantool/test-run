@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +27,9 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import re
 import sys
 
-from tarantool_connection import TarantoolConnection
-from tarantool_connection import TarantoolPool
-from tarantool_connection import TarantoolAsyncConnection
+from .tarantool_connection import TarantoolConnection
+from .tarantool_connection import TarantoolPool
+from .tarantool_connection import TarantoolAsyncConnection
 
 
 ADMIN_SEPARATOR = '\n'
@@ -54,7 +57,7 @@ class AdminPool(TarantoolPool):
             # tarantool/gh-1163
             # 1. raise only if handshake is not full
             # 2. be silent on crashes or if it's server.stop() operation
-            print 'Handshake error {\n', handshake, '\n}'
+            print('Handshake error {\n', handshake, '\n}')
             raise RuntimeError('Broken tarantool console handshake')
         return s
 

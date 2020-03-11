@@ -1,24 +1,22 @@
+from __future__ import absolute_import
+
 import filecmp
 import gevent
 import os
 import pprint
-import pytap13
 import re
 import shutil
 import sys
 import traceback
 from functools import partial
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from . import Options
+from .colorer import color_stdout
+from .utils import non_empty_valgrind_logs
+from .utils import print_tail_n
+from .utils import print_unidiff as utils_print_unidiff
 
-import lib
-from lib.colorer import color_stdout
-from lib.utils import non_empty_valgrind_logs
-from lib.utils import print_tail_n
-from lib.utils import print_unidiff as utils_print_unidiff
+from . import pytap13
 
 
 class TestExecutionError(OSError):
@@ -56,9 +54,10 @@ class FilteredStream:
         """Apply all filters, then write result to the undelrying stream.
         Do line-oriented filtering: the fragment doesn't have to represent
         just one line."""
-        fragment_stream = StringIO(fragment)
         skipped = False
-        for line in fragment_stream:
+        color_stdout('FRAGMENT TYPE: ' + str(type(fragment)) + '\n')
+        color_stdout('FRAGMENT: ' + str(fragment) + '\n')
+        for line in fragment.rstrip('\n').split('\n'):
             original_len = len(line.strip())
             for pattern, replacement in self.filters:
                 line = re.sub(pattern, replacement, line)
@@ -67,7 +66,7 @@ class FilteredStream:
                 if skipped:
                     break
             if not skipped:
-                self.stream.write(line)
+                self.stream.write(line + '\n')
 
     def push_filter(self, pattern, replacement):
         self.filters.append([pattern, replacement])
@@ -169,7 +168,10 @@ class Test(object):
             if os.path.exists(self.skip_cond):
                 sys.stdout = FilteredStream(self.tmp_result)
                 stdout_fileno = sys.stdout.stream.fileno()
-                execfile(self.skip_cond, dict(locals(), **server.__dict__))
+                new_globals = dict(locals(), **server.__dict__)
+                with open(self.skip_cond, 'r') as f:
+                    code = compile(f.read(), self.skip_cond, 'exec')
+                    exec(code, new_globals)
                 sys.stdout.close()
                 sys.stdout = save_stdout
             if not self.skip:
@@ -204,7 +206,7 @@ class Test(object):
                 self.is_equal_result = filecmp.cmp(self.result,
                                                    self.tmp_result)
             elif self.is_executed_ok:
-                if lib.Options().args.is_verbose:
+                if Options().args.is_verbose:
                     color_stdout('\n')
                     with open(self.tmp_result, 'r') as f:
                         color_stdout(f.read(), schema='log')

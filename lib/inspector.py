@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import yaml
 import traceback
@@ -6,10 +8,9 @@ import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
-from lib.utils import find_port
-from lib.colorer import color_stdout
-
-from lib.tarantool_server import TarantoolStartError
+from .utils import find_port
+from .colorer import color_stdout
+from .tarantool_server import TarantoolStartError
 
 
 # Module initialization
@@ -74,6 +75,8 @@ class TarantoolInspector(StreamServer):
         while data:
             try:
                 data = socket.recv(size)
+                if sys.version_info[0] == 3:
+                    data = data.decode('utf-8')
             except IOError:
                 # catch instance halt connection refused errors
                 data = ''

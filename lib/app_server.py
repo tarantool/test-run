@@ -1,21 +1,24 @@
+from __future__ import absolute_import
+
 import errno
 import glob
 import os
 import shutil
 import sys
+import six
 
 from gevent.subprocess import Popen, PIPE
 
-from lib.colorer import color_log
-from lib.preprocessor import TestState
-from lib.server import Server
-from lib.tarantool_server import Test
-from lib.tarantool_server import TarantoolServer
-from lib.tarantool_server import TarantoolStartError
-from lib.utils import find_port
-from lib.utils import format_process
-from lib.utils import warn_unix_socket
-from test import TestRunGreenlet, TestExecutionError
+from .colorer import color_log
+from .preprocessor import TestState
+from .server import Server
+from .tarantool_server import Test
+from .tarantool_server import TarantoolServer
+from .tarantool_server import TarantoolStartError
+from .utils import find_port
+from .utils import format_process
+from .utils import warn_unix_socket
+from .test import TestRunGreenlet, TestExecutionError
 
 
 def run_server(execs, cwd, server, logfile, retval):
@@ -162,7 +165,7 @@ class AppServer(Server):
                     test_suite.ini,
                     params=params,
                     conf_name=conf_name
-                ) for conf_name, params in runs.iteritems()
+                ) for conf_name, params in six.iteritems(runs)
                     if is_correct(conf_name)])
             else:
                 tests.append(AppTest(test_name,

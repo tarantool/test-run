@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import argparse
 from itertools import product
-from lib.singleton import Singleton
+from six import add_metaclass
 
-from lib.colorer import color_stdout
+from .singleton import Singleton
+from .colorer import color_stdout
 
 
 def env_int(name, default):
@@ -23,10 +26,9 @@ def env_list(name, default):
     return value_list or default
 
 
+@add_metaclass(Singleton)
 class Options:
     """Handle options of test-runner"""
-
-    __metaclass__ = Singleton
 
     def __init__(self):
         """Add all program options, with their defaults."""

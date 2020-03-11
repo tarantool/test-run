@@ -1,15 +1,18 @@
+from __future__ import absolute_import
+
 import glob
 import os
 import shutil
 from itertools import product
-from lib.server_mixins import ValgrindMixin
-from lib.server_mixins import GdbMixin
-from lib.server_mixins import GdbServerMixin
-from lib.server_mixins import LLdbMixin
-from lib.server_mixins import StraceMixin
-from lib.server_mixins import LuacovMixin
-from lib.colorer import color_stdout
-from lib.utils import print_tail_n
+
+from .server_mixins import ValgrindMixin
+from .server_mixins import GdbMixin
+from .server_mixins import GdbServerMixin
+from .server_mixins import LLdbMixin
+from .server_mixins import StraceMixin
+from .server_mixins import LuacovMixin
+from .colorer import color_stdout
+from .utils import print_tail_n
 
 
 DEFAULT_CHECKPOINT_PATTERNS = ["*.snap", "*.xlog", "*.vylog", "*.inprogress",

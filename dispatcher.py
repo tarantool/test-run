@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import signal
 import time
@@ -5,12 +7,18 @@ import select
 import random
 import functools
 import yaml
+import six
 
 import multiprocessing
-from multiprocessing.queues import SimpleQueue
+try:
+    # Python 3.7+
+    from multiprocessing import SimpleQueue
+except ImportError:
+    # Python 2
+    from multiprocessing.queues import SimpleQueue
 
 import listeners
-import lib
+from lib import Options
 from lib.utils import set_fd_cloexec
 from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
@@ -85,7 +93,7 @@ class Dispatcher:
 
         tasks_cnt = 0
         self.task_queue_disps = dict()
-        for key, task_group in task_groups.items():
+        for key, task_group in six.iteritems(task_groups):
             tasks_cnt += len(task_group['task_ids'])
             task_queue_disp = TaskQueueDispatcher(key, task_group, randomize)
             self.task_queue_disps[key] = task_queue_disp
@@ -121,13 +129,13 @@ class Dispatcher:
                 pass
 
     def init_listeners(self):
-        args = lib.Options().args
+        args = Options().args
         watch_hang = args.no_output_timeout >= 0 and \
             not args.gdb and \
             not args.gdbserver and \
             not args.lldb and \
             not args.valgrind
-        watch_fail = not lib.Options().args.is_force
+        watch_fail = not Options().args.is_force
 
         log_output_watcher = listeners.LogOutputWatcher()
         self.statistics = listeners.StatisticsWatcher(
