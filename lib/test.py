@@ -37,10 +37,8 @@ class TestRunGreenlet(gevent.Greenlet):
         self.callable(*self.callable_args, **self.callable_kwargs)
 
     def __repr__(self):
-            return "<TestRunGreenlet at {0} info='{1}'>".format(
-                hex(id(self)),
-                getattr(self, "info", None)
-            )
+        return "<TestRunGreenlet at {0} info='{1}'>".format(
+            hex(id(self)), getattr(self, "info", None))
 
 
 class FilteredStream:
