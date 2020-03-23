@@ -201,6 +201,14 @@ class Options:
                 help="""Run the server under 'luacov'.
                 Default: false.""")
 
+        parser.add_argument(
+                "--update-result",
+                dest="update_result",
+                action="store_true",
+                default=False,
+                help="""Update or create file with reference output (.result).
+                Default: false.""")
+
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
         # ./test-run.py foo --exclude bar baz

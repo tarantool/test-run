@@ -152,7 +152,7 @@ class Test(object):
             it to stdout.
 
             Returns short status of the test as a string: 'skip', 'pass',
-            'new', or 'fail'. There is also one possible value for
+            'new', 'updated' or 'fail'. There is also one possible value for
             short_status, 'disabled', but it returned in the caller,
             TestSuite.run_test().
         """
@@ -232,12 +232,22 @@ class Test(object):
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
-        elif (self.is_executed_ok and not
-              self.is_equal_result and not
-              os.path.isfile(self.result)) and not is_tap:
+        elif (self.is_executed_ok and
+              not self.is_equal_result and
+              not os.path.isfile(self.result) and
+              not is_tap and
+              lib.Options().args.update_result):
             shutil.copy(self.tmp_result, self.result)
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
+        elif (self.is_executed_ok and
+              not self.is_equal_result and
+              os.path.isfile(self.result) and
+              not is_tap and
+              lib.Options().args.update_result):
+            shutil.copy(self.tmp_result, self.result)
+            short_status = 'updated'
+            color_stdout("[ updated ]\n", schema='test_new')
         else:
             has_result = os.path.exists(self.tmp_result)
             if has_result:
@@ -321,10 +331,16 @@ class Test(object):
         try:
             tap.parse(content)
         except ValueError as e:
-            color_stdout('\nTAP13 parse failed: %s\n' % str(e),
+            color_stdout('\nTAP13 parse failed (%s).\n' % str(e),
                          schema='error')
+            color_stdout('\nNo result file (%s) found.\n' % self.result,
+                         schema='error')
+            if not lib.Options().args.update_result:
+                msg = 'Run the test with --update-result option to write the new result file.\n'
+                color_stdout(msg, schema='error')
             self.is_crash_reported = True
             return False, False
+
         is_ok = True
         for test_case in tap.tests:
             if test_case.result == 'ok':
