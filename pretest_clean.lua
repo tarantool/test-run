@@ -271,6 +271,7 @@ local function clean()
         os = true,
         package = true,
         pickle = true,
+        popen = true,
         pwd = true,
         socket = true,
         strict = true,
