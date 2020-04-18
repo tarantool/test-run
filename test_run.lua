@@ -163,7 +163,6 @@ local function wait_fullmesh(self, servers)
                 log.info("%s: bootstrapped", server)
                 break
             end
-            local info = self:eval(server, "box.info")
             fiber.sleep(0.01)
         end
         -- wait all for full mesh
