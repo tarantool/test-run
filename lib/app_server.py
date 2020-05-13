@@ -14,6 +14,7 @@ from lib.tarantool_server import TarantoolServer
 from lib.tarantool_server import TarantoolStartError
 from lib.utils import find_port
 from lib.utils import format_process
+from lib.utils import warn_unix_socket
 from test import TestRunGreenlet, TestExecutionError
 
 
@@ -69,6 +70,7 @@ class AppServer(Server):
         self.name = 'app_server'
         self.process = None
         self.binary = TarantoolServer.binary
+        self.use_unix_sockets_iproto = ini['use_unix_sockets_iproto']
 
     @property
     def logfile(self):
@@ -103,7 +105,12 @@ class AppServer(Server):
                     if (e.errno == errno.ENOENT):
                         continue
                     raise
-        os.putenv("LISTEN", str(find_port()))
+        if self.use_unix_sockets_iproto:
+            path = os.path.join(self.vardir, self.name + ".socket-iproto")
+            warn_unix_socket(path)
+            os.putenv("LISTEN", path)
+        else:
+            os.putenv("LISTEN", str(find_port()))
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
 
