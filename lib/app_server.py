@@ -19,6 +19,7 @@ from test import TestRunGreenlet, TestExecutionError
 
 
 def run_server(execs, cwd, server, logfile, retval):
+    os.putenv("LISTEN", server.iproto)
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
     stdout, stderr = server.process.communicate()
     sys.stdout.write(stdout)
@@ -108,9 +109,9 @@ class AppServer(Server):
         if self.use_unix_sockets_iproto:
             path = os.path.join(self.vardir, self.name + ".socket-iproto")
             warn_unix_socket(path)
-            os.putenv("LISTEN", path)
+            self.iproto = path
         else:
-            os.putenv("LISTEN", str(find_port()))
+            self.iproto = str(find_port())
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
 
