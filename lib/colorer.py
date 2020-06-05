@@ -221,6 +221,10 @@ class Colorer(object):
 
     def writeout_unidiff(self, diff):
         for i in diff:
+
+            if not i.endswith('\n'):
+                i += "\n\\ No newline\n"
+
             if i.startswith('+'):
                 self.write(i, schema='diff_in')
             elif i.startswith('-'):
