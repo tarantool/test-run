@@ -240,6 +240,12 @@ class LuaTest(Test):
         eoc_log = '\n'
         eoc_exe = '\n'
 
+        # Restart default server to be sure that dirty tests do not
+        # garbage next running tests from the queue on the same worker.
+        self.send_command("test_run = require('test_run').new()" + eoc_exe, ts)
+        self.send_command("test_run:cmd('restart server default')" + eoc_exe, ts)
+        self.inspector.sem.wait()
+
         for line in open(self.name, 'r'):
             # Normalize a line.
             line = line.rstrip('\n')
