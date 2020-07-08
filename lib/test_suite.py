@@ -81,7 +81,7 @@ class TestSuite:
         self.args = args
         self.tests = []
         self.ini = {}
-        self.fragile = {'tests': {}}
+        self.fragile = {'retries': 0, 'tests': {}}
         self.suite_path = suite_path
         self.ini["core"] = "tarantool"
 
@@ -264,6 +264,9 @@ class TestSuite:
 
     def is_parallel(self):
         return self.ini['is_parallel']
+
+    def fragile_retries(self):
+        return self.fragile.get('retries', 0)
 
     def show_reproduce_content(self):
         return self.ini['show_reproduce_content']

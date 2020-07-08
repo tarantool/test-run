@@ -326,8 +326,21 @@ class Worker:
                 self.stop_worker(task_queue, result_queue)
                 break
 
+            short_status = None
             result_queue.put(self.current_task(task_id))
-            short_status = self.run_task(task_id)
+            retries_left = self.suite.fragile_retries()
+            # let's run till short_status became 'pass'
+            while short_status != 'pass' and retries_left >= 0:
+                # print message only after some fails occurred
+                if short_status == 'fail':
+                    color_stdout(
+                        'Test "%s", conf: "%s"\n'
+                        '\tfrom "fragile" list failed, rerunning ...\n'
+                        % (task_id[0], task_id[1]), schema='error')
+                # run task and save the result to short_status
+                short_status = self.run_task(task_id)
+                retries_left = retries_left - 1
+
             result_queue.put(self.wrap_result(task_id, short_status))
             if not lib.Options().args.is_force and short_status == 'fail':
                 color_stdout(
