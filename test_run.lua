@@ -94,6 +94,28 @@ local function wait_vclock(self, node, to_vclock)
     end
 end
 
+local function wait_vclock_ignore0(self, node, to_vclock)
+    while true do
+        local vclock = self:get_vclock(node)
+        local ok = true
+        for server_id, to_lsn in pairs(to_vclock) do
+            if server_id ~= 0 then
+                local lsn = vclock[server_id]
+                if lsn == nil or lsn < to_lsn then
+                    ok = false
+                    break
+                end
+            end
+        end
+        if ok then
+            return
+        end
+        log.info("wait vclock: %s to %s", yaml.encode(vclock),
+                 yaml.encode(to_vclock))
+        fiber.sleep(0.001)
+    end
+end
+
 
 local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua"'
 local create_cluster_cmd1_return_listen_uri =
@@ -440,6 +462,7 @@ local inspector_methods = {
     -- vclock
     get_vclock = get_vclock,
     wait_vclock = wait_vclock,
+    wait_vclock_ignore0 = wait_vclock_ignore0,
     switch = switch,
     -- replication
     create_cluster = create_cluster,
