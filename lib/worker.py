@@ -142,13 +142,15 @@ class WorkerTaskResult(BaseWorkerMessage):
     """ Passed into the result queue when a task processed (done) by the
     worker. The short_status (string) field intended to give short note whether
     the task processed successfully or not, but with little more flexibility
-    than binary True/False. The task_id (any hashable object) field hold ID of
+    than binary True/False. The result_checksum (string) field saves the results
+    file checksum on test fail. The task_id (any hashable object) field hold ID of
     the processed task. The show_reproduce_content configuration form suite.ini
     """
     def __init__(self, worker_id, worker_name, task_id,
-                 short_status, show_reproduce_content):
+                 short_status, result_checksum, show_reproduce_content):
         super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
+        self.result_checksum = result_checksum
         self.task_id = task_id
         self.show_reproduce_content = show_reproduce_content
 
@@ -214,8 +216,9 @@ class Worker:
         return WorkerCurrentTask(self.id, self.name, task_name, task_param,
                                  task_result, task_tmp_result)
 
-    def wrap_result(self, task_id, short_status):
+    def wrap_result(self, task_id, short_status, result_checksum):
         return WorkerTaskResult(self.id, self.name, task_id, short_status,
+                                result_checksum,
                                 self.suite.show_reproduce_content())
 
     def sigterm_handler(self, signum, frame):
@@ -302,7 +305,7 @@ class Worker:
             with open(self.reproduce_file, 'a') as f:
                 task_id_str = yaml.safe_dump(task.id, default_flow_style=True)
                 f.write('- ' + task_id_str)
-            short_status = self.suite.run_test(
+            short_status, result_checksum = self.suite.run_test(
                 task, self.server, self.inspector)
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
@@ -312,7 +315,7 @@ class Worker:
                 '\nWorker "%s" received the following error; stopping...\n'
                 % self.name + traceback.format_exc() + '\n', schema='error')
             raise
-        return short_status
+        return short_status, result_checksum
 
     def run_loop(self, task_queue, result_queue):
         """ called from 'run_all' """
@@ -327,7 +330,10 @@ class Worker:
                 break
 
             short_status = None
+            result_checksum = None
             result_queue.put(self.current_task(task_id))
+            testname = os.path.basename(task_id[0])
+            fragile_checksums = self.suite.get_test_fragile_checksums(testname)
             retries_left = self.suite.fragile_retries()
             # let's run till short_status became 'pass'
             while short_status != 'pass' and retries_left >= 0:
@@ -335,13 +341,18 @@ class Worker:
                 if short_status == 'fail':
                     color_stdout(
                         'Test "%s", conf: "%s"\n'
-                        '\tfrom "fragile" list failed, rerunning ...\n'
-                        % (task_id[0], task_id[1]), schema='error')
+                        '\tfrom "fragile" list failed with results'
+                        ' file checksum: "%s", rerunning ...\n'
+                        % (task_id[0], task_id[1], result_checksum), schema='error')
                 # run task and save the result to short_status
-                short_status = self.run_task(task_id)
+                short_status, result_checksum = self.run_task(task_id)
+                # check if the results file checksum set on fail and if
+                # the newly created results file is known by checksum
+                if not result_checksum or (result_checksum not in fragile_checksums):
+                    break
                 retries_left = retries_left - 1
 
-            result_queue.put(self.wrap_result(task_id, short_status))
+            result_queue.put(self.wrap_result(task_id, short_status, result_checksum))
             if not lib.Options().args.is_force and short_status == 'fail':
                 color_stdout(
                     'Worker "%s" got failed test; stopping the server...\n'
