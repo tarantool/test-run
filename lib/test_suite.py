@@ -185,6 +185,12 @@ class TestSuite:
                 res.append(test)
         return res
 
+    def get_test_fragile_checksums(self, test):
+        try:
+            return self.fragile['tests'][test]['checksums']
+        except Exception:
+            return []
+
     def gen_server(self):
         try:
             return Server(self.ini, test_suite=self)
@@ -237,7 +243,7 @@ class TestSuite:
 
     def run_test(self, test, server, inspector):
         """ Returns short status of the test as a string: 'skip', 'pass',
-            'new', 'fail', or 'disabled'.
+            'new', 'fail', or 'disabled' and results file checksum on fail.
         """
         test.inspector = inspector
         test_name = os.path.basename(test.name)
@@ -251,16 +257,17 @@ class TestSuite:
         color_stdout(conf.ljust(16), schema='test_var')
 
         if self.is_test_enabled(test, conf, server):
-            short_status = test.run(server)
+            short_status, result_checksum = test.run(server)
         else:
             color_stdout("[ disabled ]\n", schema='t_name')
             short_status = 'disabled'
+            result_checksum = None
 
         # cleanup only if test passed or if --force mode enabled
         if lib.Options().args.is_force or short_status == 'pass':
             inspector.cleanup_nondefault()
 
-        return short_status
+        return short_status, result_checksum
 
     def is_parallel(self):
         return self.ini['is_parallel']
