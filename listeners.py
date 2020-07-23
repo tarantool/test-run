@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import yaml
+import shutil
 
 import lib
 from lib.colorer import color_stdout
@@ -11,6 +12,7 @@ from lib.worker import WorkerOutput
 from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
 from lib.utils import prefix_each_line
+from lib.utils import safe_makedirs
 
 
 class BaseWatcher(object):
@@ -68,6 +70,52 @@ class StatisticsWatcher(BaseWatcher):
                 color_stdout("...\n", schema='separator')
 
         return True
+
+
+class ArtifactsWatcher(BaseWatcher):
+    """ArtifactsWatcher listener collects list of all workers with failed
+    tests. After overall testing finishes it copies workers artifacts
+    files from its running 'vardir' sub-directories to the common path
+    '<vardir>/artifacts' to be able to collect these artifacts later.
+    """
+    def __init__(self, get_logfile):
+        self.failed_workers = []
+        self.get_logfile = get_logfile
+
+    def process_result(self, obj):
+        if not isinstance(obj, WorkerTaskResult):
+            return
+
+        if obj.short_status == 'fail' and \
+                obj.worker_name not in self.failed_workers:
+            self.failed_workers.append(obj.worker_name)
+
+    def save_artifacts(self):
+        if not self.failed_workers:
+            return
+
+        vardir = lib.Options().args.vardir
+        artifacts_dir = os.path.join(vardir, 'artifacts')
+        artifacts_log_dir = os.path.join(artifacts_dir, 'log')
+        artifacts_reproduce_dir = os.path.join(artifacts_dir, 'reproduce')
+        safe_makedirs(artifacts_dir)
+        safe_makedirs(artifacts_log_dir)
+        safe_makedirs(artifacts_reproduce_dir)
+
+        for worker_name in self.failed_workers:
+            logfile = self.get_logfile(worker_name)
+            reproduce_file_path = get_reproduce_file(worker_name)
+            shutil.copy(logfile,
+                        os.path.join(artifacts_log_dir,
+                                     os.path.basename(logfile)))
+            shutil.copy(reproduce_file_path,
+                        os.path.join(artifacts_reproduce_dir,
+                                     os.path.basename(reproduce_file_path)))
+            shutil.copytree(os.path.join(vardir, worker_name),
+                            os.path.join(artifacts_dir, worker_name),
+                            ignore=shutil.ignore_patterns(
+                                '*.socket-iproto', '*.socket-admin',
+                                '*.sock', '*.control'))
 
 
 class LogOutputWatcher(BaseWatcher):
