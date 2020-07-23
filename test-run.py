@@ -110,6 +110,7 @@ def main_loop_parallel():
         has_undone = dispatcher.report_undone(
             verbose=bool(is_force or not has_failed))
         if has_failed:
+            dispatcher.artifacts.save_artifacts()
             return EXIT_FAILED_TEST
         if has_undone:
             return EXIT_NOTDONE_TEST

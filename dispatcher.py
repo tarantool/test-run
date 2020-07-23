@@ -95,6 +95,7 @@ class Dispatcher:
         self.report_timeout = 1.0
 
         self.statistics = None
+        self.artifacts = None
         self.fail_watcher = None
         self.listeners = None
         self.init_listeners()
@@ -132,8 +133,10 @@ class Dispatcher:
         log_output_watcher = listeners.LogOutputWatcher()
         self.statistics = listeners.StatisticsWatcher(
             log_output_watcher.get_logfile)
+        self.artifacts = listeners.ArtifactsWatcher(
+            log_output_watcher.get_logfile)
         output_watcher = listeners.OutputWatcher()
-        self.listeners = [self.statistics, log_output_watcher, output_watcher]
+        self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
         if watch_fail:
             self.fail_watcher = listeners.FailWatcher(
                 self.terminate_all_workers)
