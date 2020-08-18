@@ -27,7 +27,9 @@ local function clean()
         local first_char = string.sub(name, 1, 1)
         return first_char ~= '_'
     end):each(function(name)
-        box.space[name]:drop()
+        if box.space[name] ~= nil then
+            box.space[name]:drop()
+        end
     end)
 
     local _USER_TYPE = 4
