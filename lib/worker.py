@@ -285,6 +285,11 @@ class Worker:
     def is_joinable(task_queue):
         return 'task_done' in task_queue.__dict__.keys()
 
+    def restart_server(self):
+        self.stop_server(cleanup=False)
+        self.server = self.suite.gen_server()
+        self.inspector = self.suite.start_server(self.server)
+
     def task_done(self, task_queue):
         if Worker.is_joinable(task_queue):
             task_queue.task_done()
@@ -339,10 +344,11 @@ class Worker:
             while short_status != 'pass' and retries_left >= 0:
                 # print message only after some fails occurred
                 if short_status == 'fail':
+                    self.restart_server()
                     color_stdout(
                         'Test "%s", conf: "%s"\n'
                         '\tfrom "fragile" list failed with results'
-                        ' file checksum: "%s", rerunning ...\n'
+                        ' file checksum: "%s", rerunning with server restart ...\n'
                         % (task_id[0], task_id[1], result_checksum), schema='error')
                 # run task and save the result to short_status
                 short_status, result_checksum = self.run_task(task_id)
@@ -353,11 +359,17 @@ class Worker:
                 retries_left = retries_left - 1
 
             result_queue.put(self.wrap_result(task_id, short_status, result_checksum))
-            if not lib.Options().args.is_force and short_status == 'fail':
-                color_stdout(
-                    'Worker "%s" got failed test; stopping the server...\n'
-                    % self.name, schema='test_var')
-                raise VoluntaryStopException()
+            if short_status == 'fail':
+                if lib.Options().args.is_force:
+                    self.restart_server()
+                    color_stdout(
+                        'Worker "%s" got failed test; restarted the server\n'
+                        % self.name, schema='test_var')
+                else:
+                    color_stdout(
+                        'Worker "%s" got failed test; stopping the server...\n'
+                        % self.name, schema='test_var')
+                    raise VoluntaryStopException()
             if self.sigterm_received:
                 color_stdout('Worker "%s" got signal to terminate; '
                              'stopping the server...\n' % self.name,
