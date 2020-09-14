@@ -255,7 +255,8 @@ class Dispatcher:
                 'queue, but were not reported as done (does not matters '
                 'success or fail):\n', schema='test_var')
             for task_id in undone:
-                color_stdout('- %s' % yaml.safe_dump(task_id))
+                task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
+                color_stdout('- %s' % task_id_str)
         else:
             # Visually continue StatisticsWatcher.print_statistics() output.
             color_stdout('* undone: %d\n' % len(undone), schema='test_var')

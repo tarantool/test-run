@@ -60,7 +60,8 @@ class StatisticsWatcher(BaseWatcher):
         color_stdout('Failed tasks:\n', schema='test_var')
         for task_id, worker_name, show_reproduce_content in self.failed_tasks:
             logfile = self.get_logfile(worker_name)
-            color_stdout('- %s' % yaml.safe_dump(task_id), schema='test_var')
+            task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
+            color_stdout('- %s' % task_id_str, schema='test_var')
             color_stdout('# logfile:        %s\n' % logfile)
             reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)

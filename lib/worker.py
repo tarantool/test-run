@@ -300,7 +300,8 @@ class Worker:
         try:
             task = self.find_task(task_id)
             with open(self.reproduce_file, 'a') as f:
-                f.write('- ' + yaml.safe_dump(task.id))
+                task_id_str = yaml.safe_dump(task.id, default_flow_style=True)
+                f.write('- ' + task_id_str)
             short_status = self.suite.run_test(
                 task, self.server, self.inspector)
         except KeyboardInterrupt:
