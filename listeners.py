@@ -28,6 +28,43 @@ class BaseWatcher(object):
         pass
 
 
+class RerunWatcher(BaseWatcher):
+    def __init__(self, can_add_task, add_task):
+        self._can_add_task = can_add_task
+        self._add_task = add_task
+        self._fail_counters = dict()
+        self._fail_limit = 3
+
+    def _count_fail(self, obj):
+        if obj.task_id not in self._fail_counters:
+            self._fail_counters[obj.task_id] = 0
+        self._fail_counters[obj.task_id] += 1
+
+    def _can_rerun(self, task_id):
+        return self._fail_counters[task_id] < self._fail_limit
+
+    def process_result(self, obj):
+        if not isinstance(obj, WorkerTaskResult):
+            return
+
+        if obj.short_status != 'fail':
+            return
+
+        if not self._can_add_task(obj.worker_id):
+            return
+
+        self._count_fail(obj)
+
+        if self._can_rerun(obj.task_id):
+            color_stdout('Schedule task %s to run again\n' % str(obj.task_id),
+                         schema='test_var')
+            obj.short_status = 'transient fail'
+            self._add_task(obj.worker_id, obj.task_id)
+        else:
+            color_stdout('Task %s reaches fail limit (%d)\n' %
+                         (str(obj.task_id), self._fail_limit), schema='test_fail')
+
+
 class StatisticsWatcher(BaseWatcher):
     def __init__(self, get_logfile):
         self.stats = dict()

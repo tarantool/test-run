@@ -130,13 +130,15 @@ class Dispatcher:
             not args.valgrind
         watch_fail = not lib.Options().args.is_force
 
+        rerun_watcher = listeners.RerunWatcher(self.can_add_task, self.add_task)
         log_output_watcher = listeners.LogOutputWatcher()
         self.statistics = listeners.StatisticsWatcher(
             log_output_watcher.get_logfile)
         self.artifacts = listeners.ArtifactsWatcher(
             log_output_watcher.get_logfile)
         output_watcher = listeners.OutputWatcher()
-        self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
+        self.listeners = [rerun_watcher, self.statistics, log_output_watcher,
+                          output_watcher, self.artifacts]
         if watch_fail:
             self.fail_watcher = listeners.FailWatcher(
                 self.terminate_all_workers)
@@ -171,6 +173,8 @@ class Dispatcher:
         for task_queue_disp in task_queue_disps_rnd:
             if not task_queue_disp.is_parallel:
                 continue
+            # Don't add a worker when a task list is exhausted.
+            # Some tasks may be running at the moment.
             if task_queue_disp.done:
                 continue
             return task_queue_disp
@@ -179,7 +183,18 @@ class Dispatcher:
         for task_queue_disp in task_queue_disps_rnd:
             if len(task_queue_disp.worker_ids) > 0:
                 continue
-            if task_queue_disp.done:
+            # Allow to add a worker even if there was a point when
+            # all tasks were taken. It is possible that a task
+            # will be added afterwards.
+            #
+            # FIXME: It is a kind of hack. A worker may read
+            # 'stop worker' marker and stop, but than we'll start
+            # a new worker, which will handle reruns. We should
+            # keep a worker running while there is a possibility
+            # that a task will be added again to the queue.
+            #
+            # NB: Don't forget to handle 'not is_force' case.
+            if not task_queue_disp.undone_tasks():
                 continue
             return task_queue_disp
         return None
@@ -234,6 +249,20 @@ class Dispatcher:
                 self.processes.remove(process)
                 break
 
+    def can_add_task(self, worker_id):
+        """Whether given task group (determined by the worker id)
+           allows to add a task dynamically (during tasks
+           processing).
+
+           It is prerequisite to call <add_task>().
+        """
+        task_queue_disp = self.get_task_queue_disp(worker_id)
+        return task_queue_disp.can_add_task()
+
+    def add_task(self, worker_id, task_id):
+        task_queue_disp = self.get_task_queue_disp(worker_id)
+        task_queue_disp.add_task(task_id)
+
     def mark_task_done(self, worker_id, task_id):
         task_queue_disp = self.get_task_queue_disp(worker_id)
         task_queue_disp.mark_task_done(task_id)
@@ -277,7 +306,8 @@ class Dispatcher:
 
             objs = self.invoke_listeners(inputs, ready_inputs)
             for obj in objs:
-                if isinstance(obj, WorkerTaskResult):
+                if isinstance(obj, WorkerTaskResult) and \
+                        obj.short_status != 'transient fail':
                     self.mark_task_done(obj.worker_id, obj.task_id)
                 elif isinstance(obj, WorkerDone):
                     self.del_worker(obj.worker_id)
@@ -408,6 +438,12 @@ class TaskQueueDispatcher:
         # mark task queue as done when the first worker done to prevent cycling
         # with add-del workers
         self.done = True
+
+    def can_add_task(self):
+        return self.key.endswith('_fragile')
+
+    def add_task(self, task_id):
+        self.task_queue.put(task_id)
 
     def mark_task_done(self, task_id):
         self.done_task_ids.add(task_id)
