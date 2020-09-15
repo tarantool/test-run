@@ -81,6 +81,7 @@ class TestSuite:
         self.args = args
         self.tests = []
         self.ini = {}
+        self.fragile = {'tests': {}}
         self.suite_path = suite_path
         self.ini["core"] = "tarantool"
 
@@ -110,6 +111,17 @@ class TestSuite:
                 lambda x: os.path.join(suite_path, x),
                 dict.fromkeys(self.ini[i].split())
                 if i in self.ini else dict())
+        if config.has_option("default", "fragile"):
+            fragiles = config.get("default", "fragile")
+            try:
+                self.fragile = json.loads(fragiles)
+                if 'tests' not in self.fragile:
+                    raise RuntimeError(
+                        "Key 'tests' absent in 'fragile' json: {}"
+                        . format(self.fragile))
+            except ValueError:
+                # use old format dictionary
+                self.fragile['tests'] = self.ini['fragile']
 
         self.parse_bool_opt('pretest_clean', False)
         self.parse_bool_opt('use_unix_sockets', False)
@@ -154,11 +166,14 @@ class TestSuite:
         self.tests_are_collected = True
         return self.tests
 
+    def get_fragile_list(self):
+        return self.fragile['tests'].keys()
+
     def stable_tests(self):
         self.collect_tests()
         res = []
         for test in self.tests:
-            if os.path.basename(test.name) not in self.ini['fragile']:
+            if os.path.basename(test.name) not in self.get_fragile_list():
                 res.append(test)
         return res
 
@@ -166,7 +181,7 @@ class TestSuite:
         self.collect_tests()
         res = []
         for test in self.tests:
-            if os.path.basename(test.name) in self.ini['fragile']:
+            if os.path.basename(test.name) in self.get_fragile_list():
                 res.append(test)
         return res
 
