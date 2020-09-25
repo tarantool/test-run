@@ -10,6 +10,7 @@ from lib.inspector import TarantoolInspector
 from lib.server import Server
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
+from lib.utils import just_and_trim
 
 
 class ConfigurationError(RuntimeError):
@@ -247,14 +248,14 @@ class TestSuite:
         """
         test.inspector = inspector
         test_name = os.path.basename(test.name)
-        color_stdout(os.path.join(self.ini['suite'], test_name).ljust(48),
-                     schema='t_name')
+        full_test_name = os.path.join(self.ini['suite'], test_name)
+        color_stdout(just_and_trim(full_test_name, 47) + ' ', schema='t_name')
         # for better diagnostics in case of a long-running test
 
         conf = ''
         if test.run_params:
             conf = test.conf_name
-        color_stdout(conf.ljust(16), schema='test_var')
+        color_stdout(just_and_trim(conf, 15) + ' ', schema='test_var')
 
         if self.is_test_enabled(test, conf, server):
             short_status, result_checksum = test.run(server)

@@ -258,3 +258,9 @@ def prefix_each_line(prefix, data):
     data = data.rstrip('\n')
     lines = [(line + '\n') for line in data.split('\n')]
     return prefix + prefix.join(lines)
+
+
+def just_and_trim(src, width):
+    if len(src) > width:
+        return src[:width - 1] + '>'
+    return src.ljust(width)
