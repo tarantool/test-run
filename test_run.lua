@@ -244,9 +244,19 @@ local function log_box_info_replication_cond(id, field, ok, info, opts)
         exp, got, tostring(ok))
 end
 
+local function box_info_replication_instance(id)
+    if type(box.cfg) ~= 'table' then
+        return nil
+    end
+    local box_info = box.info
+    local replication = box_info ~= nil and box_info.replication or nil
+    return replication ~= nil and replication[id] or nil
+end
+
 local function gen_box_info_replication_cond(id, field, opts)
     return function()
-        local info = box.info.replication[id][field]
+        local instance = box_info_replication_instance(id)
+        local info = instance ~= nil and instance[field] or nil
         local ok = info ~= nil
         if opts.status ~= nil then
             ok = ok and info.status == opts.status
@@ -260,7 +270,7 @@ local function gen_box_info_replication_cond(id, field, opts)
             ok = ok and info.message == nil
         end
         log_box_info_replication_cond(id, field, not not ok, info, opts)
-        if not ok then return false, box.info.replication[id] end
+        if not ok then return false, instance end
         return true
     end
 end
