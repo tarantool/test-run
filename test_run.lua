@@ -437,6 +437,17 @@ local function wait_log(self, node, what, bytes, timeout, opts)
     return wait_cond(self, cond, timeout, delay)
 end
 
+-- Helper for box.snapshot to save changing data in log file instead of
+-- saving in results file, to be able to collect results file checksum
+-- for rerun ability.
+local function box_snapshot()
+    local ok, res = pcall(box.snapshot)
+    if not ok then
+        log.error("box.snapshot() failed with error: " .. res)
+    end
+    return ok
+end
+
 local inspector_methods = {
     cmd = cmd,
     eval = eval,
@@ -464,6 +475,7 @@ local inspector_methods = {
     grep_log = grep_log,
     wait_cond = wait_cond,
     wait_log = wait_log,
+    box_snapshot = box_snapshot,
 }
 
 local function inspector_new(host, port)
