@@ -215,8 +215,11 @@ class TestState(object):
         if sname not in self.servers:
             raise LuaPreprocessorException(
                 'Can\'t stop nonexistent server {0}'.format(repr(sname)))
-        self.connections[sname].disconnect()
-        self.connections.pop(sname)
+        try:
+            self.connections[sname].disconnect()
+            self.connections.pop(sname)
+        except KeyError:
+            pass
         if 'signal' in opts:
             # convert to an integer if a number is passed, leave a string
             # otherwise
