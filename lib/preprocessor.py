@@ -208,6 +208,13 @@ class TestState(object):
                     'Can\'t start server {0}'.format(repr(sname)))
         return not crash_occured
 
+    def server_find(self, ctype, sname, opts):
+        color_log('\nDEBUG: TestState[%s].server_find(%s)\n' % (
+            hex(id(self)), str(sname)), schema='test_var')
+        if sname in self.servers:
+            return True
+        return False
+
     def server_stop(self, ctype, sname, opts):
         color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
             hex(id(self)), str(ctype), str(sname), str(opts)),

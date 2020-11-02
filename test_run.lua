@@ -94,6 +94,20 @@ local function wait_vclock(self, node, to_vclock)
     end
 end
 
+local find_cluster_cmd = 'find server %s'
+local drop_cluster_cmd1 = 'stop server %s with signal=KILL'
+local drop_cluster_cmd2 = 'cleanup server %s'
+local drop_cluster_cmd3 = 'delete server %s'
+
+local function drop_cluster(self, servers)
+    for _, name in ipairs(servers) do
+	if self:cmd(find_cluster_cmd:format(name)) then
+            self:cmd(drop_cluster_cmd1:format(name))
+            self:cmd(drop_cluster_cmd2:format(name))
+            self:cmd(drop_cluster_cmd3:format(name))
+	end
+    end
+end
 
 local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua"'
 local create_cluster_cmd1_return_listen_uri =
@@ -106,6 +120,8 @@ local function create_cluster(self, servers, test_suite, opts)
     test_suite = test_suite or 'replication'
 
     local uris = {}
+
+    drop_cluster(self, servers)
 
     for _, name in ipairs(servers) do
         if opts.return_listen_uri then
@@ -125,18 +141,6 @@ local function create_cluster(self, servers, test_suite, opts)
 
     if opts.return_listen_uri then
         return uris
-    end
-end
-
-local drop_cluster_cmd1 = 'stop server %s with signal=KILL'
-local drop_cluster_cmd2 = 'cleanup server %s'
-local drop_cluster_cmd3 = 'delete server %s'
-
-local function drop_cluster(self, servers)
-    for _, name in ipairs(servers) do
-        self:cmd(drop_cluster_cmd1:format(name))
-        self:cmd(drop_cluster_cmd2:format(name))
-        self:cmd(drop_cluster_cmd3:format(name))
     end
 end
 
