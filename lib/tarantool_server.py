@@ -816,6 +816,8 @@ class TarantoolServer(Server):
         if self.rpl_master:
             os.putenv("MASTER", self.rpl_master.iproto.uri)
         self.logfile_pos = self.logfile
+        self.signal_default = signal.SIGTERM
+        self.signal_kill = signal.SIGKILL
 
         # redirect stdout from tarantoolctl and tarantool
         os.putenv("TEST_WORKDIR", self.vardir)
@@ -980,6 +982,17 @@ class TarantoolServer(Server):
             if self.crash_detector is not None:
                 save_join(self.crash_detector)
             self.wait_stop()
+            # check if the process died, otherwise if SIGTERM failed use SIGKILL
+            try:
+                self.process.send_signal(0)
+            except OSError:
+                pass
+            else:
+                if signal == self.signal_default:
+                    signal = self.signal_kill
+                    color_log('Sending signal {0} ({1}) to process {2}\n'.format(
+                              signal, signame(signal), self.process.pid))
+                    self.process.send_signal(signal)
 
         self.status = None
         if re.search(r'^/', str(self._admin.port)):
