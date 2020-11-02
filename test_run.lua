@@ -128,7 +128,7 @@ local function create_cluster(self, servers, test_suite, opts)
     end
 end
 
-local drop_cluster_cmd1 = 'stop server %s'
+local drop_cluster_cmd1 = 'stop server %s with signal=KILL'
 local drop_cluster_cmd2 = 'cleanup server %s'
 local drop_cluster_cmd3 = 'delete server %s'
 
