@@ -392,7 +392,10 @@ class TestState(object):
         result = self.servers[name].admin(
             '%s%s' % (expr, self.delimiter), silent=silent
         )
-        result = yaml.safe_load(result)
+        try:
+            result = yaml.safe_load(result)
+        except AttributeError:
+            result = []
         if not result:
             result = []
         return result
