@@ -112,7 +112,7 @@ end
 local create_cluster_cmd1 = 'create server %s with script="%s/%s.lua"'
 local create_cluster_cmd1_return_listen_uri =
     'create server %s with script="%s/%s.lua", return_listen_uri=True'
-local create_cluster_cmd2 = 'start server %s with wait_load=False, wait=False'
+local create_cluster_cmd2 = 'start server %s with wait_load=False, wait=False, signal=KILL'
 local create_cluster_cmd2_args = create_cluster_cmd2 .. ', args="%s"'
 
 local function create_cluster(self, servers, test_suite, opts)
