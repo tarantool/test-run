@@ -1,5 +1,6 @@
 import os
 import shlex
+import signal
 import sys
 from collections import deque
 
@@ -439,7 +440,7 @@ class TestState(object):
             # don't stop the default server
             if k == 'default':
                 continue
-            v.stop(silent=True)
+            v.stop(silent=True, signal=signal.SIGKILL)
             if k in self.connections:
                 self.connections[k].disconnect()
                 self.connections.pop(k)
