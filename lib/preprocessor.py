@@ -395,10 +395,13 @@ class TestState(object):
                 "Wrong command for filters: {0}".format(repr(ctype)))
 
     def lua_eval(self, name, expr, silent=True):
-        self.servers[name].admin.reconnect()
-        result = self.servers[name].admin(
-            '%s%s' % (expr, self.delimiter), silent=silent
-        )
+        try:
+            self.servers[name].admin.reconnect()
+            result = self.servers[name].admin(
+                '%s%s' % (expr, self.delimiter), silent=silent
+            )
+        except KeyError:
+            return []
         try:
             result = yaml.safe_load(result)
         except AttributeError:
