@@ -776,7 +776,7 @@ class TarantoolServer(Server):
                         self.vardir)
 
     def prepare_args(self, args=[]):
-        return [self.ctl_path, 'start', os.path.basename(self.script)] + args
+        return [self.ctl_path, 'restart', os.path.basename(self.script)] + args
 
     def pretest_clean(self):
         # Don't delete snap and logs for 'default' tarantool server
