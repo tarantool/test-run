@@ -9,6 +9,7 @@ from gevent.subprocess import Popen, PIPE
 from lib.colorer import color_log
 from lib.preprocessor import TestState
 from lib.server import Server
+from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.tarantool_server import Test
 from lib.tarantool_server import TarantoolServer
 from lib.tarantool_server import TarantoolStartError
@@ -42,6 +43,14 @@ class AppTest(Test):
         tarantool = TestRunGreenlet(run_server, execs, server.vardir, server,
                                     server.logfile, retval)
         self.current_test_greenlet = tarantool
+
+        # Copy the snapshot right before starting the server.
+        # Otherwise pretest_clean() would remove it.
+        if server.snapshot_path:
+            snapshot_dest = os.path.join(server.vardir, DEFAULT_SNAPSHOT_NAME)
+            color_log("Copying snapshot {} to {}\n".format(
+                server.snapshot_path, snapshot_dest))
+            shutil.copy(server.snapshot_path, snapshot_dest)
 
         try:
             tarantool.start()
@@ -86,7 +95,12 @@ class AppServer(Server):
         return os.path.join(self.vardir, file_name)
 
     def prepare_args(self, args=[]):
-        return [os.path.join(os.getcwd(), self.current_test.name)] + args
+        cli_args = [os.path.join(os.getcwd(), self.current_test.name)] + args
+        if self.disable_schema_upgrade:
+            cli_args = [self.binary, '-e',
+                        self.DISABLE_AUTO_UPGRADE] + cli_args
+
+        return cli_args
 
     def deploy(self, vardir=None, silent=True, need_init=True):
         self.vardir = vardir
