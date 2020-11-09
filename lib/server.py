@@ -9,11 +9,14 @@ from lib.server_mixins import LLdbMixin
 from lib.server_mixins import StraceMixin
 from lib.server_mixins import LuacovMixin
 from lib.colorer import color_stdout
+from lib.options import Options
 from lib.utils import print_tail_n
 
 
 DEFAULT_CHECKPOINT_PATTERNS = ["*.snap", "*.xlog", "*.vylog", "*.inprogress",
                                "[0-9]*/"]
+
+DEFAULT_SNAPSHOT_NAME = "00000000000000000000.snap"
 
 
 class Server(object):
@@ -24,6 +27,10 @@ class Server(object):
     DEFAULT_INSPECTOR = 0
     TEST_RUN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 ".."))
+    # assert(false) hangs due to gh-4983, added fiber.sleep(0) to workaround it
+    DISABLE_AUTO_UPGRADE = "require('fiber').sleep(0) \
+        assert(box.error.injection.set('ERRINJ_AUTO_UPGRADE', true) == 'ok', \
+        'no such errinj')"
 
     @property
     def vardir(self):
@@ -84,6 +91,8 @@ class Server(object):
         self.inspector_port = int(ini.get(
             'inspector_port', self.DEFAULT_INSPECTOR
         ))
+        self.disable_schema_upgrade = Options().args.disable_schema_upgrade
+        self.snapshot_path = Options().args.snapshot_path
 
         # filled in {Test,AppTest,LuaTest,PythonTest}.execute()
         # or passed through execfile() for PythonTest (see

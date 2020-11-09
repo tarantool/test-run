@@ -26,9 +26,12 @@ from lib.box_connection import BoxConnection
 from lib.colorer import color_stdout, color_log
 from lib.preprocessor import TestState
 from lib.server import Server
+from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.test import Test
 from lib.utils import find_port
+from lib.utils import extract_schema_from_snapshot
 from lib.utils import format_process
+from lib.utils import safe_makedirs
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
@@ -778,8 +781,29 @@ class TarantoolServer(Server):
             shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pretest_clean.lua'),
                         self.vardir)
 
+        if self.snapshot_path:
+            # Copy snapshot to the workdir.
+            # Usually Tarantool looking for snapshots on start in a current directory
+            # or in a directories that specified in memtx_dir or vinyl_dir box settings.
+            # Before running test current directory (workdir) passed to a new instance in
+            # an environment variable TEST_WORKDIR and then tarantoolctl
+            # adds to it instance_name and set to memtx_dir and vinyl_dir.
+            (instance_name, _) = os.path.splitext(os.path.basename(self.script))
+            instance_dir = os.path.join(self.vardir, instance_name)
+            safe_makedirs(instance_dir)
+            snapshot_dest = os.path.join(instance_dir, DEFAULT_SNAPSHOT_NAME)
+            color_log("Copying snapshot {} to {}\n".format(
+                self.snapshot_path, snapshot_dest))
+            shutil.copy(self.snapshot_path, snapshot_dest)
+
     def prepare_args(self, args=[]):
-        return [self.ctl_path, 'start', os.path.basename(self.script)] + args
+        cli_args = [self.ctl_path, 'start',
+                    os.path.basename(self.script)] + args
+        if self.disable_schema_upgrade:
+            cli_args = [self.binary, '-e',
+                        self.DISABLE_AUTO_UPGRADE] + cli_args
+
+        return cli_args
 
     def pretest_clean(self):
         # Don't delete snap and logs for 'default' tarantool server
@@ -864,6 +888,18 @@ class TarantoolServer(Server):
         self.admin.disconnect()
         self.admin = CON_SWITCH[self.tests_type]('localhost', port)
         self.status = 'started'
+
+        # Verify that the schema actually was not upgraded.
+        if self.disable_schema_upgrade:
+            expected_version = extract_schema_from_snapshot(self.snapshot_path)
+            actual_version = yaml.safe_load(self.admin.execute(
+                'box.space._schema:get{"version"}'))[0]
+            if expected_version != actual_version:
+                color_stdout('Schema version check fails: expected '
+                             '{}, got {}\n'.format(expected_version,
+                                                   actual_version),
+                             schema='error')
+                raise TarantoolStartError(self.name)
 
     def crash_detect(self):
         if self.crash_expected:

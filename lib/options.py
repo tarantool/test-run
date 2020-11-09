@@ -217,6 +217,20 @@ class Options:
                 help="""Update or create file with reference output (.result).
                 Default: false.""")
 
+        parser.add_argument(
+                "--snapshot",
+                dest='snapshot_path',
+                default=None,
+                type=os.path.abspath,
+                help="""Path to snapshot that will be loaded before testing.""")
+
+        parser.add_argument(
+                "--disable-schema-upgrade",
+                dest='disable_schema_upgrade',
+                action="store_true",
+                default=False,
+                help="""Disable schema upgrade on testing with snapshots.""")
+
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
         # ./test-run.py foo --exclude bar baz
@@ -235,5 +249,20 @@ class Options:
                 color_stdout(format_str.format(op1, op2), schema='error')
                 check_error = True
 
+        snapshot_path = self.args.snapshot_path
+        if self.args.disable_schema_upgrade and not snapshot_path:
+            color_stdout("\nOption --disable-schema-upgrade requires --snapshot\n",
+                         schema='error')
+            check_error = True
+
+        if snapshot_path and not os.path.exists(snapshot_path):
+            color_stdout("\nPath {} not exists\n".format(snapshot_path), schema='error')
+            check_error = True
+
         if check_error:
             exit(-1)
+
+    def check_schema_upgrade_option(self, is_debug):
+        if self.args.disable_schema_upgrade and not is_debug:
+            color_stdout("Can't disable schema upgrade on release build\n", schema='error')
+            exit(1)

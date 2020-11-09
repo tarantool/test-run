@@ -56,6 +56,8 @@ def module_init():
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
 
+    Options().check_schema_upgrade_option(TarantoolServer.debug)
+
 
 # Init
 ######
