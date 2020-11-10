@@ -776,7 +776,8 @@ class TarantoolServer(Server):
                         self.vardir)
 
     def prepare_args(self, args=[]):
-        return [self.ctl_path, 'start', os.path.basename(self.script)] + args
+        return [self.ctl_path, 'restart', os.path.basename(self.script)] + args \
+                + ['--signal=9']
 
     def pretest_clean(self):
         # Don't delete snap and logs for 'default' tarantool server
@@ -1003,7 +1004,7 @@ class TarantoolServer(Server):
             color_log('    Found old server, pid {0}, killing ...'.format(pid),
                       schema='info')
         try:
-            os.kill(pid, signal.SIGTERM)
+            os.kill(pid, signal.SIGKILL)
         except OSError:
             pass
         self.wait_until_stopped(pid)
