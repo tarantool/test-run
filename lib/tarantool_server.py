@@ -1064,8 +1064,8 @@ class TarantoolServer(Server):
             if os.path.exists(self._admin.port):
                 os.unlink(self._admin.port)
 
-    def restart(self):
-        self.stop()
+    def restart(self, signal=signal.SIGTERM):
+        self.stop(signal)
         self.start()
 
     def kill_old_server(self, silent=True):
