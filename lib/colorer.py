@@ -59,6 +59,7 @@ class SchemaAscetic(CSchema):
         'test_skip': {'fgcolor': 'grey'},
         'test_disa': {'fgcolor': 'grey'},
         'error':     {'fgcolor': 'red'},
+        'info':      {'fgcolor': 'yellow'},
         'test_var':  {'fgcolor': 'yellow'},
     }
 

@@ -20,7 +20,7 @@ local function cmd(self, msg)
     sock:close()
     result = yaml.decode(result)
     if type(result) == 'table' and result.error ~= nil then
-        error(result.error)
+        error(result.error, 0)
     end
     return result
 end
