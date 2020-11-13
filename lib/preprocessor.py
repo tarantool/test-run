@@ -17,12 +17,26 @@ class Namespace(object):
 
 
 class LuaPreprocessorException(Exception):
+    """ Raised when evaluation of a test-run command failed.
+
+        This exception is displayed as QA notice on the terminal.
+
+        A Lua error is raised in a test code. The raised object is
+        a string with given error message.
+
+        All other errors that are raised during a command
+        evaluation are considered as show stoppers and lead to
+        stop execution of a test. KeyboardInterrupt and
+        TarantoolStartError stops testing at all, see
+        inspector.py.
+    """
+
     def __init__(self, val):
         super(LuaPreprocessorException, self).__init__()
         self.value = val
 
     def __str__(self):
-        return "lua preprocessor error: {0}".format(repr(self.value))
+        return self.value
 
 
 class TestState(object):

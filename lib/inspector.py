@@ -10,6 +10,7 @@ from lib.utils import find_port
 from lib.colorer import color_stdout
 
 from lib.tarantool_server import TarantoolStartError
+from lib.preprocessor import LuaPreprocessorException
 
 
 # Module initialization
@@ -95,6 +96,10 @@ class TarantoolInspector(StreamServer):
             except (KeyboardInterrupt, TarantoolStartError):
                 # propagate to the main greenlet
                 raise
+            except LuaPreprocessorException as e:
+                color_stdout('\n* [QA Notice]\n*\n* {0}\n*\n'.format(str(e)),
+                             schema='info')
+                result = {'error': str(e)}
             except Exception as e:
                 self.parser.kill_current_test()
                 color_stdout('\nTarantoolInpector.handle() received the ' +
