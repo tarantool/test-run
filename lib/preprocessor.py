@@ -229,6 +229,9 @@ class TestState(object):
         if sname not in self.servers:
             raise LuaPreprocessorException(
                 'Can\'t stop nonexistent server {0}'.format(repr(sname)))
+        if not self.servers[sname].status:
+            raise LuaPreprocessorException(
+                'Attempt to stop already stopped server {0}'.format(repr(sname)))
         self.connections[sname].disconnect()
         self.connections.pop(sname)
         if 'signal' in opts:
@@ -399,6 +402,10 @@ class TestState(object):
                 "Wrong command for filters: {0}".format(repr(ctype)))
 
     def lua_eval(self, name, expr, silent=True):
+        if name not in self.servers:
+            raise LuaPreprocessorException('Attempt to evaluate a command on ' +
+                                           'the nonexistent server {0}'.format(
+                                            repr(name)))
         self.servers[name].admin.reconnect()
         result = self.servers[name].admin(
             '%s%s' % (expr, self.delimiter), silent=silent
