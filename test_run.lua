@@ -134,7 +134,8 @@ local drop_cluster_cmd3 = 'delete server %s'
 
 local function drop_cluster(self, servers)
     for _, name in ipairs(servers) do
-        self:cmd(drop_cluster_cmd1:format(name))
+        -- Don't fail on already stopped servers.
+        pcall(self.cmd, self, drop_cluster_cmd1:format(name))
         self:cmd(drop_cluster_cmd2:format(name))
         self:cmd(drop_cluster_cmd3:format(name))
     end
