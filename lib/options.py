@@ -242,12 +242,12 @@ class Options:
         check_error = False
         conflict_options = ('valgrind', 'gdb', 'lldb', 'strace')
         for op1, op2 in product(conflict_options, repeat=2):
-            if op1 != op2 and getattr(self, op1, '') and \
-                    getattr(self, op2, ''):
-                format_str = "Error: option --{} is not compatible \
-                                with option --{}"
+            if op1 != op2 and getattr(self.args, op1, '') and \
+                    getattr(self.args, op2, ''):
+                format_str = "\nError: option --{} is not compatible with option --{}\n"
                 color_stdout(format_str.format(op1, op2), schema='error')
                 check_error = True
+                break
 
         snapshot_path = self.args.snapshot_path
         if self.args.disable_schema_upgrade and not snapshot_path:
