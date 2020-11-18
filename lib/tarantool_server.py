@@ -705,36 +705,29 @@ class TarantoolServer(Server):
 
     @classmethod
     def print_exe(cls):
-        color_stdout('Installing the server ...\n', schema='serv_text')
-
+        color_stdout('Tarantool server information\n', schema='info')
         if cls.binary:
-            color_stdout('    Found executable   at ', schema='serv_text')
-            color_stdout(cls.binary + '\n', schema='path')
-
+            color_stdout(' | Found executable at {}\n'.format(cls.binary))
         if cls.ctl_path:
-            color_stdout('    Found tarantoolctl at ', schema='serv_text')
-            color_stdout(cls.ctl_path + '\n', schema='path')
-
-        color_stdout("\n", cls.version(), "\n", schema='version')
+            color_stdout(' | Found tarantoolctl at {}\n'.format(cls.ctl_path))
+        color_stdout('\n' + prefix_each_line(' | ', cls.version()) + '\n',
+                     schema='version')
 
     def install(self, silent=True):
         if self._start_against_running:
             self._iproto = self._start_against_running
             self._admin = int(self._start_against_running) + 1
             return
-        color_log('Installing the server ...\n', schema='serv_text')
-        color_log('    Found executable at ', schema='serv_text')
-        color_log(self.binary + '\n', schema='path')
-        color_log('    Found tarantoolctl at  ', schema='serv_text')
-        color_log(self.ctl_path + '\n', schema='path')
-        color_log('    Creating and populating working directory in ',
-                  schema='serv_text')
-        color_log(self.vardir + ' ...\n', schema='path')
+        color_log('DEBUG: [Instance {}] Installing the server...\n'.format(
+            self.name), schema='info')
+        color_log(' | Found executable at {}\n'.format(self.binary))
+        color_log(' | Found tarantoolctl at {}\n'.format(self.ctl_path))
+        color_log(' | Creating and populating working directory in '
+                  '{}...\n'.format(self.vardir))
         if not os.path.exists(self.vardir):
             os.makedirs(self.vardir)
         else:
-            color_log('    Found old workdir, deleting ...\n',
-                      schema='serv_text')
+            color_log(' | Found old workdir, deleting...\n')
             self.kill_old_server()
             self.cleanup()
         self.copy_files()
@@ -818,10 +811,11 @@ class TarantoolServer(Server):
 
         path = self.script_dst if self.script else \
             os.path.basename(self.binary)
-        color_log("Starting the server ...\n", schema='serv_text')
-        color_log("Starting ", schema='serv_text')
-        color_log(path + " \n", schema='path')
-        color_log(self.version() + "\n", schema='version')
+        color_log('DEBUG: [Instance {}] Starting the server...\n'.format(
+            self.name), schema='info')
+        color_log(' | ' + path + '\n', schema='path')
+        color_log(prefix_each_line(' | ', self.version()) + '\n',
+                  schema='version')
 
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
@@ -976,16 +970,17 @@ class TarantoolServer(Server):
                 )
             return
         if not silent:
-            color_stdout('Stopping the server ...\n', schema='serv_text')
+            color_stdout('[Instance {}] Stopping the server...\n'.format(
+                self.name), schema='info')
         else:
-            color_log('Stopping the server ...\n', schema='serv_text')
+            color_log('DEBUG: [Instance {}] Stopping the server...\n'.format(
+                self.name), schema='info')
         # kill only if process is alive
         if self.process is not None and self.process.returncode is None:
-            color_log('TarantoolServer.stop(): stopping the {0}\n'.format(
-                      format_process(self.process.pid)), schema='test_var')
+            color_log(' | Sending signal {0} ({1}) to {2}\n'.format(
+                      signal, signame(signal),
+                      format_process(self.process.pid)))
             try:
-                color_log('Sending signal {0} ({1}) to process {2}\n'.format(
-                          signal, signame(signal), self.process.pid))
                 self.process.send_signal(signal)
             except OSError:
                 pass
@@ -1029,6 +1024,10 @@ class TarantoolServer(Server):
         2) wait until server tells us his status
 
         """
+        color_log('DEBUG: [Instance {}] Waiting until started '
+                  '(wait_load={})\n'.format(self.name, str(wait_load)),
+                  schema='info')
+
         if wait_load:
             msg = 'entering the event loop|will retry binding|hot standby mode'
             p = self.process if not self.gdb and not self.lldb else None
@@ -1038,9 +1037,13 @@ class TarantoolServer(Server):
                 temp = AdminConnection('localhost', self.admin.port)
                 if not wait_load:
                     ans = yaml.safe_load(temp.execute("2 + 2"))
+                    color_log(" | Successful connection check; don't wait for "
+                              "loading")
                     return True
                 ans = yaml.safe_load(temp.execute('box.info.status'))[0]
                 if ans in ('running', 'hot_standby', 'orphan'):
+                    color_log(" | Started {} (box.info.status: '{}')\n".format(
+                        format_process(self.process.pid), ans))
                     return True
                 elif ans in ('loading'):
                     continue
@@ -1050,6 +1053,8 @@ class TarantoolServer(Server):
                     )
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED:
+                    color_log(' | Connection refused; will retry every 0.1 '
+                              'seconds...')
                     time.sleep(0.1)
                     continue
                 raise
