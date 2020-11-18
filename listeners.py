@@ -1,11 +1,11 @@
 import os
-import re
 import sys
 import yaml
 import shutil
 
 import lib
 from lib.colorer import color_stdout
+from lib.colorer import decolor
 from lib.worker import WorkerCurrentTask
 from lib.worker import WorkerDone
 from lib.worker import WorkerOutput
@@ -159,8 +159,6 @@ class LogOutputWatcher(BaseWatcher):
 
 
 class OutputWatcher(BaseWatcher):
-    color_re = re.compile('\033' + r'\[\d(?:;\d\d)?m')
-
     def __init__(self):
         self.buffer = dict()
 
@@ -175,10 +173,6 @@ class OutputWatcher(BaseWatcher):
         output = OutputWatcher.add_prefix(output, worker_id)
         sys.stdout.write(output)
 
-    @staticmethod
-    def _decolor(obj):
-        return OutputWatcher.color_re.sub('', obj)
-
     def process_result(self, obj):
         if isinstance(obj, WorkerDone):
             bufferized = self.buffer.get(obj.worker_id, '')
@@ -192,7 +186,7 @@ class OutputWatcher(BaseWatcher):
             return
 
         bufferized = self.buffer.get(obj.worker_id, '')
-        if OutputWatcher._decolor(obj.output).endswith('\n'):
+        if decolor(obj.output).endswith('\n'):
             OutputWatcher._write(bufferized + obj.output, obj.worker_id)
             self.buffer[obj.worker_id] = ''
         else:
