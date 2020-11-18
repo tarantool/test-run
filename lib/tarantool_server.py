@@ -167,20 +167,27 @@ class LuaTest(Test):
         sys.stdout.write(result_old)
         return False
 
-    def set_language(self, ts, language):
-        for conn in ts.curcon:
-            conn(r'\set language ' + language, silent=True)
-
-    def send_command(self, command, ts, language=None):
-        if language:
-            self.set_language(ts, language)
+    def send_command_raw(self, command, ts):
+        """ Send a command to tarantool and read a response. """
+        # Evaluate the request on the first connection, save the
+        # response.
         result = ts.curcon[0](command, silent=True)
+        # Evaluate on other connections, ignore responses.
         for conn in ts.curcon[1:]:
             conn(command, silent=True)
         # gh-24 fix
         if result is None:
             result = '[Lost current connection]\n'
         return result
+
+    def set_language(self, ts, language):
+        command = r'\set language ' + language
+        self.send_command_raw(command, ts)
+
+    def send_command(self, command, ts, language=None):
+        if language:
+            self.set_language(ts, language)
+        return self.send_command_raw(command, ts)
 
     def flush(self, ts, command_log, command_exe):
         # Write a command to a result file.
