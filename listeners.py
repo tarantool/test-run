@@ -200,7 +200,12 @@ class OutputWatcher(BaseWatcher):
                 del self.buffer[obj.worker_id]
             return
 
-        if not isinstance(obj, WorkerOutput) or obj.log_only:
+        # Skip irrelevant events.
+        if not isinstance(obj, WorkerOutput):
+            return
+
+        # Skip color_log() events if --debug is not passed.
+        if obj.log_only and not lib.Options().args.debug:
             return
 
         bufferized = self.buffer.get(obj.worker_id, '')

@@ -76,6 +76,14 @@ class Options:
                 Default: false.""")
 
         parser.add_argument(
+                '--debug',
+                dest='debug',
+                action='store_true',
+                default=False,
+                help="""Print test-run logs to the terminal.
+                Default: false.""")
+
+        parser.add_argument(
                 "--force",
                 dest="is_force",
                 action="store_true",
