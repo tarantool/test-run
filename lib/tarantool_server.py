@@ -169,6 +169,8 @@ class LuaTest(Test):
 
     def send_command_raw(self, command, ts):
         """ Send a command to tarantool and read a response. """
+        color_log('DEBUG: sending command: {}\n'.format(command.rstrip()),
+                  schema='tarantool command')
         # Evaluate the request on the first connection, save the
         # response.
         result = ts.curcon[0](command, silent=True)
@@ -178,6 +180,9 @@ class LuaTest(Test):
         # gh-24 fix
         if result is None:
             result = '[Lost current connection]\n'
+        color_log("DEBUG: tarantool's response for [{}]\n{}\n".format(
+            command.rstrip(), prefix_each_line(' | ', result)),
+            schema='tarantool command')
         return result
 
     def set_language(self, ts, language):

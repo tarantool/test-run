@@ -62,6 +62,7 @@ class SchemaAscetic(CSchema):
         'info':      {'fgcolor': 'yellow'},
         'test_var':  {'fgcolor': 'yellow'},
         'test-run command':  {'fgcolor': 'green'},
+        'tarantool command': {'fgcolor': 'blue'},
     }
 
 
@@ -89,6 +90,7 @@ class SchemaPretty(CSchema):
         'log':       {'fgcolor': 'grey'},
         'test_var':  {'fgcolor': 'yellow'},
         'test-run command':  {'fgcolor': 'green'},
+        'tarantool command': {'fgcolor': 'blue'},
     }
 
 
