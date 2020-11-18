@@ -148,8 +148,20 @@ class LogOutputWatcher(BaseWatcher):
             self.fds[obj.worker_id] = open(filepath, 'w')
         fd = self.fds[obj.worker_id]
 
-        # Prefix each line with a timestamp.
+        # Mark chunks without newlines at the end.
+        #
+        # In OutputWatcher() such chunks are bufferized and
+        # written to the terminal when a newline arrives (to
+        # don't mix partial lines from different workers).
+        #
+        # Here we want to dump output without any buffering,
+        # because it may help with debugging a problem. So
+        # we just mark such chunks and write them out.
         output = obj.output
+        if not decolor(output).endswith('\n'):
+            output = output + ' <no newline>\n'
+
+        # Prefix each line with a timestamp.
         prefix = '[{}] '.format(obj.timestamp)
         output = prefix_each_line(prefix, output)
 
