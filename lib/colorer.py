@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from lib.singleton import Singleton
 
@@ -147,6 +148,7 @@ class Colorer(object):
     begin = "\033["
     end = "m"
     disable = begin+'0'+end
+    color_re = re.compile('\033' + r'\[\d(?:;\d\d)?m')
 
     def __init__(self):
         # These two fields can be filled later. It's for passing output from
@@ -248,9 +250,16 @@ class Colorer(object):
     def isatty(self):
         return self.is_term
 
+    def decolor(self, data):
+        return self.color_re.sub('', data)
+
 
 # Globals
 #########
 
 
 color_stdout = Colorer()
+
+
+def decolor(data):
+    return color_stdout.decolor(data)
