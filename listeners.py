@@ -208,6 +208,11 @@ class OutputWatcher(BaseWatcher):
         if obj.log_only and not lib.Options().args.debug:
             return
 
+        # Prepend color_log() messages with a timestamp.
+        if obj.log_only:
+            prefix = '[{}] '.format(obj.timestamp)
+            obj.output = prefix_each_line(prefix, obj.output)
+
         bufferized = self.buffer.get(obj.worker_id, '')
         if decolor(obj.output).endswith('\n'):
             OutputWatcher._write(bufferized + obj.output, obj.worker_id)
