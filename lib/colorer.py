@@ -61,6 +61,7 @@ class SchemaAscetic(CSchema):
         'error':     {'fgcolor': 'red'},
         'info':      {'fgcolor': 'yellow'},
         'test_var':  {'fgcolor': 'yellow'},
+        'test-run command':  {'fgcolor': 'green'},
     }
 
 
@@ -87,6 +88,7 @@ class SchemaPretty(CSchema):
         'tr_text':   {'fgcolor': 'green'},
         'log':       {'fgcolor': 'grey'},
         'test_var':  {'fgcolor': 'yellow'},
+        'test-run command':  {'fgcolor': 'green'},
     }
 
 

@@ -7,7 +7,9 @@ from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
 from lib.utils import find_port
+from lib.utils import prefix_each_line
 from lib.colorer import color_stdout
+from lib.colorer import color_log
 
 from lib.tarantool_server import TarantoolStartError
 from lib.preprocessor import LuaPreprocessorException
@@ -91,6 +93,9 @@ class TarantoolInspector(StreamServer):
         self.sem.acquire()
 
         for line in self.readline(socket):
+            color_log('DEBUG: test-run received command: {}\n'.format(line),
+                      schema='test-run command')
+
             try:
                 result = self.parser.parse_preprocessor(line)
             except (KeyboardInterrupt, TarantoolStartError):
@@ -111,6 +116,9 @@ class TarantoolInspector(StreamServer):
             result = yaml.dump(result)
             if not result.endswith('...\n'):
                 result = result + '...\n'
+            color_log("DEBUG: test-run's response for [{}]\n{}\n".format(
+                line, prefix_each_line(' | ', result)),
+                schema='test-run command')
             socket.sendall(result)
 
         self.sem.release()

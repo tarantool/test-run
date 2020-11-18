@@ -183,9 +183,6 @@ class TestState(object):
                 "Wrong option: {0}".format(repr(key)))
 
     def server_start(self, ctype, sname, opts):
-        color_log('\nDEBUG: TestState[%s].server_start(%s, %s, %s)\n' % (
-            hex(id(self)), str(ctype), str(sname), str(opts)),
-            schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException(
                 'Can\'t start nonexistent server {0}'.format(repr(sname)))
@@ -223,9 +220,6 @@ class TestState(object):
         return not crash_occured
 
     def server_stop(self, ctype, sname, opts):
-        color_log('\nDEBUG: TestState[%s].server_stop(%s, %s, %s)\n' % (
-            hex(id(self)), str(ctype), str(sname), str(opts)),
-            schema='test_var')
         if sname not in self.servers:
             raise LuaPreprocessorException(
                 'Can\'t stop nonexistent server {0}'.format(repr(sname)))
@@ -247,9 +241,6 @@ class TestState(object):
             self.servers[sname].stop(silent=True)
 
     def server_create(self, ctype, sname, opts):
-        color_log('\nDEBUG: TestState[%s].server_create(%s, %s, %s)\n' % (
-            hex(id(self)), str(ctype), str(sname), str(opts)),
-            schema='test_var')
         if sname in self.servers:
             raise LuaPreprocessorException(
                 'Server {0} already exists'.format(repr(sname)))
