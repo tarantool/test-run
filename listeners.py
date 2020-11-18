@@ -147,7 +147,13 @@ class LogOutputWatcher(BaseWatcher):
             filepath = self.get_logfile(obj.worker_name)
             self.fds[obj.worker_id] = open(filepath, 'w')
         fd = self.fds[obj.worker_id]
-        fd.write(obj.output)
+
+        # Prefix each line with a timestamp.
+        output = obj.output
+        prefix = '[{}] '.format(obj.timestamp)
+        output = prefix_each_line(prefix, output)
+
+        fd.write(output)
         fd.flush()
 
     def __del__(self):

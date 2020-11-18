@@ -5,6 +5,7 @@ import os
 import signal
 import traceback
 import yaml
+from datetime import datetime
 
 import lib
 from lib.colorer import color_log
@@ -166,6 +167,7 @@ class WorkerOutput(BaseWorkerMessage):
         super(WorkerOutput, self).__init__(worker_id, worker_name)
         self.output = output
         self.log_only = log_only
+        self.timestamp = datetime.isoformat(datetime.now(), ' ')
 
 
 class WorkerDone(BaseWorkerMessage):
