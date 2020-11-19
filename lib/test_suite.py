@@ -196,7 +196,7 @@ class TestSuite:
         try:
             return Server(self.ini, test_suite=self)
         except Exception as e:
-            print e
+            print(e)
             raise RuntimeError("Unknown server: core = {0}".format(
                                self.ini["core"]))
 

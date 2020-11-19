@@ -54,7 +54,7 @@ class AdminPool(TarantoolPool):
             # tarantool/gh-1163
             # 1. raise only if handshake is not full
             # 2. be silent on crashes or if it's server.stop() operation
-            print 'Handshake error {\n', handshake, '\n}'
+            print('Handshake error {\n', handshake, '\n}')
             raise RuntimeError('Broken tarantool console handshake')
         return s
 
