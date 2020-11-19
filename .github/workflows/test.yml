@@ -1,0 +1,37 @@
+name: test-run
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    if: ( github.event_name == 'push' ||
+        github.event.pull_request.head.repo.full_name != github.repository ) &&
+        ( github.repository == 'tarantool/test-run' )
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, 3.8-dev]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: display python version
+      run: python -c "import sys; print(sys.version)"
+    - name: setup dependencies
+      run: |
+       sudo apt update -y
+       sudo apt-get -y install lua5.1 luarocks
+       sudo luarocks install luacheck
+    - name: setup python dependencies
+      run: |
+       pip install -r requirements.txt
+       pip install -r requirements-test.txt
+    - name: run static analysis
+      run: |
+       make lint
