@@ -1153,7 +1153,7 @@ class TarantoolServer(Server):
     def test_option_get(self, option_list_str, silent=False):
         args = [self.binary] + shlex.split(option_list_str)
         if not silent:
-            print " ".join([os.path.basename(self.binary)] + args[1:])
+            print(" ".join([os.path.basename(self.binary)] + args[1:]))
         output = subprocess.Popen(args,
                                   cwd=self.vardir,
                                   stdout=subprocess.PIPE,
@@ -1161,7 +1161,7 @@ class TarantoolServer(Server):
         return output
 
     def test_option(self, option_list_str):
-        print self.test_option_get(option_list_str)
+        print(self.test_option_get(option_list_str))
 
     @staticmethod
     def find_tests(test_suite, suite_path):

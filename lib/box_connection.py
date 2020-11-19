@@ -75,11 +75,11 @@ class BoxConnection(TarantoolConnection):
         if not command:
             return
         if not silent:
-            print command
+            print(command)
         cmd = command.replace(SEPARATOR, ' ') + SEPARATOR
         response = self.py_con.call(cmd)
         if not silent:
-            print response
+            print(response)
         return response
 
     def execute(self, command, silent=True):
@@ -88,8 +88,8 @@ class BoxConnection(TarantoolConnection):
     def call(self, command, *args):
         if not command:
             return
-        print 'call ', command, args
+        print('call ', command, args)
         response = self.py_con.call(command, *args)
         result = str(response)
-        print result
+        print(result)
         return result
