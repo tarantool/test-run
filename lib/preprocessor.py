@@ -216,7 +216,7 @@ class TestState(object):
             self.connections[sname] = self.servers[sname].admin
             try:
                 self.connections[sname]('return true', silent=True)
-            except socket.error as e:
+            except socket.error:
                 LuaPreprocessorException(
                     'Can\'t start server {0}'.format(repr(sname)))
         return not crash_occured
