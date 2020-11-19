@@ -258,11 +258,20 @@ class HangWatcher(BaseWatcher):
         self.worker_current_task = dict()
 
     def process_result(self, obj):
-        self.warned_seconds_ago = 0.0
-        self.inactivity = 0.0
-
+        # Track tasks in progress.
         if isinstance(obj, WorkerCurrentTask):
             self.worker_current_task[obj.worker_id] = obj
+
+        # Skip irrelevant events.
+        if not isinstance(obj, WorkerOutput):
+            return
+
+        # Skip color_log() events if --debug is not passed.
+        if obj.log_only and not lib.Options().args.debug:
+            return
+
+        self.warned_seconds_ago = 0.0
+        self.inactivity = 0.0
 
     def process_timeout(self, delta_seconds):
         self.warned_seconds_ago += delta_seconds
