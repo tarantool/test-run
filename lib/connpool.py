@@ -35,9 +35,9 @@ class ConnectionPool(object):
         self.keepalive = keepalive
         # Exceptions list must be in tuple form to be caught properly
         self.exc_classes = tuple(exc_classes)
-        for i in xrange(size):
+        for i in range(size):
             self.lock.acquire()
-        for i in xrange(size):
+        for i in range(size):
             greenlet = TestRunGreenlet(self._addOne)
             greenlet.start_later(self.SPAWN_FREQUENCY * i)
         if self.keepalive:
