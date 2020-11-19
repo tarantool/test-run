@@ -104,7 +104,7 @@ def reproduce_task_groups(task_groups):
     if not reproduce:
         raise ValueError('[reproduce] Tests list cannot be empty')
     for i, task_id in enumerate(reproduce):
-        for key, task_group in task_groups.items():
+        for key, task_group in six.iteritems(task_groups):
             if task_id in task_group['task_ids']:
                 found_keys.append(key)
                 break

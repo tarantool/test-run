@@ -8,6 +8,7 @@ import re
 import shlex
 import shutil
 import signal
+import six
 import subprocess
 import sys
 import time
@@ -1197,7 +1198,7 @@ class TarantoolServer(Server):
                     test_suite.ini,
                     runs[r],
                     r
-                ) for r in runs.keys() if is_correct(r)])
+                ) for r in six.iterkeys(runs) if is_correct(r)])
             else:
                 tests.append(LuaTest(k, test_suite.args, test_suite.ini))
 

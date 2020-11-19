@@ -68,7 +68,7 @@ def check_port(port, rais=True, ipv4=True, ipv6=True):
     connections (UNIX Sockets in case of file path). False -- otherwise.
     """
     try:
-        if isinstance(port, (int, long)):
+        if isinstance(port, six.integer_types):
             if ipv4:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.bind(('127.0.0.1', port))

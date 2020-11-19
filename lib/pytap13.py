@@ -26,6 +26,7 @@ except ImportError:
     from io import StringIO
 
 import yaml
+import six
 
 
 RE_VERSION = re.compile(r"^\s*TAP version 13\s*$")
@@ -176,7 +177,7 @@ class TAP13(object):
             self.tests.append(Test('not ok', len(self.tests), comment=comment))
 
     def parse(self, source):
-        if isinstance(source, (str, unicode)):
+        if isinstance(source, six.string_types):
             self._parse(StringIO(source))
         elif hasattr(source, "__iter__"):
             self._parse(source)

@@ -5,6 +5,7 @@ import select
 import random
 import functools
 import yaml
+import six
 
 import multiprocessing
 try:
@@ -90,7 +91,7 @@ class Dispatcher:
 
         tasks_cnt = 0
         self.task_queue_disps = dict()
-        for key, task_group in task_groups.items():
+        for key, task_group in six.iteritems(task_groups):
             tasks_cnt += len(task_group['task_ids'])
             task_queue_disp = TaskQueueDispatcher(key, task_group, randomize)
             self.task_queue_disps[key] = task_queue_disp

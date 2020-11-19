@@ -4,6 +4,7 @@ import os
 import shutil
 import signal
 import sys
+import six
 
 from gevent.subprocess import Popen, PIPE
 
@@ -252,7 +253,7 @@ class AppServer(Server):
                     test_suite.ini,
                     params=params,
                     conf_name=conf_name
-                ) for conf_name, params in runs.iteritems()
+                ) for conf_name, params in six.iteritems(runs)
                     if is_correct(conf_name)])
             else:
                 tests.append(AppTest(test_name,

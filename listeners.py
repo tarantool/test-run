@@ -4,6 +4,7 @@ import os
 import sys
 import yaml
 import shutil
+import six
 
 from lib import Options
 from lib.colorer import color_stdout
@@ -56,7 +57,7 @@ class StatisticsWatcher(BaseWatcher):
         """Returns are there failed tasks."""
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
-        for short_status, cnt in self.stats.items():
+        for short_status, cnt in six.iteritems(self.stats):
             color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
         if not self.failed_tasks:
@@ -225,7 +226,7 @@ class OutputWatcher(BaseWatcher):
             self.buffer[obj.worker_id] = bufferized + obj.output
 
     def not_done_worker_ids(self):
-        return self.buffer.keys()
+        return list(self.buffer.keys())
 
 
 class FailWatcher(BaseWatcher):
@@ -295,7 +296,7 @@ class HangWatcher(BaseWatcher):
             schema=color_schema)
 
         hung_tasks = [task for worker_id, task
-                      in self.worker_current_task.iteritems()
+                      in six.iteritems(self.worker_current_task)
                       if worker_id in worker_ids]
         for task in hung_tasks:
             result_file = task.task_tmp_result
