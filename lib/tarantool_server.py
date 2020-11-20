@@ -759,7 +759,7 @@ class TarantoolServer(Server):
     def copy_files(self):
         if self.script:
             shutil.copy(self.script, self.script_dst)
-            os.chmod(self.script_dst, 0777)
+            os.chmod(self.script_dst, 0o777)
         if self.lua_libs:
             for i in self.lua_libs:
                 source = os.path.join(self.testdir, i)
