@@ -10,7 +10,7 @@ import multiprocessing
 from multiprocessing.queues import SimpleQueue
 
 import listeners
-import lib
+from lib import Options
 from lib.utils import set_fd_cloexec
 from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
@@ -122,13 +122,13 @@ class Dispatcher:
                 pass
 
     def init_listeners(self):
-        args = lib.Options().args
+        args = Options().args
         watch_hang = args.no_output_timeout >= 0 and \
             not args.gdb and \
             not args.gdbserver and \
             not args.lldb and \
             not args.valgrind
-        watch_fail = not lib.Options().args.is_force
+        watch_fail = not Options().args.is_force
 
         log_output_watcher = listeners.LogOutputWatcher()
         self.statistics = listeners.StatisticsWatcher(

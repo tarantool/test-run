@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-import lib
+from lib import Options
 from lib.app_server import AppServer
 from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
@@ -153,7 +153,7 @@ class TestSuite:
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
-        if not lib.Options().args.reproduce:
+        if not Options().args.reproduce:
             color_stdout("Collecting tests in ", schema='ts_text')
             color_stdout(
                 '%s (Found %s tests)' % (
@@ -265,7 +265,7 @@ class TestSuite:
             result_checksum = None
 
         # cleanup only if test passed or if --force mode enabled
-        if lib.Options().args.is_force or short_status == 'pass':
+        if Options().args.is_force or short_status == 'pass':
             inspector.cleanup_nondefault()
 
         return short_status, result_checksum
