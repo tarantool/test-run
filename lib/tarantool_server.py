@@ -18,11 +18,6 @@ from gevent import Timeout
 from greenlet import GreenletExit
 from threading import Timer
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.box_connection import BoxConnection
 from lib.colorer import color_stdout
@@ -41,6 +36,13 @@ from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
 from test import TestRunGreenlet, TestExecutionError
+
+try:
+    # Python 2
+    from StringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
 
 
 def save_join(green_obj, timeout=None):

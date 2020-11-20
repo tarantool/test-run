@@ -17,10 +17,13 @@
 # Author: Josef Skladanka <jskladan@redhat.com>
 
 import re
+
 try:
-    from CStringIO import StringIO
-except ImportError:
+    # Python 2
     from StringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
 
 import yaml
 from .utils import string_types
