@@ -7,7 +7,31 @@ import functools
 import yaml
 
 import multiprocessing
-from multiprocessing.queues import SimpleQueue
+
+# SimpleQueue is available from multiprocessing.queues on
+# all Python versions known at the moment of writting the code
+# (up to 3.9).
+#
+# It was additionally exposed directly from the multiprocessing
+# module since Python 3.3 ([1]).
+#
+# However the mandatory argument 'ctx'
+# (see multiprocessing.get_context()) was added to the constructor
+# of SimpleQueue from multiprocessing.queues since Python 3.4
+# ([2]).
+#
+# So we should import SimpleQueue from multiprocessing on
+# Python 3.3+ (and must to do so on Python 3.4+) to uniformly
+# instantiate it (without constructor arguments).
+#
+# [1]: https://bugs.python.org/issue11836
+# [2]: https://bugs.python.org/issue18999
+try:
+    # Python 3.3+
+    from multiprocessing import SimpleQueue
+except ImportError:
+    # Python 2
+    from multiprocessing.queues import SimpleQueue
 
 from lib import Options
 from lib.utils import set_fd_cloexec
