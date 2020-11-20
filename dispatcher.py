@@ -7,7 +7,12 @@ import functools
 import yaml
 
 import multiprocessing
-from multiprocessing.queues import SimpleQueue
+try:
+    # Python 3.7+
+    from multiprocessing import SimpleQueue
+except ImportError:
+    # Python 2
+    from multiprocessing.queues import SimpleQueue
 
 import listeners
 from lib import Options
