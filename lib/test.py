@@ -173,7 +173,10 @@ class Test(object):
             if os.path.exists(self.skip_cond):
                 sys.stdout = FilteredStream(self.tmp_result)
                 stdout_fileno = sys.stdout.stream.fileno()
-                execfile(self.skip_cond, dict(locals(), **server.__dict__))
+                new_globals = dict(locals(), **server.__dict__)
+                with open(self.skip_cond, 'r') as f:
+                    code = compile(f.read(), self.skip_cond, 'exec')
+                    exec(code, new_globals)
                 sys.stdout.close()
                 sys.stdout = save_stdout
             if not self.skip:
