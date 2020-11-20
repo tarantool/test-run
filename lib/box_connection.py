@@ -21,21 +21,30 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+import os
+import sys
 import errno
 import ctypes
 import socket
 
-from tarantool_connection import TarantoolConnection
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    'tarantool-python'))
 
-# monkey patch tarantool and msgpack
-from lib.utils import check_libs
-check_libs()
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    'msgpack-python'))
 
 from tarantool import Connection as tnt_connection  # noqa: E402
 from tarantool import Schema                        # noqa: E402
 
+from tarantool_connection import TarantoolConnection
+from lib.utils import check_libs
 
 SEPARATOR = '\n'
+
+# monkey patch tarantool and msgpack
+check_libs()
 
 
 class BoxConnection(TarantoolConnection):
