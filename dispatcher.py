@@ -9,11 +9,16 @@ import yaml
 import multiprocessing
 from multiprocessing.queues import SimpleQueue
 
-import listeners
-import lib
+from lib import Options
 from lib.utils import set_fd_cloexec
 from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
+from listeners import ArtifactsWatcher
+from listeners import FailWatcher
+from listeners import HangWatcher
+from listeners import LogOutputWatcher
+from listeners import OutputWatcher
+from listeners import StatisticsWatcher
 
 
 class TcpPortDispatcher:
@@ -122,30 +127,27 @@ class Dispatcher:
                 pass
 
     def init_listeners(self):
-        args = lib.Options().args
+        args = Options().args
         watch_hang = args.no_output_timeout >= 0 and \
             not args.gdb and \
             not args.gdbserver and \
             not args.lldb and \
             not args.valgrind
-        watch_fail = not lib.Options().args.is_force
+        watch_fail = not Options().args.is_force
 
-        log_output_watcher = listeners.LogOutputWatcher()
-        self.statistics = listeners.StatisticsWatcher(
-            log_output_watcher.get_logfile)
-        self.artifacts = listeners.ArtifactsWatcher(
-            log_output_watcher.get_logfile)
-        output_watcher = listeners.OutputWatcher()
+        log_output_watcher = LogOutputWatcher()
+        self.statistics = StatisticsWatcher(log_output_watcher.get_logfile)
+        self.artifacts = ArtifactsWatcher(log_output_watcher.get_logfile)
+        output_watcher = OutputWatcher()
         self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
         if watch_fail:
-            self.fail_watcher = listeners.FailWatcher(
-                self.terminate_all_workers)
+            self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
         if watch_hang:
             warn_timeout = 60.0 if args.long else 10.0
-            hang_watcher = listeners.HangWatcher(
-                output_watcher.not_done_worker_ids, self.kill_all_workers,
-                warn_timeout, float(args.no_output_timeout))
+            hang_watcher = HangWatcher(output_watcher.not_done_worker_ids,
+                                       self.kill_all_workers, warn_timeout,
+                                       float(args.no_output_timeout))
             self.listeners.append(hang_watcher)
 
     def run_max_workers(self):
@@ -315,8 +317,8 @@ class Dispatcher:
         # leave only output listeners in self.listeners
         new_listeners = []
         for listener in self.listeners:
-            if isinstance(listener, (listeners.LogOutputWatcher,
-                                     listeners.OutputWatcher)):
+            if isinstance(listener, (LogOutputWatcher,
+                                     OutputWatcher)):
                 listener.report_at_timeout = False
                 new_listeners.append(listener)
         self.listeners = new_listeners
