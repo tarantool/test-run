@@ -3,7 +3,7 @@ import sys
 import yaml
 import shutil
 
-import lib
+from lib import Options
 from lib.colorer import color_stdout
 from lib.colorer import decolor
 from lib.worker import WorkerCurrentTask
@@ -13,6 +13,8 @@ from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
 from lib.utils import prefix_each_line
 from lib.utils import safe_makedirs
+from lib.utils import print_tail_n
+from lib.utils import print_unidiff
 
 
 class BaseWatcher(object):
@@ -69,7 +71,7 @@ class StatisticsWatcher(BaseWatcher):
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
             if show_reproduce_content:
                 color_stdout("---\n", schema='separator')
-                lib.utils.print_tail_n(reproduce_file_path)
+                print_tail_n(reproduce_file_path)
                 color_stdout("...\n", schema='separator')
 
         return True
@@ -97,7 +99,7 @@ class ArtifactsWatcher(BaseWatcher):
         if not self.failed_workers:
             return
 
-        vardir = lib.Options().args.vardir
+        vardir = Options().args.vardir
         artifacts_dir = os.path.join(vardir, 'artifacts')
         artifacts_log_dir = os.path.join(artifacts_dir, 'log')
         artifacts_reproduce_dir = os.path.join(artifacts_dir, 'reproduce')
@@ -124,7 +126,7 @@ class ArtifactsWatcher(BaseWatcher):
 class LogOutputWatcher(BaseWatcher):
     def __init__(self):
         self.fds = dict()
-        self.logdir = os.path.join(lib.Options().args.vardir, 'log')
+        self.logdir = os.path.join(Options().args.vardir, 'log')
         try:
             os.makedirs(self.logdir)
         except OSError:
@@ -205,7 +207,7 @@ class OutputWatcher(BaseWatcher):
             return
 
         # Skip color_log() events if --debug is not passed.
-        if obj.log_only and not lib.Options().args.debug:
+        if obj.log_only and not Options().args.debug:
             return
 
         # Prepend color_log() messages with a timestamp.
@@ -267,7 +269,7 @@ class HangWatcher(BaseWatcher):
             return
 
         # Skip color_log() events if --debug is not passed.
-        if obj.log_only and not lib.Options().args.debug:
+        if obj.log_only and not Options().args.debug:
             return
 
         self.warned_seconds_ago = 0.0
@@ -313,7 +315,7 @@ class HangWatcher(BaseWatcher):
         for task in hung_tasks:
             color_stdout("Test hung! Result content mismatch:\n",
                          schema='error')
-            lib.utils.print_unidiff(task.task_result, task.task_tmp_result)
+            print_unidiff(task.task_result, task.task_tmp_result)
         color_stdout('\n[Main process] No output from workers. '
                      'It seems that we hang. Send SIGKILL to workers; '
                      'exiting...\n', schema='error')
