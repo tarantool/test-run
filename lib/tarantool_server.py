@@ -396,8 +396,10 @@ class PythonTest(Test):
 
     def execute(self, server):
         super(PythonTest, self).execute(server)
-        execfile(self.name, dict(locals(), test_run_current_test=self,
-                                 **server.__dict__))
+        new_globals = dict(locals(), test_run_current_test=self, **server.__dict__)
+        with open(self.name) as f:
+            code = compile(f.read(), self.name, 'exec')
+            exec(code, new_globals)
         # crash was detected (possibly on non-default server)
         if server.current_test.is_crash_reported:
             raise TestExecutionError
