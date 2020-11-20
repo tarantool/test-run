@@ -19,9 +19,11 @@ from greenlet import GreenletExit
 from threading import Timer
 
 try:
-    from cStringIO import StringIO
-except ImportError:
+    # Python 2
     from StringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
 
 from lib.admin_connection import AdminConnection, AdminAsyncConnection
 from lib.box_connection import BoxConnection

@@ -12,9 +12,11 @@ from hashlib import md5
 from utils import safe_makedirs
 
 try:
-    from cStringIO import StringIO
-except ImportError:
+    # Python 2
     from StringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
 
 from lib import Options
 from lib.colorer import color_stdout
