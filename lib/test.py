@@ -16,7 +16,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-import lib
+from lib import Options
 from lib.colorer import color_stdout
 from lib.utils import non_empty_valgrind_logs
 from lib.utils import print_tail_n
@@ -208,7 +208,7 @@ class Test(object):
                 self.is_equal_result = filecmp.cmp(self.result,
                                                    self.tmp_result)
             elif self.is_executed_ok:
-                if lib.Options().args.is_verbose:
+                if Options().args.is_verbose:
                     color_stdout('\n')
                     with open(self.tmp_result, 'r') as f:
                         color_stdout(f.read(), schema='log')
@@ -241,7 +241,7 @@ class Test(object):
               not self.is_equal_result and
               not os.path.isfile(self.result) and
               not is_tap and
-              lib.Options().args.update_result):
+              Options().args.update_result):
             shutil.copy(self.tmp_result, self.result)
             short_status = 'new'
             color_stdout("[ new ]\n", schema='test_new')
@@ -249,7 +249,7 @@ class Test(object):
               not self.is_equal_result and
               os.path.isfile(self.result) and
               not is_tap and
-              lib.Options().args.update_result):
+              Options().args.update_result):
             shutil.copy(self.tmp_result, self.result)
             short_status = 'updated'
             color_stdout("[ updated ]\n", schema='test_new')
@@ -343,7 +343,7 @@ class Test(object):
                          schema='error')
             color_stdout('\nNo result file (%s) found.\n' % self.result,
                          schema='error')
-            if not lib.Options().args.update_result:
+            if not Options().args.update_result:
                 msg = 'Run the test with --update-result option to write the new result file.\n'
                 color_stdout(msg, schema='error')
             self.is_crash_reported = True

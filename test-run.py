@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 """Tarantool regression test suite front-end."""
 
-
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -54,13 +53,15 @@ import os
 import sys
 import time
 
-import lib
-import lib.worker
-
-from dispatcher import Dispatcher
+from lib import Options
 from lib.colorer import color_stdout
+from lib.utils import print_tail_n
+from lib.worker import get_task_groups
+from lib.worker import get_reproduce_file
+from lib.worker import reproduce_task_groups
+from lib.worker import print_greetings
+from dispatcher import Dispatcher
 from listeners import HangError
-
 
 EXIT_SUCCESS = 0
 EXIT_HANG = 1
@@ -73,7 +74,7 @@ EXIT_UNKNOWN_ERROR = 50
 def main_loop_parallel():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
-    args = lib.Options().args
+    args = Options().args
     jobs = args.jobs
     if jobs < 1:
         # faster result I got was with 2 * cpu_count
@@ -94,16 +95,16 @@ def main_loop_parallel():
                  format(args.no_output_timeout), schema='tr_text')
     color_stdout("\n", schema='tr_text')
 
-    task_groups = lib.worker.get_task_groups()
-    if lib.Options().args.reproduce:
-        task_groups = lib.worker.reproduce_task_groups(task_groups)
+    task_groups = get_task_groups()
+    if Options().args.reproduce:
+        task_groups = reproduce_task_groups(task_groups)
         jobs = 1
         randomize = False
 
     dispatcher = Dispatcher(task_groups, jobs, randomize)
     dispatcher.start()
 
-    lib.worker.print_greetings()
+    print_greetings()
 
     color_stdout("\n", '=' * 86, "\n", schema='separator')
     color_stdout("WORKR".ljust(6),     schema='t_name')
@@ -113,7 +114,7 @@ def main_loop_parallel():
     color_stdout('-' * 81, "\n",       schema='separator')
 
     try:
-        is_force = lib.Options().args.is_force
+        is_force = Options().args.is_force
         dispatcher.wait()
         dispatcher.wait_processes()
         color_stdout('-' * 81, "\n", schema='separator')
@@ -152,8 +153,8 @@ def main_parallel():
 
 def main_loop_consistent(failed_test_ids):
     # find and prepare all tasks/groups, print information
-    task_groups = lib.worker.get_task_groups().items()
-    lib.worker.print_greetings()
+    task_groups = get_task_groups().items()
+    print_greetings()
 
     for name, task_group in task_groups:
         # print information about current test suite
@@ -173,15 +174,15 @@ def main_loop_consistent(failed_test_ids):
             short_status = worker.run_task(task_id)
             if short_status == 'fail':
                 reproduce_file_path = \
-                    lib.worker.get_reproduce_file(worker.name)
+                    get_reproduce_file(worker.name)
                 color_stdout('Reproduce file %s\n' %
                              reproduce_file_path, schema='error')
                 if show_reproduce_content:
                     color_stdout("---\n", schema='separator')
-                    lib.utils.print_tail_n(reproduce_file_path)
+                    print_tail_n(reproduce_file_path)
                     color_stdout("...\n", schema='separator')
                 failed_test_ids.append(task_id)
-                if not lib.Options().args.is_force:
+                if not Options().args.is_force:
                     worker.stop_server(cleanup=False)
                     return
 
@@ -203,11 +204,11 @@ def main_consistent():
     except RuntimeError as e:
         color_stdout("\nFatal error: %s. Execution aborted.\n" % e,
                      schema='error')
-        if lib.Options().args.gdb:
+        if Options().args.gdb:
             time.sleep(100)
         return -1
 
-    if failed_test_ids and lib.Options().args.is_force:
+    if failed_test_ids and Options().args.is_force:
         color_stdout("\n===== %d tests failed:\n" % len(failed_test_ids),
                      schema='error')
         for test_id in failed_test_ids:
@@ -223,8 +224,8 @@ if __name__ == "__main__":
 
     status = 0
 
-    force_parallel = bool(lib.Options().args.reproduce)
-    if not force_parallel and lib.Options().args.jobs == -1:
+    force_parallel = bool(Options().args.reproduce)
+    if not force_parallel and Options().args.jobs == -1:
         status = main_consistent()
     else:
         status = main_parallel()
