@@ -44,6 +44,12 @@ except ImportError:
     # Python 3
     from io import StringIO
 
+if sys.version[0] == '2':
+    reload(sys)         # noqa: F821
+    sys.setdefaultencoding('utf8')
+
+import codecs
+
 
 def save_join(green_obj, timeout=None):
     """
@@ -94,7 +100,7 @@ class LuaTest(Test):
         if not os.path.isfile(self.result):
             return self.RESULT_FILE_VERSION_DEFAULT
 
-        with open(self.result, 'r') as f:
+        with codecs.open(self.result, 'r', encoding='UTF-8') as f:
             line = f.readline().rstrip('\n')
 
             # An empty line or EOF.
@@ -266,7 +272,7 @@ class LuaTest(Test):
         eoc_log = '\n'
         eoc_exe = '\n'
 
-        for line in open(self.name, 'r'):
+        for line in codecs.open(self.name, 'r', encoding='UTF-8'):
             # Normalize a line.
             line = line.rstrip('\n')
 
@@ -399,7 +405,7 @@ class PythonTest(Test):
     def execute(self, server):
         super(PythonTest, self).execute(server)
         new_globals = dict(locals(), test_run_current_test=self, **server.__dict__)
-        with open(self.name) as f:
+        with codecs.open(self.name, encoding='UTF-8') as f:
             code = compile(f.read(), self.name, 'exec')
             exec(code, new_globals)
         # crash was detected (possibly on non-default server)
@@ -425,7 +431,7 @@ class TarantoolLog(object):
 
     def positioning(self):
         if os.path.exists(self.path):
-            with open(self.path, 'r') as f:
+            with codecs.open(self.path, 'r', encoding='UTF-8') as f:
                 f.seek(0, os.SEEK_END)
                 self.log_begin = f.tell()
         return self
@@ -433,7 +439,7 @@ class TarantoolLog(object):
     def seek_once(self, msg):
         if not os.path.exists(self.path):
             return -1
-        with open(self.path, 'r') as f:
+        with codecs.open(self.path, 'r', encoding='UTF-8') as f:
             f.seek(self.log_begin, os.SEEK_SET)
             while True:
                 log_str = f.readline()
@@ -450,7 +456,7 @@ class TarantoolLog(object):
                 break
             time.sleep(0.001)
 
-        with open(self.path, 'r') as f:
+        with codecs.open(self.path, 'r', encoding='UTF-8') as f:
             f.seek(self.log_begin, os.SEEK_SET)
             cur_pos = self.log_begin
             while True:
@@ -577,7 +583,7 @@ class TarantoolServer(Server):
     @property
     def log_des(self):
         if not hasattr(self, '_log_des'):
-            self._log_des = open(self.logfile, 'a')
+            self._log_des = codecs.open(self.logfile, 'a', encoding='UTF-8')
         return self._log_des
 
     @log_des.deleter
@@ -663,7 +669,7 @@ class TarantoolServer(Server):
     @classmethod
     def version(cls):
         p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
-        version = p.stdout.read().rstrip()
+        version = p.stdout.read().decode('utf-8').rstrip()
         p.wait()
         return version
 
@@ -951,7 +957,7 @@ class TarantoolServer(Server):
         # find and save backtrace or assertion fail
         assert_lines = list()
         bt = list()
-        with open(self.logfile, 'r') as log:
+        with codecs.open(self.logfile, 'r', encoding='UTF-8') as log:
             lines = log.readlines()
             for rpos, line in enumerate(reversed(lines)):
                 if line.startswith('Segmentation fault'):
@@ -1148,7 +1154,7 @@ class TarantoolServer(Server):
         pid = -1
         if os.path.exists(self.pidfile):
             try:
-                with open(self.pidfile) as f:
+                with codecs.open(self.pidfile, encoding='UTF-8') as f:
                     pid = int(f.read())
             except Exception:
                 pass
@@ -1162,7 +1168,7 @@ class TarantoolServer(Server):
                                   cwd=self.vardir,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT).stdout.read()
-        return output
+        return output.decode('utf-8')
 
     def test_option(self, option_list_str):
         print(self.test_option_get(option_list_str))

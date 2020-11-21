@@ -28,6 +28,9 @@ from tarantool_connection import TarantoolConnection
 from tarantool_connection import TarantoolPool
 from tarantool_connection import TarantoolAsyncConnection
 
+if sys.version[0] == '2':
+    reload(sys)         # noqa: F821
+    sys.setdefaultencoding('utf8')
 
 ADMIN_SEPARATOR = '\n'
 
@@ -39,7 +42,8 @@ def get_handshake(sock, length=128, max_try=100):
     result = ""
     i = 0
     while len(result) != length and i < max_try:
-        result = "%s%s" % (result, sock.recv(length-len(result)))
+        recv = sock.recv(length-len(result)).decode('utf-8')
+        result = "%s%s" % (result, recv)
         # max_try counter for tarantool/gh-1362
         i += 1
     return result
@@ -61,12 +65,14 @@ class AdminPool(TarantoolPool):
 
 class ExecMixIn(object):
     def cmd(self, socket, cmd, silent):
+        cmd = cmd.encode('utf-8')
         socket.sendall(cmd)
 
         bufsiz = 4096
         res = ""
         while True:
             buf = socket.recv(bufsiz)
+            buf = buf.decode('utf-8')
             if not buf:
                 break
             res = res + buf
