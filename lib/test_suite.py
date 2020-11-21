@@ -1,4 +1,10 @@
-import ConfigParser
+try:
+    # Python 3
+    import configparser
+except ImportError:
+    # Python 2
+    import ConfigParser as configparser
+
 import json
 import os
 import re
@@ -91,7 +97,15 @@ class TestSuite:
             raise RuntimeError("Suite %s doesn't exist" % repr(suite_path))
 
         # read the suite config
-        config = ConfigParser.ConfigParser()
+        packer_kwargs = dict()
+        packer_kwargs['inline_comment_prefixes='] = ';'
+        packer_kwargs['strict='] = True
+        try:
+            # Python 3.2+
+            config = configparser.ConfigParser(**packer_kwargs)
+        except TypeError:
+            # Python 2
+            config = configparser.ConfigParser()
         config.read(os.path.join(suite_path, "suite.ini"))
         self.ini.update(dict(config.items("default")))
         self.ini.update(self.args.__dict__)
