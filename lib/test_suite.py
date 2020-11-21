@@ -1,4 +1,16 @@
-import ConfigParser
+from __future__ import print_function
+from __future__ import absolute_import
+
+from six.moves import configparser
+import six
+
+if six.PY2:
+    # Python2
+    ConfigParser = configparser.SafeConfigParser
+else:
+    # Python3
+    ConfigParser = configparser.ConfigParser
+
 import json
 import os
 import re
@@ -90,7 +102,7 @@ class TestSuite:
             raise RuntimeError("Suite %s doesn't exist" % repr(suite_path))
 
         # read the suite config
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(os.path.join(suite_path, "suite.ini"))
         self.ini.update(dict(config.items("default")))
         self.ini.update(self.args.__dict__)
