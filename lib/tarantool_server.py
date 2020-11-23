@@ -776,7 +776,15 @@ class TarantoolServer(Server):
                     if (e.errno == errno.ENOENT):
                         continue
                     raise
-        shutil.copy('.tarantoolctl', self.vardir)
+        # Previously tarantoolctl configuration file located in tarantool
+        # repository at test/ directory. Currently it is located in root
+        # path of test-run/ submodule repository. For backward compatibility
+        # this file should be checked at the old place and only after at
+        # the current.
+        tntctl_file = '.tarantoolctl'
+        if not os.path.exists(tntctl_file):
+            tntctl_file = os.path.join(self.TEST_RUN_DIR, '.tarantoolctl')
+        shutil.copy(tntctl_file, self.vardir)
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
         # Need to use get here because of nondefault servers doesn't have ini.
