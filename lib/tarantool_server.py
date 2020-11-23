@@ -42,7 +42,7 @@ from lib.utils import safe_makedirs
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
-from test import TestRunGreenlet, TestExecutionError
+from lib.test import TestRunGreenlet, TestExecutionError
 
 
 def save_join(green_obj, timeout=None):

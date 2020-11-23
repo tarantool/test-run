@@ -24,9 +24,9 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import re
 import sys
 
-from tarantool_connection import TarantoolConnection
-from tarantool_connection import TarantoolPool
-from tarantool_connection import TarantoolAsyncConnection
+from lib.tarantool_connection import TarantoolConnection
+from lib.tarantool_connection import TarantoolPool
+from lib.tarantool_connection import TarantoolAsyncConnection
 
 
 ADMIN_SEPARATOR = '\n'

@@ -10,7 +10,7 @@ from collections import deque
 from contextlib import contextmanager
 from functools import wraps
 
-from test import TestRunGreenlet
+from lib.test import TestRunGreenlet
 
 __all__ = ["ConnectionPool", "retry"]
 
