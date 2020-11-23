@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import logging
 
 import gevent
@@ -10,7 +12,7 @@ from collections import deque
 from contextlib import contextmanager
 from functools import wraps
 
-from test import TestRunGreenlet
+from .test import TestRunGreenlet
 
 __all__ = ["ConnectionPool", "retry"]
 

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import yaml
@@ -7,14 +9,14 @@ import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
-from lib.utils import find_port
-from lib.utils import prefix_each_line
-from lib.colorer import color_stdout
-from lib.colorer import color_log
-from lib.colorer import qa_notice
+from .utils import find_port
+from .utils import prefix_each_line
+from .colorer import color_stdout
+from .colorer import color_log
+from .colorer import qa_notice
 
-from lib.tarantool_server import TarantoolStartError
-from lib.preprocessor import LuaPreprocessorException
+from .tarantool_server import TarantoolStartError
+from .preprocessor import LuaPreprocessorException
 
 if sys.version[0] == '2':
     reload(sys)     # noqa: F821

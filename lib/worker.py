@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import collections
 import copy
 import functools
@@ -7,13 +9,13 @@ import traceback
 import yaml
 from datetime import datetime
 
-from lib import Options
-from lib.colorer import color_log
-from lib.colorer import color_stdout
-from lib.tarantool_server import TarantoolServer
-from lib.test import get_result
-from lib.test_suite import TestSuite
-from lib.utils import safe_makedirs
+from . import Options
+from .colorer import color_log
+from .colorer import color_stdout
+from .tarantool_server import TarantoolServer
+from .test import get_result
+from .test_suite import TestSuite
+from .utils import safe_makedirs
 
 # Utils
 #######

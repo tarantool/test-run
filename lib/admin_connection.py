@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +27,9 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import re
 import sys
 
-from tarantool_connection import TarantoolConnection
-from tarantool_connection import TarantoolPool
-from tarantool_connection import TarantoolAsyncConnection
+from .tarantool_connection import TarantoolConnection
+from .tarantool_connection import TarantoolPool
+from .tarantool_connection import TarantoolAsyncConnection
 
 if sys.version[0] == '2':
     reload(sys)         # noqa: F821

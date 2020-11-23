@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 import errno
 import gevent
 import glob
@@ -18,24 +21,24 @@ from gevent import Timeout
 from greenlet import GreenletExit
 from threading import Timer
 
-from lib.admin_connection import AdminConnection, AdminAsyncConnection
-from lib.box_connection import BoxConnection
-from lib.colorer import color_stdout
-from lib.colorer import color_log
-from lib.colorer import qa_notice
-from lib.options import Options
-from lib.preprocessor import TestState
-from lib.server import Server
-from lib.server import DEFAULT_SNAPSHOT_NAME
-from lib.test import Test
-from lib.utils import find_port
-from lib.utils import extract_schema_from_snapshot
-from lib.utils import format_process
-from lib.utils import safe_makedirs
-from lib.utils import signame
-from lib.utils import warn_unix_socket
-from lib.utils import prefix_each_line
-from test import TestRunGreenlet, TestExecutionError
+from .admin_connection import AdminConnection, AdminAsyncConnection
+from .box_connection import BoxConnection
+from .colorer import color_stdout
+from .colorer import color_log
+from .colorer import qa_notice
+from .options import Options
+from .preprocessor import TestState
+from .server import Server
+from .server import DEFAULT_SNAPSHOT_NAME
+from .test import Test
+from .utils import find_port
+from .utils import extract_schema_from_snapshot
+from .utils import format_process
+from .utils import safe_makedirs
+from .utils import signame
+from .utils import warn_unix_socket
+from .utils import prefix_each_line
+from .test import TestRunGreenlet, TestExecutionError
 
 try:
     # Python 2

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +28,7 @@ import errno
 import ctypes
 import socket
 
-from tarantool_connection import TarantoolConnection
+from .tarantool_connection import TarantoolConnection
 
 # monkey patch tarantool and msgpack
 from lib.utils import check_libs

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import collections
@@ -9,7 +11,7 @@ import time
 import json
 import subprocess
 from gevent import socket
-from lib.colorer import color_stdout
+
 try:
     # Python3.5 or above
     from signal import Signals
@@ -17,6 +19,7 @@ except ImportError:
     # Python2
     Signals = None
 
+from .colorer import color_stdout
 
 UNIX_SOCKET_LEN_LIMIT = 107
 

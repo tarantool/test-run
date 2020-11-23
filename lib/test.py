@@ -1,15 +1,15 @@
+from __future__ import absolute_import
+
 import filecmp
 import gevent
 import os
 import pprint
-import pytap13
 import re
 import shutil
 import sys
 import traceback
 from functools import partial
 from hashlib import md5
-from utils import safe_makedirs
 
 try:
     # Python 2
@@ -18,11 +18,14 @@ except ImportError:
     # Python 3
     from io import StringIO
 
-from lib import Options
-from lib.colorer import color_stdout
-from lib.utils import non_empty_valgrind_logs
-from lib.utils import print_tail_n
-from lib.utils import print_unidiff as utils_print_unidiff
+from . import Options
+from .colorer import color_stdout
+from .utils import non_empty_valgrind_logs
+from .utils import print_tail_n
+from .utils import print_unidiff as utils_print_unidiff
+from .utils import safe_makedirs
+
+from . import pytap13
 
 if sys.version[0] == '2':
     reload(sys)     # noqa: F821

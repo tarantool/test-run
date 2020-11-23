@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 try:
     # Python 3
     import configparser
@@ -9,15 +11,15 @@ import json
 import os
 import re
 
-from lib import Options
-from lib.app_server import AppServer
-from lib.colorer import color_stdout
-from lib.inspector import TarantoolInspector
-from lib.server import Server
-from lib.tarantool_server import TarantoolServer
-from lib.unittest_server import UnittestServer
-from lib.utils import just_and_trim
-from lib.utils import string_types
+from . import Options
+from .app_server import AppServer
+from .colorer import color_stdout
+from .inspector import TarantoolInspector
+from .server import Server
+from .tarantool_server import TarantoolServer
+from .unittest_server import UnittestServer
+from .utils import just_and_trim
+from .utils import string_types
 
 
 class ConfigurationError(RuntimeError):
