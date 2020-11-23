@@ -1,11 +1,14 @@
+from __future__ import absolute_import
+
 import os
 import glob
 import shlex
-from lib.utils import find_in_path
-from lib.utils import print_tail_n
-from lib.utils import non_empty_valgrind_logs
-from lib.colorer import color_stdout, color_log
 from six.moves import shlex_quote
+
+from .utils import find_in_path
+from .utils import print_tail_n
+from .utils import non_empty_valgrind_logs
+from .colorer import color_stdout, color_log
 
 
 def shlex_join(strings):

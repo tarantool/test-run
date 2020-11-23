@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import shutil
 
-from lib.options import Options
-from lib.tarantool_server import TarantoolServer
-from lib.unittest_server import UnittestServer
-from utils import warn_unix_sockets_at_start
+from .options import Options
+from .tarantool_server import TarantoolServer
+from .unittest_server import UnittestServer
+from .utils import warn_unix_sockets_at_start
 
 
 __all__ = ['Options']

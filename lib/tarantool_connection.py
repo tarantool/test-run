@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -30,10 +32,10 @@ from contextlib import contextmanager
 import gevent
 from gevent import socket as gsocket
 
-from connpool import ConnectionPool
-from test import TestRunGreenlet
-from utils import warn_unix_socket
-from utils import set_fd_cloexec
+from .connpool import ConnectionPool
+from .test import TestRunGreenlet
+from .utils import warn_unix_socket
+from .utils import set_fd_cloexec
 
 
 class TarantoolPool(ConnectionPool):

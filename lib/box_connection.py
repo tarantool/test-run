@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+
 __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 # Redistribution and use in source and binary forms, with or without
@@ -38,8 +41,8 @@ sys.path.append(os.path.join(
 from tarantool import Connection as tnt_connection  # noqa: E402
 from tarantool import Schema                        # noqa: E402
 
-from tarantool_connection import TarantoolConnection
-from lib.utils import check_libs
+from .tarantool_connection import TarantoolConnection
+from .utils import check_libs
 
 SEPARATOR = '\n'
 

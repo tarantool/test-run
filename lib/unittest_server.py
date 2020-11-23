@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import glob
 from subprocess import Popen, PIPE, STDOUT
 
-from lib.server import Server
-from lib.tarantool_server import Test
+from .server import Server
+from .tarantool_server import Test
 
 
 class UnitTest(Test):
