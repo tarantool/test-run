@@ -5,7 +5,7 @@ import shutil
 from lib.options import Options
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
-from utils import warn_unix_sockets_at_start
+from lib.utils import warn_unix_sockets_at_start
 
 
 __all__ = ['Options']

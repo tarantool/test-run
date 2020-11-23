@@ -25,7 +25,7 @@ import errno
 import ctypes
 import socket
 
-from tarantool_connection import TarantoolConnection
+from lib.tarantool_connection import TarantoolConnection
 
 # monkey patch tarantool and msgpack
 from lib.utils import check_libs

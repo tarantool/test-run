@@ -21,8 +21,8 @@ from lib.utils import find_port
 from lib.utils import format_process
 from lib.utils import signame
 from lib.utils import warn_unix_socket
-from test import TestRunGreenlet, TestExecutionError
 from threading import Timer
+from lib.test import TestRunGreenlet, TestExecutionError
 
 
 def timeout_handler(server_process, test_timeout):

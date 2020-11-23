@@ -30,10 +30,10 @@ from contextlib import contextmanager
 import gevent
 from gevent import socket as gsocket
 
-from connpool import ConnectionPool
-from test import TestRunGreenlet
-from utils import warn_unix_socket
-from utils import set_fd_cloexec
+from lib.connpool import ConnectionPool
+from lib.test import TestRunGreenlet
+from lib.utils import warn_unix_socket
+from lib.utils import set_fd_cloexec
 
 
 class TarantoolPool(ConnectionPool):
