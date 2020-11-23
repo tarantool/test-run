@@ -8,6 +8,7 @@ default_cfg = {
     vinyl_dir  = workdir,
     log        = workdir,
     background = false,
+    replication_sync_timeout = 100,
 }
 
 instance_dir = workdir
