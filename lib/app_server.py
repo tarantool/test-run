@@ -6,7 +6,9 @@ import sys
 
 from gevent.subprocess import Popen, PIPE
 
+from lib.colorer import color_stdout
 from lib.colorer import color_log
+from lib.options import Options
 from lib.preprocessor import TestState
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
@@ -17,12 +19,22 @@ from lib.utils import find_port
 from lib.utils import format_process
 from lib.utils import warn_unix_socket
 from test import TestRunGreenlet, TestExecutionError
+from threading import Timer
+
+
+def timeout_handler(server_process, test_timeout):
+    color_stdout("Test timeout of %d secs reached\t" % test_timeout, schema='error')
+    server_process.kill()
 
 
 def run_server(execs, cwd, server, logfile, retval):
     os.putenv("LISTEN", server.iproto)
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    test_timeout = Options().args.test_timeout
+    timer = Timer(test_timeout, timeout_handler, (server.process, test_timeout))
+    timer.start()
     stdout, stderr = server.process.communicate()
+    timer.cancel()
     sys.stdout.write(stdout)
     with open(logfile, 'a') as f:
         f.write(stderr)
