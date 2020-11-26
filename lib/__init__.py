@@ -2,10 +2,14 @@ import os
 import sys
 import shutil
 
-from lib.options import Options
-from lib.tarantool_server import TarantoolServer
-from lib.unittest_server import UnittestServer
-from utils import warn_unix_sockets_at_start
+# monkey patch tarantool and msgpack
+from lib.utils import check_libs
+check_libs()
+
+from lib.options import Options                   # noqa: E402
+from lib.tarantool_server import TarantoolServer  # noqa: E402
+from lib.unittest_server import UnittestServer    # noqa: E402
+from utils import warn_unix_sockets_at_start      # noqa: E402
 
 
 __all__ = ['Options']

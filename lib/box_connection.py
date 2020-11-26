@@ -26,13 +26,8 @@ import ctypes
 import socket
 
 from tarantool_connection import TarantoolConnection
-
-# monkey patch tarantool and msgpack
-from lib.utils import check_libs
-check_libs()
-
-from tarantool import Connection as tnt_connection  # noqa: E402
-from tarantool import Schema                        # noqa: E402
+from tarantool import Connection as tnt_connection
+from tarantool import Schema
 
 
 SEPARATOR = '\n'
