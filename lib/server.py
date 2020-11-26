@@ -93,6 +93,7 @@ class Server(object):
         ))
         self.disable_schema_upgrade = Options().args.disable_schema_upgrade
         self.snapshot_path = Options().args.snapshot_path
+        self.is_snapshot_for_bootstrap = Options().is_snapshot_for_bootstrap
 
         # filled in {Test,AppTest,LuaTest,PythonTest}.execute()
         # or passed through execfile() for PythonTest (see

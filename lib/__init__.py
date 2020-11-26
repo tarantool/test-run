@@ -10,6 +10,8 @@ from lib.options import Options                   # noqa: E402
 from lib.tarantool_server import TarantoolServer  # noqa: E402
 from lib.unittest_server import UnittestServer    # noqa: E402
 from utils import warn_unix_sockets_at_start      # noqa: E402
+from lib.colorer import color_log                 # noqa: E402
+import xlog                                       # noqa: E402
 
 
 __all__ = ['Options']
@@ -60,6 +62,14 @@ def module_init():
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
 
+    # Initialize xlog module with found tarantool / tarantoolctl.
+    # Set color_log() as the function for write debug logs.
+    tarantool_cmd = [TarantoolServer.binary]
+    tarantoolctl_cmd = tarantool_cmd + [TarantoolServer.ctl_path]
+    xlog.init(tarantool=tarantool_cmd, tarantoolctl=tarantoolctl_cmd,
+              debug=lambda x: color_log(' | ' + x + '\n'))
+
+    Options().check_snapshot_option()
     Options().check_schema_upgrade_option(TarantoolServer.debug)
 
 

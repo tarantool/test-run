@@ -17,6 +17,7 @@ from lib.utils import find_port
 from lib.utils import format_process
 from lib.utils import warn_unix_socket
 from test import TestRunGreenlet, TestExecutionError
+from xlog import prepare_bootstrap_snapshot
 
 
 def run_server(execs, cwd, server, logfile, retval):
@@ -51,6 +52,12 @@ class AppTest(Test):
             color_log("Copying snapshot {} to {}\n".format(
                 server.snapshot_path, snapshot_dest))
             shutil.copy(server.snapshot_path, snapshot_dest)
+            if server.is_snapshot_for_bootstrap:
+                # Temporary solution until gh-5540 will be
+                # implemented.
+                color_log('Preparing snapshot {} for local '
+                          'recovery...\n'.format(snapshot_dest))
+                prepare_bootstrap_snapshot(snapshot_dest)
 
         try:
             tarantool.start()

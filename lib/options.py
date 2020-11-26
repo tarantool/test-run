@@ -5,6 +5,7 @@ from itertools import product
 from lib.singleton import Singleton
 
 from lib.colorer import color_stdout
+from xlog import snapshot_is_for_bootstrap
 
 
 def env_int(name, default):
@@ -217,12 +218,31 @@ class Options:
                 help="""Update or create file with reference output (.result).
                 Default: false.""")
 
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        self.is_snapshot_for_bootstrap = False
+
+        def store_snapshot(snapshot_path):
+            self.is_snapshot_for_bootstrap = False
+            return os.path.abspath(snapshot_path)
+
+        def store_bootstrap(snapshot_path):
+            self.is_snapshot_for_bootstrap = True
+            return os.path.abspath(snapshot_path)
+
+        group.add_argument(
                 "--snapshot",
                 dest='snapshot_path',
                 default=None,
-                type=os.path.abspath,
+                type=store_snapshot,
                 help="""Path to snapshot that will be loaded before testing.""")
+
+        group.add_argument(
+                "--bootstrap",
+                dest='snapshot_path',
+                default=None,
+                type=store_bootstrap,
+                help="""Path to bootstrap snapshot that will be loaded before
+                        testing.""")
 
         parser.add_argument(
                 "--disable-schema-upgrade",
@@ -261,6 +281,22 @@ class Options:
 
         if check_error:
             exit(-1)
+
+    def check_snapshot_option(self):
+        if not self.args.snapshot_path:
+            return
+
+        if self.is_snapshot_for_bootstrap and \
+           not snapshot_is_for_bootstrap(self.args.snapshot_path):
+            color_stdout('Expected a boostrap snapshot, one for local recovery '
+                         'is given\n', schema='error')
+            exit(1)
+
+        if not self.is_snapshot_for_bootstrap and \
+           snapshot_is_for_bootstrap(self.args.snapshot_path):
+            color_stdout('Expected a snapshot for local recovery, one for '
+                         'bootstrap is given\n', schema='error')
+            exit(1)
 
     def check_schema_upgrade_option(self, is_debug):
         if self.args.disable_schema_upgrade and not is_debug:

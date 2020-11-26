@@ -36,6 +36,7 @@ from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
 from test import TestRunGreenlet, TestExecutionError
 from xlog import extract_schema_from_snapshot
+from xlog import prepare_bootstrap_snapshot
 
 
 def save_join(green_obj, timeout=None):
@@ -795,6 +796,12 @@ class TarantoolServer(Server):
             color_log("Copying snapshot {} to {}\n".format(
                 self.snapshot_path, snapshot_dest))
             shutil.copy(self.snapshot_path, snapshot_dest)
+            if self.is_snapshot_for_bootstrap:
+                # Temporary solution until gh-5540 will be
+                # implemented.
+                color_log('Preparing snapshot {} for local '
+                          'recovery...\n'.format(snapshot_dest))
+                prepare_bootstrap_snapshot(snapshot_dest)
 
     def prepare_args(self, args=[]):
         cli_args = [self.ctl_path, 'start',
