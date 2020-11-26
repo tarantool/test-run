@@ -191,6 +191,14 @@ class Options:
                 Note: The option works now only with parallel testing.""")
 
         parser.add_argument(
+                "--test-timeout",
+                dest="test_timeout",
+                default=110,
+                type=int,
+                help="""Break the test process with kill signal if the test runs
+                longer than this amount of seconds. Default: 110 [seconds].""")
+
+        parser.add_argument(
                 "--no-output-timeout",
                 dest="no_output_timeout",
                 default=0,

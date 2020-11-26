@@ -14,6 +14,7 @@ import time
 import yaml
 
 from gevent import socket
+from gevent import Timeout
 from greenlet import GreenletExit
 from threading import Timer
 
@@ -27,6 +28,7 @@ from lib.box_connection import BoxConnection
 from lib.colorer import color_stdout
 from lib.colorer import color_log
 from lib.colorer import qa_notice
+from lib.options import Options
 from lib.preprocessor import TestState
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
@@ -44,12 +46,21 @@ from test import TestRunGreenlet, TestExecutionError
 def save_join(green_obj, timeout=None):
     """
     Gevent join wrapper for
-    test-run stop-on-crash feature
+    test-run stop-on-crash/stop-on-timeout feature
 
-    :return True in case of crash and False otherwise
+    :return True in case of crash or test timeout and False otherwise
     """
     try:
-        green_obj.join(timeout=timeout)
+        green_obj.get(timeout=timeout)
+    except Timeout:
+        color_stdout("Test timeout of %d secs reached\t" % timeout, schema='error')
+        # We should kill the greenlet that writes to a temporary
+        # result file. If the same test is run several times (e.g.
+        # on different configurations), this greenlet may wake up
+        # and write to the temporary result file of the new run of
+        # the test.
+        green_obj.kill()
+        return True
     except GreenletExit:
         return True
     # We don't catch TarantoolStartError here to propagate it to a parent
@@ -60,7 +71,6 @@ def save_join(green_obj, timeout=None):
 class LuaTest(Test):
     """ Handle *.test.lua and *.test.sql test files. """
 
-    TIMEOUT = 60 * 10
     RESULT_FILE_VERSION_INITIAL = 1
     RESULT_FILE_VERSION_DEFAULT = 2
     RESULT_FILE_VERSION_LINE_RE = re.compile(
@@ -378,7 +388,7 @@ class LuaTest(Test):
         lua.start()
         crash_occured = True
         try:
-            crash_occured = save_join(lua, timeout=self.TIMEOUT)
+            crash_occured = save_join(lua, timeout=Options().args.test_timeout)
             self.killall_servers(server, ts, crash_occured)
         except KeyboardInterrupt:
             # prevent tests greenlet from writing to the real stdout
