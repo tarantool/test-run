@@ -7,8 +7,6 @@ import random
 import fcntl
 import difflib
 import time
-import json
-import subprocess
 from gevent import socket
 from lib.colorer import color_stdout
 try:
@@ -266,40 +264,3 @@ def just_and_trim(src, width):
     if len(src) > width:
         return src[:width - 1] + '>'
     return src.ljust(width)
-
-
-def xlog_rows(xlog_path):
-    """ Parse xlog / snapshot file.
-
-        Assume tarantool and tarantoolctl is in PATH.
-    """
-    cmd = ['tarantoolctl', 'cat', xlog_path, '--format=json', '--show-system']
-    with open(os.devnull, 'w') as devnull:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=devnull)
-    for line in process.stdout.readlines():
-        yield json.loads(line)
-
-
-def extract_schema_from_snapshot(snapshot_path):
-    """
-    Extract schema version from snapshot.
-
-    Assume tarantool and tarantoolctl is in PATH.
-
-    Example of record:
-
-     {
-       "HEADER": {"lsn":2, "type": "INSERT", "timestamp": 1584694286.0031},
-       "BODY": {"space_id": 272, "tuple": ["version", 2, 3, 1]}
-     }
-
-    :returns: [u'version', 2, 3, 1]
-    """
-    BOX_SCHEMA_ID = 272
-    for row in xlog_rows(snapshot_path):
-        if row['HEADER']['type'] == 'INSERT' and \
-           row['BODY']['space_id'] == BOX_SCHEMA_ID:
-            res = row['BODY']['tuple']
-            if res[0] == 'version':
-                return res
-    return None

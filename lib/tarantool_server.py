@@ -29,13 +29,13 @@ from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.test import Test
 from lib.utils import find_port
-from lib.utils import extract_schema_from_snapshot
 from lib.utils import format_process
 from lib.utils import safe_makedirs
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
 from test import TestRunGreenlet, TestExecutionError
+from xlog import extract_schema_from_snapshot
 
 
 def save_join(green_obj, timeout=None):
