@@ -237,7 +237,7 @@ def print_unidiff(filepath_a, filepath_b):
             ctime = time.ctime(os.stat(filepath).st_mtime)
         except Exception:
             if not os.path.exists(filepath):
-                color_stdout('[File does not exists: {}]'.format(filepath),
+                color_stdout('[File does not exist: {}]\n'.format(filepath),
                              schema='error')
             lines = []
             ctime = time.ctime()
