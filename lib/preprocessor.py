@@ -400,9 +400,11 @@ class TestState(object):
                                            'the nonexistent server {0}'.format(
                                             repr(name)))
         self.servers[name].admin.reconnect()
-        result = self.servers[name].admin(
-            '%s%s' % (expr, self.delimiter), silent=silent
-        )
+        result = None
+        while not result:
+            result = self.servers[name].admin(
+                '%s%s' % (expr, self.delimiter), silent=silent
+            )
         result = yaml.safe_load(result)
         if not result:
             result = []
