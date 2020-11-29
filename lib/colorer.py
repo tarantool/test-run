@@ -20,6 +20,33 @@ def color_log(*args, **kwargs):
     color_stdout(*args, **kwargs)
 
 
+def qa_notice(*args, **kwargs):
+    """ Print a notice for an QA engineer at the terminal.
+
+        Example::
+
+            * [QA Notice]
+            *
+            * Attempt to stop already stopped server 'foo'
+            *
+    """
+    # Import from the function to avoid recursive import.
+    from lib.utils import prefix_each_line
+
+    # Use 'info' color by default (yellow).
+    if 'schema' not in kwargs:
+        kwargs = dict(kwargs, schema='info')
+
+    # Join all positional arguments (like color_stdout() do) and
+    # decorate with a header and asterisks.
+    data = ''.join([str(msg) for msg in args])
+    data = prefix_each_line('* ', data)
+    data = '\n* [QA Notice]\n*\n{}*\n'.format(data)
+
+    # Write out.
+    color_stdout(data, **kwargs)
+
+
 class CSchema(object):
     objects = {}
 
