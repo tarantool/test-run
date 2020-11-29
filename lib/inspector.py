@@ -10,6 +10,7 @@ from lib.utils import find_port
 from lib.utils import prefix_each_line
 from lib.colorer import color_stdout
 from lib.colorer import color_log
+from lib.colorer import qa_notice
 
 from lib.tarantool_server import TarantoolStartError
 from lib.preprocessor import LuaPreprocessorException
@@ -102,8 +103,7 @@ class TarantoolInspector(StreamServer):
                 # propagate to the main greenlet
                 raise
             except LuaPreprocessorException as e:
-                color_stdout('\n* [QA Notice]\n*\n* {0}\n*\n'.format(str(e)),
-                             schema='info')
+                qa_notice(str(e))
                 result = {'error': str(e)}
             except Exception as e:
                 self.parser.kill_current_test()
