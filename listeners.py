@@ -282,23 +282,28 @@ class HangWatcher(BaseWatcher):
             return
 
         is_warning = self.inactivity < self.kill_timeout
+        color_schema = 'test_var' if is_warning else 'error'
 
         color_stdout(
             "No output during {0.inactivity:.0f} seconds. "
             "Will abort after {0.kill_timeout:.0f} seconds without output. "
             "List of workers not reporting the status:\n".format(self),
-            schema=('test_var' if is_warning else 'error'))
+            schema=color_schema)
 
         hung_tasks = [task for worker_id, task
                       in self.worker_current_task.iteritems()
                       if worker_id in worker_ids]
         for task in hung_tasks:
-            with open(task.task_tmp_result, 'r') as f:
-                lines = sum(1 for _ in f)
-            color_stdout("- {0} [{1}, {2}] at {3}:{4}\n".format(
+            result_file = task.task_tmp_result
+            result_file_summary = '(no result file {})'.format(result_file)
+            if os.path.exists(result_file):
+                with open(result_file, 'r') as f:
+                    lines = sum(1 for _ in f)
+                    result_file_summary = 'at {}:{}'.format(result_file,
+                                                            lines)
+            color_stdout('- {} [{}, {}] {}\n'.format(
                 task.worker_name, task.task_name, task.task_param,
-                task.task_tmp_result, lines),
-                schema=('test_var' if is_warning else 'error'))
+                result_file_summary), schema=color_schema)
 
         self.warned_seconds_ago = 0.0
 
