@@ -470,10 +470,6 @@ class TarantoolServer(Server):
 
     # ----------------------------PROPERTIES--------------------------------- #
     @property
-    def debug(self):
-        return self.test_debug()
-
-    @property
     def name(self):
         if not hasattr(self, '_name') or not self._name:
             return self.default_tarantool["name"]
@@ -700,6 +696,8 @@ class TarantoolServer(Server):
                         ctl_dir + '/?.lua;' + \
                         ctl_dir + '/?/init.lua;' + \
                         os.environ.get("LUA_PATH", ";;")
+                cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
+                                 re.I))
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
@@ -1090,11 +1088,6 @@ class TarantoolServer(Server):
 
     def test_option(self, option_list_str):
         print self.test_option_get(option_list_str)
-
-    def test_debug(self):
-        if re.findall(r"-Debug", self.test_option_get("-V", True), re.I):
-            return True
-        return False
 
     @staticmethod
     def find_tests(test_suite, suite_path):
