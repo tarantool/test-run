@@ -6,6 +6,7 @@ import os
 import os.path
 import re
 import shlex
+from pipes import quote as shlex_quote
 import shutil
 import signal
 import subprocess
@@ -33,6 +34,10 @@ from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
 from test import TestRunGreenlet, TestExecutionError
+
+
+def shlex_join(strings):
+    return ' '.join(shlex_quote(s) for s in strings)
 
 
 def save_join(green_obj, timeout=None):
@@ -810,6 +815,7 @@ class TarantoolServer(Server):
         color_log("Starting ", schema='serv_text')
         color_log(path + " \n", schema='path')
         color_log(self.version() + "\n", schema='version')
+        color_log('RUN: ' + shlex_join(args) + '\n', schema='test_var')
 
         os.putenv("LISTEN", self.iproto.uri)
         os.putenv("ADMIN", self.admin.uri)
