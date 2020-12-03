@@ -89,7 +89,7 @@ def get_task_groups():
             res[key + '_fragile'] = {
                 'gen_worker': gen_worker,
                 'task_ids': fragile_task_ids,
-                'is_parallel': False,
+                'is_parallel': suite.is_parallel(),
                 'show_reproduce_content': suite.show_reproduce_content(),
             }
     return res
