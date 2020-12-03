@@ -276,6 +276,7 @@ local function clean()
         socket = true,
         strict = true,
         string = true,
+        sqlparser = true,
         table = true,
         ['table.clear'] = true,
         ['table.new'] = true,
