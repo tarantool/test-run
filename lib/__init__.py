@@ -35,6 +35,11 @@ def module_init():
     os.chdir(path)
     setenv()
 
+    # Keep the PWD environment variable in sync with a current
+    # working directory. It does not strictly necessary, just to
+    # avoid any confusion.
+    os.environ['PWD'] = os.getcwd()
+
     warn_unix_sockets_at_start(args.vardir)
 
     # always run with clean (non-existent) 'var' directory

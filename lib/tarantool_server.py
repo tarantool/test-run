@@ -848,6 +848,12 @@ class TarantoolServer(Server):
             os.putenv("MASTER", self.rpl_master.iproto.uri)
         self.logfile_pos = self.logfile
 
+        # This is strange, but tarantooctl leans on the PWD
+        # environment variable, not a real current working
+        # directory, when it performs search for the
+        # .tarantoolctl configuration file.
+        os.environ['PWD'] = self.vardir
+
         # redirect stdout from tarantoolctl and tarantool
         os.putenv("TEST_WORKDIR", self.vardir)
         self.process = subprocess.Popen(args,
@@ -855,6 +861,9 @@ class TarantoolServer(Server):
                                         stdout=self.log_des,
                                         stderr=self.log_des)
         del(self.log_des)
+
+        # Restore the actual PWD value.
+        os.environ['PWD'] = os.getcwd()
 
         # gh-19 crash detection
         self.crash_detector = TestRunGreenlet(self.crash_detect)
