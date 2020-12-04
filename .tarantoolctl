@@ -1,6 +1,9 @@
 -- Options for test-run tarantoolctl
 
+-- Note: tonumber(nil) is nil.
 local workdir = os.getenv('TEST_WORKDIR')
+local replication_sync_timeout = tonumber(os.getenv('REPLICATION_SYNC_TIMEOUT'))
+
 default_cfg = {
     pid_file   = workdir,
     wal_dir    = workdir,
@@ -8,6 +11,7 @@ default_cfg = {
     vinyl_dir  = workdir,
     log        = workdir,
     background = false,
+    replication_sync_timeout = replication_sync_timeout,
 }
 
 instance_dir = workdir

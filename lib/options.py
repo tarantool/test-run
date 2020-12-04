@@ -202,6 +202,20 @@ class Options:
                 Note: The option works now only with parallel testing.""")
 
         parser.add_argument(
+                "--replication-sync-timeout",
+                dest="replication_sync_timeout",
+                default=100,
+                type=int,
+                help="""The number of seconds that a replica will wait when
+                trying to sync with a master in a cluster, or a quorum of
+                masters, after connecting or during configuration update.
+                This could fail indefinitely if replication_sync_lag is smaller
+                than network latency, or if the replica cannot keep pace with
+                master updates. If replication_sync_timeout expires, the replica
+                enters orphan status.
+                Default: 100 [seconds].""")
+
+        parser.add_argument(
                 "--luacov",
                 dest="luacov",
                 action="store_true",
