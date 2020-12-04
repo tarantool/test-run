@@ -57,6 +57,7 @@ def module_init():
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
     os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
     os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
+    os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
