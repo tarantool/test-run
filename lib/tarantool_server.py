@@ -47,8 +47,6 @@ def save_join(green_obj, timeout=None):
     """
     Gevent join wrapper for
     test-run stop-on-crash/stop-on-timeout feature
-
-    :return True in case of crash or test timeout and False otherwise
     """
     try:
         green_obj.get(timeout=timeout)
@@ -60,12 +58,10 @@ def save_join(green_obj, timeout=None):
         # and write to the temporary result file of the new run of
         # the test.
         green_obj.kill()
-        return True
     except GreenletExit:
-        return True
+        pass
     # We don't catch TarantoolStartError here to propagate it to a parent
     # greenlet to report a (default or non-default) tarantool server fail.
-    return False
 
 
 class LuaTest(Test):
@@ -331,41 +327,6 @@ class LuaTest(Test):
         command_log.close()
         command_exe.close()
 
-        # Stop any servers created by the test, except the default
-        # one.
-        ts.stop_nondefault()
-
-    def killall_servers(self, server, ts, crash_occured):
-        """ kill all servers and crash detectors before stream swap """
-        color_log('Kill all servers ...\n', schema='info')
-        server_list = ts.servers.values() + [server, ]
-        check_list = [s for s in server_list if 'process' in s.__dict__]
-
-        # check that all servers stopped correctly
-        for server in check_list:
-            bad_returncode = server.process.returncode not in (None,
-                                                               0,
-                                                               -signal.SIGKILL,
-                                                               -signal.SIGTERM)
-            # if non-default server crashed but it was expected
-            # don't kill the default server and crash detectors
-            crash_occured = crash_occured or \
-                bad_returncode and not server.crash_expected
-
-        for server in check_list:
-            server.process.poll()
-
-            if crash_occured:
-                # kill all servers and crash detectors on crash
-                if server.process.returncode is None:
-                    server.process.kill()
-                if server.crash_detector is not None:
-                    gevent.kill(server.crash_detector)
-            elif server.process.returncode is not None:
-                # join crash detectors of stopped servers
-                if server.crash_detector is not None:
-                    save_join(server.crash_detector)
-
     def execute(self, server):
         super(LuaTest, self).execute(server)
         cls_name = server.__class__.__name__.lower()
@@ -386,21 +347,21 @@ class LuaTest(Test):
         lua = TestRunGreenlet(self.exec_loop, ts)
         self.current_test_greenlet = lua
         lua.start()
-        crash_occured = True
         try:
-            crash_occured = save_join(lua, timeout=Options().args.test_timeout)
-            self.killall_servers(server, ts, crash_occured)
+            save_join(lua, timeout=Options().args.test_timeout)
         except KeyboardInterrupt:
             # prevent tests greenlet from writing to the real stdout
             lua.kill()
-
-            ts.stop_nondefault()
             raise
         except TarantoolStartError as e:
             color_stdout('\n[Instance "{0}"] Failed to start tarantool '
                          'instance "{1}"\n'.format(server.name, e.name),
                          schema='error')
             server.kill_current_test()
+        finally:
+            # Stop any servers created by the test, except the
+            # default one.
+            ts.stop_nondefault()
 
 
 class PythonTest(Test):
