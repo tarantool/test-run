@@ -70,6 +70,10 @@ class AppTest(Test):
         except TarantoolStartError:
             # A non-default server failed to start.
             raise TestExecutionError
+        finally:
+            # Stop any servers created by the test, except the
+            # default one.
+            ts.stop_nondefault()
         if retval['returncode'] != 0:
             raise TestExecutionError
 
