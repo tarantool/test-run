@@ -427,8 +427,9 @@ class TestState(object):
         self.parse_preprocessor(string)
 
     def stop_nondefault(self):
-        color_log('\nDEBUG: TestState[%s].stop_nondefault()\n'
-                  % hex(id(self)), schema='test_var')
+        names = [k for k in self.servers.keys() if k != 'default']
+        color_log('DEBUG: Stop non-default servers: {}\n'.format(names),
+                  schema='info')
         if sys.stdout.__class__.__name__ == 'FilteredStream':
             sys.stdout.clear_all_filters()
         for k, v in self.servers.iteritems():
@@ -441,8 +442,9 @@ class TestState(object):
                 self.connections.pop(k)
 
     def cleanup_nondefault(self):
-        color_log('\nDEBUG: TestState[%s].cleanup_nondefault()\n' %
-                  hex(id(self)), schema='test_var')
+        names = [k for k in self.servers.keys() if k != 'default']
+        color_log('DEBUG: Cleanup non-default servers: {}\n'.format(names),
+                  schema='info')
         for k, v in self.servers.iteritems():
             # don't cleanup the default server
             if k == 'default':
