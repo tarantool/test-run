@@ -2,6 +2,7 @@ import errno
 import glob
 import os
 import shutil
+import signal
 import sys
 
 from gevent.subprocess import Popen, PIPE
@@ -73,7 +74,10 @@ class AppTest(Test):
         finally:
             # Stop any servers created by the test, except the
             # default one.
-            ts.stop_nondefault()
+            #
+            # See a comment in LuaTest.execute() for motivation of
+            # SIGKILL usage.
+            ts.stop_nondefault(signal=signal.SIGKILL)
         if retval['returncode'] != 0:
             raise TestExecutionError
 

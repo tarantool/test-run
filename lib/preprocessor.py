@@ -1,5 +1,6 @@
 import os
 import shlex
+import signal
 import sys
 from collections import deque
 
@@ -10,6 +11,7 @@ import six
 from lib.admin_connection import AdminAsyncConnection
 from lib.colorer import color_log
 from lib.utils import signum
+from lib.utils import signame
 
 
 class Namespace(object):
@@ -426,17 +428,18 @@ class TestState(object):
         string = string[3:].strip()
         self.parse_preprocessor(string)
 
-    def stop_nondefault(self):
+    def stop_nondefault(self, signal=signal.SIGTERM):
         names = [k for k in self.servers.keys() if k != 'default']
-        color_log('DEBUG: Stop non-default servers: {}\n'.format(names),
-                  schema='info')
+        color_log('DEBUG: Stop non-default servers using '
+                  'signal {} ({}): {}\n'.format(signal, signame(signal),
+                                                names), schema='info')
         if sys.stdout.__class__.__name__ == 'FilteredStream':
             sys.stdout.clear_all_filters()
         for k, v in self.servers.iteritems():
             # don't stop the default server
             if k == 'default':
                 continue
-            v.stop(silent=True)
+            v.stop(silent=True, signal=signal)
             if k in self.connections:
                 self.connections[k].disconnect()
                 self.connections.pop(k)
