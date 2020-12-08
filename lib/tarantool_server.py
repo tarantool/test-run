@@ -361,7 +361,34 @@ class LuaTest(Test):
         finally:
             # Stop any servers created by the test, except the
             # default one.
-            ts.stop_nondefault()
+            #
+            # The stop_nondefault() method calls
+            # TarantoolServer.stop() under the hood. It sends
+            # SIGTERM (if another signal is not passed), waits
+            # for 5 seconds for a process termination and, if
+            # nothing occurs, sends SIGKILL and continue waiting
+            # for the termination.
+            #
+            # Look, 5 seconds (plus some delay for waiting) for
+            # each instance if it does not follow SIGTERM[^1].
+            # It is unacceptable, because the difference between
+            # --test-timeout (110 seconds by default) and
+            # --no-output-timeout (120 seconds by default) may
+            # be lower than (5 seconds + delay) * (non-default
+            # instance count).
+            #
+            # That's why we send SIGKILL for residual instances
+            # right away.
+            #
+            # Hitting --no-output-timeout is undesirable, because
+            # in the current implementation it is the show-stopper
+            # for a testing: test-run doesn't restart fragile
+            # tests, doesn't continue processing of other tests,
+            # doesn't save artifacts at the end of the testing.
+            #
+            # [^1]: See gh-4127 and gh-5573 for problems of this
+            #       kind.
+            ts.stop_nondefault(signal=signal.SIGKILL)
 
 
 class PythonTest(Test):
