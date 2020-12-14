@@ -78,7 +78,7 @@ class AppTest(Test):
             # See a comment in LuaTest.execute() for motivation of
             # SIGKILL usage.
             ts.stop_nondefault(signal=signal.SIGKILL)
-        if retval['returncode'] != 0:
+        if retval.get('returncode', None) != 0:
             raise TestExecutionError
 
 
