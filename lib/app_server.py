@@ -9,6 +9,7 @@ from gevent.subprocess import Popen, PIPE
 
 from lib.colorer import color_stdout
 from lib.colorer import color_log
+from lib.colorer import qa_notice
 from lib.options import Options
 from lib.preprocessor import TestState
 from lib.server import Server
@@ -18,6 +19,7 @@ from lib.tarantool_server import TarantoolServer
 from lib.tarantool_server import TarantoolStartError
 from lib.utils import find_port
 from lib.utils import format_process
+from lib.utils import signame
 from lib.utils import warn_unix_socket
 from test import TestRunGreenlet, TestExecutionError
 from threading import Timer
@@ -72,14 +74,24 @@ class AppTest(Test):
             # A non-default server failed to start.
             raise TestExecutionError
         finally:
-            # Stop any servers created by the test, except the
-            # default one.
-            #
-            # See a comment in LuaTest.execute() for motivation of
-            # SIGKILL usage.
-            ts.stop_nondefault(signal=signal.SIGKILL)
+            self.teardown(server, ts)
         if retval.get('returncode', None) != 0:
             raise TestExecutionError
+
+    def teardown(self, server, ts):
+        # Stop any servers created by the test, except the
+        # default one.
+        #
+        # See a comment in LuaTest.execute() for motivation of
+        # SIGKILL usage.
+        ts.stop_nondefault(signal=signal.SIGKILL)
+
+        # When a supplementary (non-default) server fails, we
+        # should not leave the process that executes an app test.
+        # Let's kill it.
+        #
+        # Reuse AppServer.stop() code for convenience.
+        server.stop(signal=signal.SIGKILL)
 
 
 class AppServer(Server):
@@ -153,15 +165,59 @@ class AppServer(Server):
         # cannot check length of path of *.control unix socket created by it.
         # So for 'app' tests type we don't check *.control unix sockets paths.
 
-    def stop(self, silent):
+    def stop(self, silent=True, signal=signal.SIGTERM):
+        # FIXME: Extract common parts of AppServer.stop() and
+        # TarantoolServer.stop() to an utility function.
+
+        color_log('DEBUG: [app server] Stopping the server...\n',
+                  schema='info')
+
         if not self.process:
+            color_log(' | Nothing to do: the process does not exist\n',
+                      schema='info')
             return
-        color_log('AppServer.stop(): stopping the %s\n' %
-                  format_process(self.process.pid), schema='test_var')
+
+        if self.process.returncode:
+            if self.process.returncode < 0:
+                signaled_by = -self.process.returncode
+                color_log(' | Nothing to do: the process was terminated by '
+                          'signal {} ({})\n'.format(signaled_by,
+                                                    signame(signaled_by)),
+                          schema='info')
+            else:
+                color_log(' | Nothing to do: the process was exited with code '
+                          '{}\n'.format(self.process.returncode),
+                          schema='info')
+            return
+
+        color_log(' | Sending signal {0} ({1}) to {2}\n'.format(
+                  signal, signame(signal),
+                  format_process(self.process.pid)))
         try:
-            self.process.terminate()
+            self.process.send_signal(signal)
         except OSError:
             pass
+
+        # Waiting for stopping the server. If the timeout
+        # reached, send SIGKILL.
+        timeout = 5
+
+        def kill():
+            qa_notice('The app server does not stop during {} '
+                      'seconds after the {} ({}) signal.\n'
+                      'Info: {}\n'
+                      'Sending SIGKILL...'.format(
+                          timeout, signal, signame(signal),
+                          format_process(self.process.pid)))
+            try:
+                self.process.kill()
+            except OSError:
+                pass
+
+        timer = Timer(timeout, kill)
+        timer.start()
+        self.process.wait()
+        timer.cancel()
 
     @classmethod
     def find_exe(cls, builddir):
