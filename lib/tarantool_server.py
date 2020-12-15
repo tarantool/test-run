@@ -1048,7 +1048,10 @@ class TarantoolServer(Server):
                           'Sending SIGKILL...'.format(
                               self.name, timeout, signal, signame(signal),
                               format_process(self.process.pid)))
-                self.process.kill()
+                try:
+                    self.process.kill()
+                except OSError:
+                    pass
 
             timer = Timer(timeout, kill)
             timer.start()
