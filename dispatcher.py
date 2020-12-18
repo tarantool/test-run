@@ -143,10 +143,9 @@ class Dispatcher:
             self.listeners.append(self.fail_watcher)
         if watch_hang:
             warn_timeout = 60.0 if args.long else 10.0
-            no_output_timeout = float(args.no_output_timeout or 120)
             hang_watcher = listeners.HangWatcher(
                 output_watcher.not_done_worker_ids, self.kill_all_workers,
-                warn_timeout, no_output_timeout)
+                warn_timeout, float(args.no_output_timeout))
             self.listeners.append(hang_watcher)
 
     def run_max_workers(self):
