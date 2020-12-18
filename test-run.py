@@ -73,7 +73,8 @@ EXIT_UNKNOWN_ERROR = 50
 def main_loop_parallel():
     color_stdout("Started {0}\n".format(" ".join(sys.argv)), schema='tr_text')
 
-    jobs = lib.Options().args.jobs
+    args = lib.Options().args
+    jobs = args.jobs
     if jobs < 1:
         # faster result I got was with 2 * cpu_count
         jobs = 2 * multiprocessing.cpu_count()
@@ -82,6 +83,16 @@ def main_loop_parallel():
         color_stdout("Running in parallel with %d workers\n\n" % jobs,
                      schema='tr_text')
     randomize = True
+
+    color_stdout("Timeout options:\n", schema='tr_text')
+    color_stdout('-' * 19, "\n",       schema='separator')
+    color_stdout("REPLICATION_SYNC_TIMEOUT:" . ljust(26) + "{}\n" .
+                 format(args.replication_sync_timeout), schema='tr_text')
+    color_stdout("TEST_TIMEOUT:" . ljust(26) + "{}\n" .
+                 format(args.test_timeout), schema='tr_text')
+    color_stdout("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
+                 format(args.no_output_timeout), schema='tr_text')
+    color_stdout("\n", schema='tr_text')
 
     task_groups = lib.worker.get_task_groups()
     if lib.Options().args.reproduce:

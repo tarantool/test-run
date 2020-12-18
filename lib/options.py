@@ -193,7 +193,7 @@ class Options:
         parser.add_argument(
                 "--test-timeout",
                 dest="test_timeout",
-                default=110,
+                default=env_int('TEST_TIMEOUT', 110),
                 type=int,
                 help="""Break the test process with kill signal if the test runs
                 longer than this amount of seconds. Default: 110 [seconds].""")
@@ -201,7 +201,7 @@ class Options:
         parser.add_argument(
                 "--no-output-timeout",
                 dest="no_output_timeout",
-                default=0,
+                default=env_int('NO_OUTPUT_TIMEOUT', 120),
                 type=int,
                 help="""Exit if there was no output from workers during this
                 amount of seconds. Set it to -1 to disable hang detection.
@@ -212,7 +212,7 @@ class Options:
         parser.add_argument(
                 "--replication-sync-timeout",
                 dest="replication_sync_timeout",
-                default=100,
+                default=env_int('REPLICATION_SYNC_TIMEOUT', 100),
                 type=int,
                 help="""The number of seconds that a replica will wait when
                 trying to sync with a master in a cluster, or a quorum of
