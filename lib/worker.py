@@ -287,7 +287,7 @@ class Worker:
 
     @staticmethod
     def is_joinable(task_queue):
-        return 'task_done' in task_queue.__dict__.keys()
+        return 'task_done' in list(task_queue.__dict__)
 
     def restart_server(self):
         self.stop_server(cleanup=False)

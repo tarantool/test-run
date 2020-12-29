@@ -185,7 +185,7 @@ class TestSuite:
         return self.tests
 
     def get_fragile_list(self):
-        return self.fragile['tests'].keys()
+        return list(self.fragile['tests'])
 
     def stable_tests(self):
         self.collect_tests()
