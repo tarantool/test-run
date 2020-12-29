@@ -40,7 +40,6 @@ from .utils import signame
 from .utils import warn_unix_socket
 from .utils import prefix_each_line
 from .test import TestRunGreenlet, TestExecutionError
-import imp
 
 try:
     # Python 2
@@ -664,7 +663,7 @@ class TarantoolServer(Server):
         # or passed through execfile() for PythonTest
         self.current_test = None
         caller_globals = inspect.stack()[1][0].f_globals
-        if 'test_run_current_test' in caller_globals.keys():
+        if 'test_run_current_test' in list(caller_globals):
             self.current_test = caller_globals['test_run_current_test']
 
     def __del__(self):
