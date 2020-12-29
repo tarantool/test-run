@@ -245,8 +245,8 @@ class AppServer(Server):
 
         test_names = sorted(glob.glob(os.path.join(suite_path, "*.test.lua")))
         test_names = Server.exclude_tests(test_names, test_suite.args.exclude)
-        test_names = sum(map((lambda x: patterned(x, test_suite.args.tests)),
-                             test_names), [])
+        test_names = sum(list(map((lambda x: patterned(x, test_suite.args.tests)),
+                                  test_names)), [])
         tests = []
 
         for test_name in test_names:
