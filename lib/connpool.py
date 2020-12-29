@@ -134,7 +134,7 @@ def retry(f, exc_classes=DEFAULT_EXC_CLASSES, logger=None,
             except exc_classes as e:
                 if logger is not None:
                     logger.log(retry_log_level,
-                               retry_log_message.format(f=f.func_name, e=e))
+                               retry_log_message.format(f=f.__name__, e=e))
                 gevent.sleep(interval)
                 failures += 1
                 if max_failures is not None \
@@ -142,6 +142,6 @@ def retry(f, exc_classes=DEFAULT_EXC_CLASSES, logger=None,
                     if logger is not None:
                         logger.log(max_failure_log_level,
                                    max_failure_log_message.format(
-                                       f=f.func_name, e=e))
+                                       f=f.__name__, e=e))
                     raise
     return deco
