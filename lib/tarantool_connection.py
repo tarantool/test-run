@@ -148,7 +148,7 @@ class TarantoolConnection(object):
         """
         try:
             if not self.is_connected or self.socket.recv(
-                    1, socket.MSG_DONTWAIT | socket.MSG_PEEK) == '':
+                    1, socket.MSG_DONTWAIT | socket.MSG_PEEK) == b'':
                 self.reconnect()
         except socket.error as e:
             if e.errno == errno.EAGAIN:
