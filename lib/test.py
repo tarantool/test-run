@@ -58,7 +58,7 @@ class FilteredStream:
         # always open the output stream in line-buffered mode,
         # to see partial results of a failed test
         #
-        self.stream = open(filename, "w+", 1)
+        self.stream = open(filename, "wb+")
         self.filters = []
         self.inspector = None
 
@@ -66,11 +66,10 @@ class FilteredStream:
         """Apply all filters, then write result to the undelrying stream.
         Do line-oriented filtering: the fragment doesn't have to represent
         just one line."""
-        if isinstance(fragment, (bytes, bytearray)):
-            fragment = fragment.decode('utf-8')
-        fragment_stream = StringIO(fragment)
+        if sys.version[0] == '3' and isinstance(fragment, str):
+            fragment = fragment.encode('utf-8')
         skipped = False
-        for line in fragment_stream:
+        for line in fragment.splitlines(True):
             original_len = len(line.strip())
             for pattern, replacement in self.filters:
                 line = re.sub(pattern, replacement, line)
@@ -82,6 +81,10 @@ class FilteredStream:
                 self.stream.write(line)
 
     def push_filter(self, pattern, replacement):
+        if sys.version[0] == '3' and isinstance(pattern, str):
+            pattern = pattern.encode('utf-8')
+        if sys.version[0] == '3' and isinstance(replacement, str):
+            replacement = replacement.encode('utf-8')
         self.filters.append([pattern, replacement])
 
     def pop_filter(self):
