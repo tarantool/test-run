@@ -7,6 +7,8 @@ import functools
 import yaml
 import six
 
+from sys import platform
+
 import multiprocessing
 try:
     # Python 3.7+
@@ -82,6 +84,13 @@ class Dispatcher:
     ```
     """
     def __init__(self, task_groups, max_workers_cnt, randomize):
+        if platform == "darwin":
+            try:
+                # Python 3
+                multiprocessing.set_start_method('fork')
+            except AttributeError:
+                # Python 2
+                pass
         self.pids = []
         self.processes = []
         self.result_queues = []
