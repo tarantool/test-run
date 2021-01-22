@@ -125,10 +125,10 @@ class TestSuite:
             self.ini[i] = dict.fromkeys(self.ini[i].split()) \
                 if i in self.ini else dict()
         for i in ["lua_libs"]:
-            self.ini[i] = map(
-                lambda x: os.path.join(suite_path, x),
-                dict.fromkeys(self.ini[i].split())
-                if i in self.ini else dict())
+            lua_libs = self.ini.get(i, "")
+            self.ini[i] = []
+            for p in lua_libs.split():
+                self.ini[i].append(os.path.join(suite_path, p))
         if config.has_option("default", "fragile"):
             fragiles = config.get("default", "fragile")
             try:
