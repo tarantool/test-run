@@ -7,6 +7,7 @@ import os
 import signal
 import traceback
 import yaml
+import six
 from datetime import datetime
 
 from . import Options

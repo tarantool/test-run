@@ -101,7 +101,7 @@ def main_loop_parallel():
 
     task_groups = get_task_groups()
     if Options().args.reproduce:
-        task_groups = lib.worker.reproduce_task_groups(task_groups)
+        task_groups = reproduce_task_groups(task_groups)
         jobs = 1
         randomize = False
 

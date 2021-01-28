@@ -23,6 +23,7 @@ from .tarantool_server import TarantoolStartError
 from .utils import find_port
 from .utils import format_process
 from .utils import warn_unix_socket
+from .utils import signame
 from .test import TestRunGreenlet, TestExecutionError
 from threading import Timer
 
