@@ -436,7 +436,7 @@ class TestState(object):
                                                 names), schema='info')
         if sys.stdout.__class__.__name__ == 'FilteredStream':
             sys.stdout.clear_all_filters()
-        for k, v in self.servers.iteritems():
+        for k, v in self.servers.items():
             # don't stop the default server
             if k == 'default':
                 continue
@@ -449,7 +449,7 @@ class TestState(object):
         names = [k for k in self.servers.keys() if k != 'default']
         color_log('DEBUG: Cleanup non-default servers: {}\n'.format(names),
                   schema='info')
-        for k, v in self.servers.iteritems():
+        for k, v in self.servers.items():
             # don't cleanup the default server
             if k == 'default':
                 continue
