@@ -6,12 +6,13 @@ from collections import deque
 
 import yaml
 from gevent import socket
-import six
 
 from lib.admin_connection import AdminAsyncConnection
 from lib.colorer import color_log
 from lib.utils import signum
 from lib.utils import signame
+from lib.utils import integer_types
+from lib.utils import string_types
 
 
 class Namespace(object):
@@ -412,9 +413,9 @@ class TestState(object):
         if ctype == 'set':
             self.curcon[0].reconnect()
             result = eval(ret[1:-1], {}, self.environ.__dict__)
-            if isinstance(result, six.integer_types):
+            if isinstance(result, integer_types):
                 cmd = '{0}={1}'.format(ref, result)
-            elif isinstance(result, six.string_types):
+            elif isinstance(result, string_types):
                 cmd = '{0}="{1}"'.format(ref, result)
             else:
                 raise LuaPreprocessorException(

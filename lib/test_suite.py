@@ -11,6 +11,7 @@ from lib.server import Server
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
 from lib.utils import just_and_trim
+from lib.utils import string_types
 
 
 class ConfigurationError(RuntimeError):
@@ -68,7 +69,7 @@ class TestSuite:
             self.ini[name] = default
         elif isinstance(val, bool):
             pass
-        elif isinstance(val, str) and val.lower() in ('true', 'false'):
+        elif isinstance(val, string_types) and val.lower() in ('true', 'false'):
             # If value is not boolean it come from ini file, need to convert
             # string 'True' or 'False' into boolean representation.
             self.ini[name] = val.lower() == 'true'
