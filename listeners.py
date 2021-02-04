@@ -293,7 +293,7 @@ class HangWatcher(BaseWatcher):
             schema=color_schema)
 
         hung_tasks = [task for worker_id, task
-                      in self.worker_current_task.iteritems()
+                      in self.worker_current_task.items()
                       if worker_id in worker_ids]
         for task in hung_tasks:
             result_file = task.task_tmp_result
