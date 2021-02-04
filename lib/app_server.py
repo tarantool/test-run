@@ -252,7 +252,7 @@ class AppServer(Server):
                     test_suite.ini,
                     params=params,
                     conf_name=conf_name
-                ) for conf_name, params in runs.iteritems()
+                ) for conf_name, params in runs.items()
                     if is_correct(conf_name)])
             else:
                 tests.append(AppTest(test_name,
