@@ -1,6 +1,5 @@
 import os
 import sys
-import six
 import collections
 import signal
 import random
@@ -20,6 +19,16 @@ except ImportError:
 
 
 UNIX_SOCKET_LEN_LIMIT = 107
+
+# Useful for very coarse version differentiation.
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    string_types = str,
+    integer_types = int,
+else:
+    string_types = basestring,      # noqa: F821
+    integer_types = (int, long)     # noqa: F821
 
 
 def check_libs():
@@ -68,7 +77,7 @@ def check_port(port, rais=True, ipv4=True, ipv6=True):
     connections (UNIX Sockets in case of file path). False -- otherwise.
     """
     try:
-        if isinstance(port, (int, long)):
+        if isinstance(port, integer_types):
             if ipv4:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.bind(('127.0.0.1', port))
@@ -139,22 +148,22 @@ SIGNUMS = dict((k, int(v)) for k, v in reversed(sorted(
 
 
 def signame(signal):
-    if isinstance(signal, six.integer_types):
+    if isinstance(signal, integer_types):
         return SIGNAMES[signal]
     if Signals and isinstance(signal, Signals):
         return SIGNAMES[int(signal)]
-    if isinstance(signal, six.string_types):
+    if isinstance(signal, string_types):
         return signal
     raise TypeError('signame(): signal argument of unexpected type: {}'.format(
                     str(type(signal))))
 
 
 def signum(signal):
-    if isinstance(signal, six.integer_types):
+    if isinstance(signal, integer_types):
         return signal
     if Signals and isinstance(signal, Signals):
         return int(signal)
-    if isinstance(signal, six.string_types):
+    if isinstance(signal, string_types):
         if not signal.startswith('SIG'):
             signal = 'SIG' + signal
         return SIGNUMS[signal]
