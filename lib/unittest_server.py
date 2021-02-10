@@ -17,6 +17,7 @@ class UnitTest(Test):
     def execute(self, server):
         server.current_test = self
         execs = server.prepare_args()
+        execs[0] = os.path.abspath(execs[0])
         proc = Popen(execs, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
         sys.stdout.write(proc.communicate()[0])
 
