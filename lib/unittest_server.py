@@ -48,7 +48,7 @@ class UnittestServer(Server):
     def prepare_args(self, args=[]):
         executable_path = os.path.join(self.builddir, "test",
                                        self.current_test.name)
-        return [executable_path] + args
+        return [os.path.abspath(executable_path)] + args
 
     def deploy(self, vardir=None, silent=True, wait=True):
         self.vardir = vardir
