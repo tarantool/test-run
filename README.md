@@ -379,3 +379,9 @@ The following files will be removed:
 * `[0-9]*/`
 
 For a `core = unittest` test suite this option does not change any behaviour.
+
+### Used By
+
+- [Tarantool](https://github.com/tarantool/tarantool) - in-memory database and application server
+- [vshard](https://github.com/tarantool/vshard) - sharding based on virtual buckets
+- xsync (internal project)
