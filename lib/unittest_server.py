@@ -19,7 +19,7 @@ class UnitTest(Test):
         execs = server.prepare_args()
         execs[0] = os.path.abspath(execs[0])
         proc = Popen(execs, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
-        sys.stdout.write(proc.communicate()[0])
+        sys.stdout.write_bytes(proc.communicate()[0])
 
 
 class UnittestServer(Server):

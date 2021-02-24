@@ -27,6 +27,9 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 import re
 import sys
 
+from .utils import bytes_to_str
+from .utils import str_to_bytes
+
 from .tarantool_connection import TarantoolConnection
 from .tarantool_connection import TarantoolPool
 from .tarantool_connection import TarantoolAsyncConnection
@@ -39,13 +42,13 @@ def get_handshake(sock, length=128, max_try=100):
     """
     Correct way to get tarantool handshake
     """
-    result = ""
+    result = b""
     i = 0
     while len(result) != length and i < max_try:
-        result = "%s%s" % (result, sock.recv(length-len(result)))
+        result = b"%s%s" % (result, sock.recv(length-len(result)))
         # max_try counter for tarantool/gh-1362
         i += 1
-    return result
+    return bytes_to_str(result)
 
 
 class AdminPool(TarantoolPool):
@@ -64,12 +67,12 @@ class AdminPool(TarantoolPool):
 
 class ExecMixIn(object):
     def cmd(self, socket, cmd, silent):
-        socket.sendall(cmd)
+        socket.sendall(str_to_bytes(cmd))
 
         bufsiz = 4096
         res = ""
         while True:
-            buf = socket.recv(bufsiz)
+            buf = bytes_to_str(socket.recv(bufsiz))
             if not buf:
                 break
             res = res + buf

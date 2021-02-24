@@ -38,6 +38,7 @@ from .utils import safe_makedirs
 from .utils import signame
 from .utils import warn_unix_socket
 from .utils import prefix_each_line
+from .utils import bytes_to_str
 from .test import TestRunGreenlet, TestExecutionError
 
 try:
@@ -580,7 +581,7 @@ class TarantoolServer(Server):
     @property
     def log_des(self):
         if not hasattr(self, '_log_des'):
-            self._log_des = open(self.logfile, 'a')
+            self._log_des = open(self.logfile, 'ab')
         return self._log_des
 
     @log_des.deleter
@@ -666,7 +667,7 @@ class TarantoolServer(Server):
     @classmethod
     def version(cls):
         p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
-        version = p.stdout.read().rstrip()
+        version = bytes_to_str(p.stdout.read()).rstrip()
         p.wait()
         return version
 
@@ -1165,7 +1166,7 @@ class TarantoolServer(Server):
                                   cwd=self.vardir,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT).stdout.read()
-        return output
+        return bytes_to_str(output)
 
     def test_option(self, option_list_str):
         print(self.test_option_get(option_list_str))
