@@ -6,8 +6,10 @@ import gevent
 from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
+from lib.utils import bytes_to_str
 from lib.utils import find_port
 from lib.utils import prefix_each_line
+from lib.utils import str_to_bytes
 from lib.colorer import color_stdout
 from lib.colorer import color_log
 from lib.colorer import qa_notice
@@ -77,7 +79,7 @@ class TarantoolInspector(StreamServer):
 
         while data:
             try:
-                data = socket.recv(size)
+                data = bytes_to_str(socket.recv(size))
             except IOError:
                 # catch instance halt connection refused errors
                 data = ''
@@ -119,7 +121,7 @@ class TarantoolInspector(StreamServer):
             color_log("DEBUG: test-run's response for [{}]\n{}\n".format(
                 line, prefix_each_line(' | ', result)),
                 schema='test-run command')
-            socket.sendall(result)
+            socket.sendall(str_to_bytes(result))
 
         self.sem.release()
 

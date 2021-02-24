@@ -9,19 +9,14 @@ import traceback
 from functools import partial
 from hashlib import md5
 
-try:
-    # Python 2
-    from StringIO import StringIO
-except ImportError:
-    # Python 3
-    from io import StringIO
-
 from lib import Options
 from lib.colorer import color_stdout
+from lib.utils import assert_bytes
 from lib.utils import non_empty_valgrind_logs
 from lib.utils import print_tail_n
 from lib.utils import print_unidiff as utils_print_unidiff
 from lib.utils import safe_makedirs
+from lib.utils import str_to_bytes
 from lib import pytap13
 
 
@@ -48,21 +43,17 @@ class TestRunGreenlet(gevent.Greenlet):
 class FilteredStream:
     """Helper class to filter .result file output"""
     def __init__(self, filename):
-        #
-        # always open the output stream in line-buffered mode,
-        # to see partial results of a failed test
-        #
-        self.stream = open(filename, "w+", 1)
+        self.stream = open(filename, "wb+")
         self.filters = []
         self.inspector = None
 
-    def write(self, fragment):
-        """Apply all filters, then write result to the undelrying stream.
-        Do line-oriented filtering: the fragment doesn't have to represent
-        just one line."""
-        fragment_stream = StringIO(fragment)
+    def write_bytes(self, fragment):
+        """ The same as ``write()``, but accepts ``<bytes>`` as
+            input.
+        """
+        assert_bytes(fragment)
         skipped = False
-        for line in fragment_stream:
+        for line in fragment.splitlines(True):
             original_len = len(line.strip())
             for pattern, replacement in self.filters:
                 line = re.sub(pattern, replacement, line)
@@ -73,8 +64,20 @@ class FilteredStream:
             if not skipped:
                 self.stream.write(line)
 
+    def write(self, fragment):
+        """ Apply all filters, then write result to the underlying
+            stream.
+
+            Do line-oriented filtering: the fragment doesn't have
+            to represent just one line.
+
+            Accepts ``<str>`` as input, just like the standard
+            ``sys.stdout.write()``.
+        """
+        self.write_bytes(str_to_bytes(fragment))
+
     def push_filter(self, pattern, replacement):
-        self.filters.append([pattern, replacement])
+        self.filters.append([str_to_bytes(pattern), str_to_bytes(replacement)])
 
     def pop_filter(self):
         self.filters.pop()

@@ -35,6 +35,7 @@ from lib.preprocessor import TestState
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.test import Test
+from lib.utils import bytes_to_str
 from lib.utils import find_port
 from lib.utils import extract_schema_from_snapshot
 from lib.utils import format_process
@@ -577,7 +578,7 @@ class TarantoolServer(Server):
     @property
     def log_des(self):
         if not hasattr(self, '_log_des'):
-            self._log_des = open(self.logfile, 'a')
+            self._log_des = open(self.logfile, 'ab')
         return self._log_des
 
     @log_des.deleter
@@ -663,7 +664,7 @@ class TarantoolServer(Server):
     @classmethod
     def version(cls):
         p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
-        version = p.stdout.read().rstrip()
+        version = bytes_to_str(p.stdout.read()).rstrip()
         p.wait()
         return version
 
@@ -1162,7 +1163,7 @@ class TarantoolServer(Server):
                                   cwd=self.vardir,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT).stdout.read()
-        return output
+        return bytes_to_str(output)
 
     def test_option(self, option_list_str):
         print(self.test_option_get(option_list_str))
