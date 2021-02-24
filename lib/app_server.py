@@ -38,8 +38,8 @@ def run_server(execs, cwd, server, logfile, retval):
     timer.start()
     stdout, stderr = server.process.communicate()
     timer.cancel()
-    sys.stdout.write(stdout)
-    with open(logfile, 'a') as f:
+    sys.stdout.write_bytes(stdout)
+    with open(logfile, 'ab') as f:
         f.write(stderr)
     retval['returncode'] = server.process.wait()
     server.process = None
