@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import os
-import sys
 import yaml
 import traceback
 
@@ -17,10 +16,6 @@ from .colorer import qa_notice
 
 from .tarantool_server import TarantoolStartError
 from .preprocessor import LuaPreprocessorException
-
-if sys.version[0] == '2':
-    reload(sys)     # noqa: F821
-    sys.setdefaultencoding('utf8')
 
 
 # Module initialization
@@ -84,7 +79,7 @@ class TarantoolInspector(StreamServer):
 
         while data:
             try:
-                data = socket.recv(size).decode('utf-8')
+                data = socket.recv(size)
             except IOError:
                 # catch instance halt connection refused errors
                 data = ''
@@ -126,7 +121,7 @@ class TarantoolInspector(StreamServer):
             color_log("DEBUG: test-run's response for [{}]\n{}\n".format(
                 line, prefix_each_line(' | ', result)),
                 schema='test-run command')
-            socket.sendall(result.encode('utf-8'))
+            socket.sendall(result)
 
         self.sem.release()
 

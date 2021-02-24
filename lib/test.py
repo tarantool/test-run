@@ -27,10 +27,6 @@ from .utils import safe_makedirs
 
 from . import pytap13
 
-if sys.version[0] == '2':
-    reload(sys)     # noqa: F821
-    sys.setdefaultencoding('utf8')
-
 
 class TestExecutionError(OSError):
     """To be raised when a test execution fails"""
@@ -67,8 +63,6 @@ class FilteredStream:
         """Apply all filters, then write result to the undelrying stream.
         Do line-oriented filtering: the fragment doesn't have to represent
         just one line."""
-        if isinstance(fragment, (bytes, bytearray)):
-            fragment = fragment.decode('utf-8')
         fragment_stream = StringIO(fragment)
         skipped = False
         for line in fragment_stream:

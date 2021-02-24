@@ -26,10 +26,6 @@ from .utils import signame
 from .test import TestRunGreenlet, TestExecutionError
 from threading import Timer
 
-if sys.version[0] == '2':
-    reload(sys)     # noqa: F821
-    sys.setdefaultencoding('utf8')
-
 
 def timeout_handler(server_process, test_timeout):
     color_stdout("Test timeout of %d secs reached\t" % test_timeout, schema='error')
@@ -46,7 +42,7 @@ def run_server(execs, cwd, server, logfile, retval):
     timer.cancel()
     sys.stdout.write(stdout)
     with open(logfile, 'a') as f:
-        f.write(stderr.decode('utf-8'))
+        f.write(stderr)
     retval['returncode'] = server.process.wait()
     server.process = None
 
