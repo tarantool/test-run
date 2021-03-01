@@ -64,9 +64,10 @@ end
 local function wait_lsn(self, waiter, master)
     local sid = self:get_server_id(master)
     local lsn = self:get_lsn(master, sid)
-
-    while self:get_lsn(waiter, sid) < lsn do
+    local remote_lsn = self:get_lsn(waiter, sid)
+    while remote_lsn == nil or remote_lsn < lsn do
         fiber.sleep(0.001)
+        remote_lsn = self:get_lsn(waiter, sid)
     end
 end
 
