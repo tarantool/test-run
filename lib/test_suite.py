@@ -133,6 +133,9 @@ class TestSuite:
                         . format(self.fragile))
             except ValueError:
                 # use old format dictionary
+                raise RuntimeError(
+                    "Key 'tests' absent in 'fragile' json: {}"
+                    . format(self.fragile))
                 self.fragile['tests'] = self.ini['fragile']
 
         self.parse_bool_opt('pretest_clean', False)
