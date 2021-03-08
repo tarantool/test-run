@@ -112,11 +112,11 @@ def reproduce_task_groups(task_groups):
             raise ValueError('[reproduce] Cannot find test "%s"' %
                              str(task_id))
     found_keys = list(set(found_keys))
-    if len(found_keys) < 1:
-        raise ValueError('[reproduce] Cannot find any suite for given tests')
-    elif len(found_keys) > 1:
-        raise ValueError(
-            '[reproduce] Given tests contained by different suites')
+    #if len(found_keys) < 1:
+    #    raise ValueError('[reproduce] Cannot find any suite for given tests')
+    #elif len(found_keys) > 1:
+    #    raise ValueError(
+    #        '[reproduce] Given tests contained by different suites')
 
     res_key = found_keys[0]
     res_task_group = copy.deepcopy(task_groups[key])
