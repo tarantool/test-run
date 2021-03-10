@@ -141,7 +141,10 @@ class Dispatcher:
     def terminate_all_workers(self):
         for process in self.processes:
             if process.is_alive():
-                process.terminate()
+                try:
+                    process.terminate()
+                except OSError:
+                    pass
 
     def kill_all_workers(self):
         for pid in self.pids:
