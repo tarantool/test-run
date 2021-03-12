@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Test is needed to check how test-run handle
+# tests with result files. Since commit
+# 395edeb6b743c4479a62dd2183062124973d2b2a
+# 'python3: decouple bytes and strings' test-run
+# reads test output and result files in byte mode.
+# Output of this test contains broken UTF-8 sequences
+# and test-run will fail if it will try to decode output.
+
+printf 'TAP version 13\n'
+printf '1..3\n'
+printf 'ok 1 - \302\302\n'
+printf 'ok 2 - \302\302\n'
+printf 'ok 3 - \342\230\240\n'
