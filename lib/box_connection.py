@@ -88,7 +88,7 @@ class BoxConnection(TarantoolConnection):
     def call(self, command, *args):
         if not command:
             return
-        print('call ', command, args)
+        print('call  {} {}'.format(command, args))
         response = self.py_con.call(command, *args)
         result = str(response)
         print(result)
