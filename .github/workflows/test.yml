@@ -14,10 +14,17 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8, 3.8-dev]
+        tarantool-version: [2.6, 2.7]
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: update git submodules
+      run: git submodule update --init --recursive
+    - name: set up Tarantool ${{ matrix.tarantool-version }}
+      uses: tarantool/setup-tarantool@v1
+      with:
+        tarantool-version: ${{ matrix.tarantool-version }}
+    - name: set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
@@ -28,6 +35,19 @@ jobs:
        sudo apt update -y
        sudo apt-get -y install lua5.1 luarocks
        sudo luarocks install luacheck
+    - name: set default pip to pip3
+      run: |
+       sudo rm -f /usr/local/bin/pip
+       sudo ln -s /usr/bin/pip3 /usr/local/bin/pip
+    - name: set default python and pip to v2.7
+      if: ${{ matrix.python-version }} == 2.7
+      run: |
+       curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+       sudo python2 get-pip.py
+       sudo rm -f /usr/bin/python
+       sudo ln -s /usr/bin/python2 /usr/bin/python
+       sudo rm -f /usr/local/bin/pip
+       sudo ln -s /usr/local/bin/pip2 /usr/local/bin/pip
     - name: setup python dependencies
       run: |
        pip install -r requirements.txt
@@ -35,3 +55,6 @@ jobs:
     - name: run static analysis
       run: |
        make lint
+    - name: run regression tests
+      run: |
+       make test
