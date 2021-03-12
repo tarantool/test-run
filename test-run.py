@@ -236,6 +236,36 @@ if __name__ == "__main__":
     if PY3:
         multiprocessing.set_start_method('fork')
 
+    # test-run assumes that text file streams are UTF-8 (as
+    # contrary to ASCII) on Python 3. It is necessary to process
+    # non ASCII symbols in test files, result files and so on.
+    #
+    # Default text file stream encoding depends on a system
+    # locale with exception for the POSIX locale (C locale): in
+    # this case UTF-8 is used (see PEP-0540). Sadly, this
+    # behaviour is in effect since Python 3.7.
+    #
+    # We want to achieve the same behaviour on lower Python
+    # versions, at least on 3.6.8, which is provided by CentOS 7
+    # and CentOS 8.
+    #
+    # So we hack the open() builtin.
+    #
+    # https://stackoverflow.com/a/53347548/1598057
+    if PY3 and sys.version_info[0:2] < (3, 7):
+        std_open = __builtins__.open
+
+        def open_as_utf8(*args, **kwargs):
+            if len(args) >= 2:
+                mode = args[1]
+            else:
+                mode = kwargs.get('mode', '')
+            if 'b' not in mode:
+                kwargs.setdefault('encoding', 'utf-8')
+            return std_open(*args, **kwargs)
+
+        __builtins__.open = open_as_utf8
+
     # don't sure why, but it values 1 or 2 gives 1.5x speedup for parallel
     # test-run (and almost doesn't affect consistent test-run)
     os.environ['OMP_NUM_THREADS'] = '2'
