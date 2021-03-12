@@ -1,0 +1,50 @@
+-- test-run result file version 2
+-- Simple SQL test that uses '\set language' command.
+-- Command introduced in commit 6e38b88eb6bbe543a1e3ba0a6a0be2f6f58abc86
+-- ('Implement SQL driver')
+
+-- Create table for tests
+CREATE TABLE t (a BOOLEAN PRIMARY KEY);
+ | ---
+ | - row_count: 1
+ | ...
+INSERT INTO t VALUES (true), (false);
+ | ---
+ | - row_count: 2
+ | ...
+
+-- Create user-defined function.
+\set language lua
+ | ---
+ | - true
+ | ...
+test_run = require('test_run').new()
+ | ---
+ | ...
+\set language sql
+ | ---
+ | - true
+ | ...
+
+SELECT a FROM t WHERE a;
+ | ---
+ | - metadata:
+ |   - name: A
+ |     type: boolean
+ |   rows:
+ |   - [true]
+ | ...
+SELECT a FROM t WHERE a != true;
+ | ---
+ | - metadata:
+ |   - name: A
+ |     type: boolean
+ |   rows:
+ |   - [false]
+ | ...
+
+-- Cleaning.
+DROP TABLE t;
+ | ---
+ | - row_count: 1
+ | ...

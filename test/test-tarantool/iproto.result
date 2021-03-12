@@ -1,0 +1,7 @@
+IPROTO_UPDATE
+query [('IPROTO_CODE', 4)] [('IPROTO_SPACE_ID', 280)]
+True
+query [('IPROTO_CODE', 4)] [('IPROTO_KEY', (1,)), ('IPROTO_SPACE_ID', 280)]
+True
+
+
