@@ -658,9 +658,6 @@ class TarantoolServer(Server):
         if 'test_run_current_test' in caller_globals.keys():
             self.current_test = caller_globals['test_run_current_test']
 
-    def __del__(self):
-        self.stop()
-
     @classmethod
     def version(cls):
         p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
