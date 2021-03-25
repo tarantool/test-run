@@ -426,8 +426,6 @@ end
 -- Wrapper for grep_log, wait until expected log entry is appear
 -- in a server log file.
 local function wait_log(self, node, what, bytes, timeout, opts)
-    assert(timeout ~= nil)
-
     local opts = opts or {}
     local delay = opts.delay
 
