@@ -58,6 +58,7 @@ def module_init():
     os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
     os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
+    os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)

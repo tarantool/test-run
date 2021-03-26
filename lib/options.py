@@ -252,6 +252,11 @@ class Options:
                 action="store_true",
                 default=False,
                 help="""Disable schema upgrade on testing with snapshots.""")
+        parser.add_argument(
+                "--memtx-allocator",
+                dest="memtx_allocator",
+                default=os.environ.get("MEMTX_ALLOCATOR", "small"),
+                help="""Memtx allocator type for tests""")
 
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
