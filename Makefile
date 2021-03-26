@@ -15,6 +15,9 @@ luacheck:
 test_integration:
 	$(PYTHON) test/test-run.py --force $(TEST_RUN_EXTRA_PARAMS)
 
-test: test_integration
+test_unittest:
+	$(PYTHON) -m unittest discover test/unittest/
 
-.PHONY: lint flake8 luacheck test test_integration
+test: test_unittest test_integration
+
+.PHONY: lint flake8 luacheck test test_integration test_unittest
