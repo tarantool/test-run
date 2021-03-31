@@ -905,8 +905,8 @@ class TarantoolServer(Server):
         # Verify that the schema actually was not upgraded.
         if self.disable_schema_upgrade:
             expected_version = extract_schema_from_snapshot(self.snapshot_path)
-            actual_version = yaml.safe_load(self.admin.execute(
-                'box.space._schema:get{"version"}'))[0]
+            actual_version = tuple(yaml.safe_load(self.admin.execute(
+                'box.space._schema:get{"version"}'))[0][1:])
             if expected_version != actual_version:
                 color_stdout('Schema version check fails: expected '
                              '{}, got {}\n'.format(expected_version,
