@@ -322,7 +322,7 @@ def extract_schema_from_snapshot(snapshot_path):
        "BODY": {"space_id": 272, "tuple": ["version", 2, 3, 1]}
      }
 
-    :returns: [u'version', 2, 3, 1]
+    :returns: (2, 3, 1)
     """
     BOX_SCHEMA_ID = 272
     for row in xlog_rows(snapshot_path):
@@ -330,7 +330,7 @@ def extract_schema_from_snapshot(snapshot_path):
            row['BODY']['space_id'] == BOX_SCHEMA_ID:
             res = row['BODY']['tuple']
             if res[0] == 'version':
-                return res
+                return tuple(res[1:])
     return None
 
 
