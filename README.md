@@ -383,5 +383,6 @@ For a `core = unittest` test suite this option does not change any behaviour.
 ### Used By
 
 - [Tarantool](https://github.com/tarantool/tarantool) - in-memory database and application server
+- [memcached](https://github.com/tarantool/memcached) - Memcached protocol 'wrapper' for Tarantool
 - [vshard](https://github.com/tarantool/vshard) - sharding based on virtual buckets
 - xsync (internal project)
