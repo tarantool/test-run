@@ -1,7 +1,13 @@
 import os
 import glob
 import shlex
-from six.moves import shlex_quote
+
+try:
+    # Python 3.3+.
+    from shlex import quote as shlex_quote
+except ImportError:
+    # Python 2.7.
+    from pipes import quote as shlex_quote
 
 from lib.utils import find_in_path
 from lib.utils import print_tail_n
