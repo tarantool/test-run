@@ -1,5 +1,7 @@
 # Tarantool Functional testing framework
 
+[![Coverage Status](https://coveralls.io/repos/github/tarantool/test-run/badge.svg)](https://coveralls.io/github/tarantool/test-run)
+
 ### Test Suite
 
 Bunch of tests, that lay down in the subfolder (recursively) with `suite.ini`
