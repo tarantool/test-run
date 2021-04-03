@@ -58,3 +58,13 @@ jobs:
     - name: run regression tests
       run: |
        make test
+    - name: code coverage
+      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
+      run: |
+       pip install coveralls==3.*
+       make coverage
+    - name: upload coverage data to coveralls.io
+      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
+      run: coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
