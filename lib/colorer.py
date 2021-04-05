@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-from lib.singleton import Singleton
 
 
 # Use it to print messages on the screen and to the worker's log.
@@ -128,7 +127,6 @@ class Colorer(object):
     1. ftp://ftp.cs.utk.edu/pub/shuford/terminal/dec_vt220_codes.txt
     2. http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
     """
-    __metaclass__ = Singleton
     fgcolor = {
         "black":     '0;30',
         "red":       '0;31',
