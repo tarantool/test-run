@@ -2,7 +2,6 @@ import os
 import sys
 import argparse
 from itertools import product
-from lib.singleton import Singleton
 
 from lib.colorer import color_stdout
 
@@ -23,13 +22,27 @@ def env_list(name, default):
     return value_list or default
 
 
-class Options:
+class Options(object):
     """Handle options of test-runner"""
 
-    __metaclass__ = Singleton
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        """Make the class singleton."""
+        if cls._instance:
+            return cls._instance
+        cls._instance = super(Options, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
     def __init__(self):
         """Add all program options, with their defaults."""
+
+        # The __init__() method is called always, even when we
+        # return already initialized Options instance from
+        # __new__().
+        if Options._initialized:
+            return
 
         parser = argparse.ArgumentParser(
             description="Tarantool regression test suite front-end.")
@@ -263,6 +276,8 @@ class Options:
         # ./test-run.py foo --exclude bar baz
         self.args = parser.parse_args()
         self.check()
+
+        Options._initialized = True
 
     def check(self):
         """Check the arguments for correctness."""
