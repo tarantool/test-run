@@ -43,6 +43,7 @@ from lib.utils import safe_makedirs
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
+from lib.utils import get_mem_stat_rss
 from lib.test import TestRunGreenlet, TestExecutionError
 
 
@@ -198,6 +199,9 @@ class LuaTest(Test):
         color_log("DEBUG: tarantool's response for [{}]\n{}\n".format(
             command.rstrip(), prefix_each_line(' | ', result)),
             schema='tarantool command')
+        if (Options().args.collect_statistics):
+            color_log('RSS: {}\n' . format(get_mem_stat_rss()),
+                      schema='tarantool command')
         return result
 
     def set_language(self, ts, language):
