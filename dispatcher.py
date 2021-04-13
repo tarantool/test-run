@@ -167,8 +167,9 @@ class Dispatcher:
         self.statistics = StatisticsWatcher(log_output_watcher.get_logfile)
         self.artifacts = ArtifactsWatcher(log_output_watcher.get_logfile)
         output_watcher = OutputWatcher()
-        self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts,
-                          sampler.watcher]
+        self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
+        if sampler.is_enabled:
+            self.listeners.append(sampler.watcher)
         if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)

@@ -145,14 +145,16 @@ class WorkerTaskResult(BaseWorkerMessage):
     the task processed successfully or not, but with little more flexibility
     than binary True/False. The result_checksum (string) field saves the results
     file checksum on test fail. The task_id (any hashable object) field hold ID of
-    the processed task. The show_reproduce_content configuration form suite.ini
+    the processed task. The is_long (boolean) field shows if task is in long test
+    list in suite.ini. The show_reproduce_content configuration from suite.ini.
     """
     def __init__(self, worker_id, worker_name, task_id,
-                 short_status, result_checksum, show_reproduce_content):
+                 short_status, result_checksum, is_long, show_reproduce_content):
         super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
         self.result_checksum = result_checksum
         self.task_id = task_id
+        self.is_long = is_long
         self.show_reproduce_content = show_reproduce_content
 
 
@@ -221,6 +223,7 @@ class Worker:
     def wrap_result(self, task_id, short_status, result_checksum):
         return WorkerTaskResult(self.id, self.name, task_id, short_status,
                                 result_checksum,
+                                self.suite.test_is_long(task_id),
                                 self.suite.show_reproduce_content())
 
     def sigterm_handler(self, signum, frame):
