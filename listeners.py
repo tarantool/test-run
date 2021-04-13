@@ -15,6 +15,7 @@ from lib.utils import prefix_each_line
 from lib.utils import safe_makedirs
 from lib.utils import print_tail_n
 from lib.utils import print_unidiff
+from lib.utils import get_mem_stat_rss
 
 
 class BaseWatcher(object):
@@ -168,6 +169,9 @@ class LogOutputWatcher(BaseWatcher):
         output = prefix_each_line(prefix, output)
 
         fd.write(output)
+        if (Options().args.collect_statistics):
+            rss = '{}RSS: {}' . format(prefix, get_mem_stat_rss())
+            fd.write(rss)
         fd.flush()
 
     def __del__(self):

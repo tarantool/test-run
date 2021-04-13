@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import collections
 import signal
@@ -231,6 +232,19 @@ def format_process(pid):
     except (OSError, IOError):
         pass
     return 'process %d [%s; %s]' % (pid, status, cmdline)
+
+
+def get_mem_stat_rss():
+    rss = 'unknown'
+    pat = re.compile(r"^total_rss .*")
+    try:
+        with open('/sys/fs/cgroup/memory/memory.stat', 'r') as f:
+            for line in f:
+                if pat.match(line) is not None:
+                    rss = line.split(' ')[1]
+    except (OSError, IOError):
+        pass
+    return rss
 
 
 def set_fd_cloexec(socket):
