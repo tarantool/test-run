@@ -233,6 +233,25 @@ def format_process(pid):
     return 'process %d [%s; %s]' % (pid, status, cmdline)
 
 
+def proc_stat_rss_supported():
+    return os.path.isfile('/proc/%d/status' % os.getpid())
+
+
+def get_proc_stat_rss(pid):
+    rss = 0
+    try:
+        with open('/proc/%d/status' % pid, 'r') as f:
+            for line in f:
+                if ':' not in line:
+                    continue
+                key, value = line.split(':', 1)
+                if key == 'VmRSS':
+                    rss = int(value.strip().split()[0])
+    except (OSError, IOError):
+        pass
+    return rss
+
+
 def set_fd_cloexec(socket):
     flags = fcntl.fcntl(socket, fcntl.F_GETFD)
     fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)

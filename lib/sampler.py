@@ -5,6 +5,8 @@ import time
 from lib.colorer import color_log
 from lib.colorer import qa_notice
 from lib.utils import format_process
+from lib.utils import get_proc_stat_rss
+from lib.utils import proc_stat_rss_supported
 
 
 if sys.version_info[0] == 2:
@@ -42,6 +44,10 @@ class SamplerWatcher(object):
     def process_timeout(self, delta_seconds):
         self._wakeup()
 
+    @property
+    def sample_interval(self):
+        return self._sample_interval
+
     def _wakeup(self):
         """Invoke Sampler.sample() if enough time elapsed since
            the previous call.
@@ -72,6 +78,7 @@ class Sampler:
         self._watcher = SamplerWatcher(self)
 
         self._processes = dict()
+        self._rss_summary = dict()
 
     def set_queue(self, queue, worker_id, worker_name):
         # Called from a worker process (_run_worker()).
@@ -81,11 +88,24 @@ class Sampler:
         self._watcher = None
 
     @property
+    def rss_summary(self):
+        """Task ID to maximum RSS mapping."""
+        return self._rss_summary
+
+    @property
+    def sample_interval(self):
+        return self._watcher.sample_interval
+
+    @property
     def watcher(self):
         if not self._watcher:
             raise RuntimeError('sampler: watcher is available only in the ' +
                                'main test-run process')
         return self._watcher
+
+    @property
+    def is_enabled(self):
+        return proc_stat_rss_supported()
 
     def register_process(self, pid, task_id, server_name, worker_id=None,
                          worker_name=None):
@@ -134,6 +154,7 @@ class Sampler:
         color_log(' | server: {}\n'.format(str(server_name)))
 
     def _sample(self):
+        tasks_rss = dict()
         for pid in list(self._processes.keys()):
             # Unregister processes that're gone.
             # Assume that PIDs are rarely reused.
@@ -142,11 +163,17 @@ class Sampler:
             except ProcessLookupError:
                 self.unregister_process(pid)
             else:
-                self._sample_process(pid)
+                self._sample_process(pid, tasks_rss)
 
-    def _sample_process(self, pid):
-        # Your sampling code here.
-        pass
+        # Save current overall RSS value if it is bigger than saved.
+        for task_id in tasks_rss:
+            if self.rss_summary.get(task_id, 0) < tasks_rss[task_id]:
+                self.rss_summary[task_id] = tasks_rss[task_id]
+
+    def _sample_process(self, pid, tasks_rss):
+        task_id = self._processes[pid]['task_id']
+        # Count overall RSS per task.
+        tasks_rss[task_id] = get_proc_stat_rss(pid) + tasks_rss.get(task_id, 0)
 
 
 # The 'singleton' sampler instance: created in the main test-run

@@ -6,6 +6,7 @@ import shutil
 from lib import Options
 from lib.colorer import color_stdout
 from lib.colorer import decolor
+from lib.sampler import sampler
 from lib.worker import WorkerCurrentTask
 from lib.worker import WorkerDone
 from lib.worker import WorkerOutput
@@ -33,12 +34,18 @@ class BaseWatcher(object):
 class StatisticsWatcher(BaseWatcher):
     def __init__(self, get_logfile):
         self.stats = dict()
+        self.field_size = 60
+        self._sampler = sampler
         self.failed_tasks = []
         self.get_logfile = get_logfile
+        self.long_tasks = set()
 
     def process_result(self, obj):
         if not isinstance(obj, WorkerTaskResult):
             return
+
+        if obj.is_long:
+            self.long_tasks.add(obj.task_id)
 
         if obj.short_status not in self.stats:
             self.stats[obj.short_status] = 0
@@ -50,8 +57,63 @@ class StatisticsWatcher(BaseWatcher):
                                       obj.result_checksum,
                                       obj.show_reproduce_content))
 
+    def get_long_mark(self, task):
+        return '(long)' if task in self.long_tasks else ''
+
+    def prettify_task_name(self, task_id):
+        return task_id[0] + ((':' + task_id[1]) if task_id[1] else '')
+
+    # RSS.
+    def print_rss_summary(self, stats_dir):
+        if not self._sampler.is_enabled:
+            return
+
+        rss_summary = self._sampler.rss_summary
+        top_rss = 10
+
+        # Print to stdout RSS statistics for all failed tasks.
+        if self.failed_tasks:
+            color_stdout('Occupied memory in failed tests (RSS, Mb):\n', schema='info')
+            for task in self.failed_tasks:
+                task_id = task[0]
+                if task_id in rss_summary:
+                    color_stdout('* %6.1f %s %s\n' % (float(rss_summary[task_id]) / 1024,
+                                 self.prettify_task_name(task_id).ljust(self.field_size),
+                                 self.get_long_mark(task_id)),
+                                 schema='info')
+            color_stdout('\n')
+
+        # Print to stdout RSS statistics for some number of most it used tasks.
+        color_stdout('Top {} tests by occupied memory (RSS, Mb):\n'.format(
+                     top_rss), schema='info')
+        results_sorted = sorted(rss_summary.items(), key=lambda x: x[1], reverse=True)
+        for task_id, rss in results_sorted[:top_rss]:
+            color_stdout('* %6.1f %s %s\n' % (float(rss) / 1024,
+                         self.prettify_task_name(task_id).ljust(self.field_size),
+                         self.get_long_mark(task_id)), schema='info')
+        color_stdout('\n')
+
+        color_stdout('(Tests quicker than {} seconds may be missed.)\n'.format(
+                     self._sampler.sample_interval), schema='info')
+
+        color_stdout('-' * 81, "\n", schema='separator')
+
+        # Print RSS statistics to '<vardir>/statistics/rss.log' file.
+        filepath = os.path.join(stats_dir, 'rss.log')
+        fd = open(filepath, 'w')
+        for task_id in rss_summary:
+            fd.write("{} {}\n".format(self.prettify_task_name(task_id),
+                                      rss_summary[task_id]))
+        fd.close()
+
     def print_statistics(self):
-        """Returns are there failed tasks."""
+        """Print statistics and results of testing."""
+        # Prepare standalone subpath '<vardir>/statistics' for statistics files.
+        stats_dir = os.path.join(Options().args.vardir, 'statistics')
+        safe_makedirs(stats_dir)
+
+        self.print_rss_summary(stats_dir)
+
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
@@ -121,6 +183,8 @@ class ArtifactsWatcher(BaseWatcher):
                             ignore=shutil.ignore_patterns(
                                 '*.socket-iproto', '*.socket-admin',
                                 '*.sock', '*.control'))
+        shutil.copytree(os.path.join(vardir, 'statistics'),
+                        os.path.join(artifacts_dir, 'statistics'))
 
 
 class LogOutputWatcher(BaseWatcher):

@@ -289,3 +289,6 @@ class TestSuite:
 
     def show_reproduce_content(self):
         return self.ini['show_reproduce_content']
+
+    def test_is_long(self, task_id):
+        return os.path.basename(task_id[0]) in self.ini['long_run']
