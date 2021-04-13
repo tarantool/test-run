@@ -271,6 +271,14 @@ class Options(object):
                 default=os.environ.get("MEMTX_ALLOCATOR", "small"),
                 help="""Memtx allocator type for tests""")
 
+        parser.add_argument(
+                "--collect-statistics",
+                dest="collect_statistics",
+                action="store_true",
+                default=False,
+                help="""Collect memory/disk host statistics usage.
+                Default: false.""")
+
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
         # ./test-run.py foo --exclude bar baz
