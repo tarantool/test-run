@@ -15,6 +15,7 @@ from lib.utils import prefix_each_line
 from lib.utils import safe_makedirs
 from lib.utils import print_tail_n
 from lib.utils import print_unidiff
+from lib.utils import get_mem_stat_rss
 
 
 class BaseWatcher(object):
@@ -126,6 +127,7 @@ class ArtifactsWatcher(BaseWatcher):
 class LogOutputWatcher(BaseWatcher):
     def __init__(self):
         self.fds = dict()
+        self.fds_stat = dict()
         self.logdir = os.path.join(Options().args.vardir, 'log')
         try:
             os.makedirs(self.logdir)
@@ -137,13 +139,25 @@ class LogOutputWatcher(BaseWatcher):
         filepath = os.path.join(self.logdir, filename)
         return os.path.realpath(filepath)
 
+    def get_statfile(self, worker_name):
+        filename = '%s.mem_stat.log' % worker_name
+        filepath = os.path.join(self.logdir, filename)
+        return os.path.realpath(filepath)
+
     def process_result(self, obj):
         if isinstance(obj, WorkerDone):
             self.fds[obj.worker_id].close()
             del self.fds[obj.worker_id]
+            self.fds_stat[obj.worker_id].close()
+            del self.fds_stat[obj.worker_id]
 
         if not isinstance(obj, WorkerOutput):
             return
+
+        if obj.worker_id not in self.fds_stat.keys():
+            filepath = self.get_statfile(obj.worker_name)
+            self.fds_stat[obj.worker_id] = open(filepath, 'w')
+        fd_stat = self.fds_stat[obj.worker_id]
 
         if obj.worker_id not in self.fds.keys():
             filepath = self.get_logfile(obj.worker_name)
@@ -169,6 +183,9 @@ class LogOutputWatcher(BaseWatcher):
 
         fd.write(output)
         fd.flush()
+        if (Options().args.collect_statistics):
+            fd_stat.write(get_mem_stat_rss())
+            fd_stat.flush()
 
     def __del__(self):
         for fd in self.fds.values():
