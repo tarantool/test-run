@@ -342,6 +342,7 @@ class Worker:
             testname = os.path.basename(task_id[0])
             fragile_checksums = self.suite.get_test_fragile_checksums(testname)
             retries_left = self.suite.fragile_retries()
+            self.restart_server()
             # let's run till short_status became 'pass'
             while short_status != 'pass' and retries_left >= 0:
                 # print message only after some fails occurred
