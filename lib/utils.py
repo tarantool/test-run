@@ -1,3 +1,4 @@
+import errno
 import os
 import sys
 import collections
@@ -23,6 +24,9 @@ UNIX_SOCKET_LEN_LIMIT = 107
 # Useful for very coarse version differentiation.
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
+
+if PY2:
+    FileNotFoundError = IOError
 
 if PY3:
     string_types = str,
@@ -283,6 +287,8 @@ def xlog_rows(xlog_path):
 
         Assume tarantool and tarantoolctl is in PATH.
     """
+    if not os.path.exists(xlog_path):
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), xlog_path)
     cmd = ['tarantoolctl', 'cat', xlog_path, '--format=json', '--show-system']
     with open(os.devnull, 'w') as devnull:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=devnull)
