@@ -5,11 +5,13 @@ import pprint
 import re
 import shutil
 import sys
+import time
 import traceback
 from functools import partial
 from hashlib import md5
 
 from lib import Options
+from lib.colorer import color_log
 from lib.colorer import color_stdout
 from lib.utils import assert_bytes
 from lib.utils import non_empty_valgrind_logs
@@ -130,6 +132,7 @@ class Test(object):
         self.is_terminated = False
         self.run_params = params
         self.conf_name = conf_name
+        self.started_time = 0.0
 
         # filled in execute() when a greenlet runs
         self.current_test_greenlet = None
@@ -185,6 +188,7 @@ class Test(object):
                 sys.stdout.close()
                 sys.stdout = save_stdout
             if not self.skip:
+                self.started_time = time.time()
                 sys.stdout = FilteredStream(self.tmp_result)
                 stdout_fileno = sys.stdout.stream.fileno()
                 self.execute(server)
@@ -232,6 +236,7 @@ class Test(object):
 
         short_status = None
         result_checksum = None
+        test_timing = round(time.time() - self.started_time, 2)
 
         if self.skip:
             short_status = 'skip'
@@ -242,7 +247,7 @@ class Test(object):
               self.is_equal_result and
               self.is_valgrind_clean):
             short_status = 'pass'
-            color_stdout("[ pass ]\n", schema='test_pass')
+            color_stdout("[ pass ] [ {} ]\n" . format(test_timing), schema='test_pass')
             if os.path.exists(self.tmp_result):
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and
@@ -269,7 +274,7 @@ class Test(object):
                 with open(self.tmp_result, mode='rb') as result_file:
                     result_checksum = md5(result_file.read()).hexdigest()
             short_status = 'fail'
-            color_stdout("[ fail ]\n", schema='test_fail')
+            color_stdout("[ fail ] [ {} ]\n" . format(test_timing), schema='test_fail')
 
             where = ""
             if not self.is_crash_reported and not has_result:
@@ -293,6 +298,8 @@ class Test(object):
                                            "Test failed! Output from log file "
                                            "{0}:\n".format(log_file))
                 where = ": there were warnings in the valgrind log file(s)"
+        color_log("TEST:CONF TIMING: {}:{} {}\n" . format(self.name, self.conf_name, test_timing),
+                  schema='log')
         return short_status, result_checksum
 
     def print_diagnostics(self, log_file, message):

@@ -107,18 +107,19 @@ def main_loop_parallel():
 
     print_greetings()
 
-    color_stdout("\n", '=' * 86, "\n", schema='separator')
+    color_stdout("\n", '=' * 96, "\n", schema='separator')
     color_stdout("WORKR".ljust(6),     schema='t_name')
     color_stdout("TEST".ljust(48),     schema='t_name')
     color_stdout("PARAMS".ljust(16),   schema='test_var')
-    color_stdout("RESULT\n",           schema='test_pass')
-    color_stdout('-' * 81, "\n",       schema='separator')
+    color_stdout("RESULT".ljust(9),    schema='test_pass')
+    color_stdout("TIMING\n",           schema='test_pass')
+    color_stdout('-' * 91, "\n",       schema='separator')
 
     try:
         is_force = Options().args.is_force
         dispatcher.wait()
         dispatcher.wait_processes()
-        color_stdout('-' * 81, "\n", schema='separator')
+        color_stdout('-' * 91, "\n", schema='separator')
         has_failed = dispatcher.statistics.print_statistics()
         has_undone = dispatcher.report_undone(
             verbose=bool(is_force or not has_failed))
@@ -128,12 +129,12 @@ def main_loop_parallel():
         if has_undone:
             return EXIT_NOTDONE_TEST
     except KeyboardInterrupt:
-        color_stdout('-' * 81, "\n", schema='separator')
+        color_stdout('-' * 91, "\n", schema='separator')
         dispatcher.statistics.print_statistics()
         dispatcher.report_undone(verbose=False)
         raise
     except HangError:
-        color_stdout('-' * 81, "\n", schema='separator')
+        color_stdout('-' * 91, "\n", schema='separator')
         dispatcher.statistics.print_statistics()
         dispatcher.report_undone(verbose=False)
         return EXIT_HANG
