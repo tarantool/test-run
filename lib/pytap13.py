@@ -18,6 +18,8 @@
 
 import re
 
+from lib.colorer import color_log
+
 try:
     # Python 2
     from StringIO import StringIO
@@ -139,6 +141,7 @@ class TAP13(object):
 
             if seek_test:
                 m = RE_TEST_LINE.match(line)
+                color_log('%s\n' % line, schema='test-run command')
                 if m and on_top_level:
                     self.__tests_counter += 1
                     t_attrs = m.groupdict()
