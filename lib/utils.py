@@ -293,7 +293,7 @@ def xlog_rows(xlog_path):
     with open(os.devnull, 'w') as devnull:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=devnull)
     for line in process.stdout.readlines():
-        yield json.loads(line)
+        yield json.loads(bytes_to_str(line))
 
 
 def extract_schema_from_snapshot(snapshot_path):
