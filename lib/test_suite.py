@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sys
+import time
 
 from lib import Options
 from lib.app_server import AppServer
@@ -268,18 +269,20 @@ class TestSuite:
             conf = test.conf_name
         color_stdout(just_and_trim(conf, 15) + ' ', schema='test_var')
 
+        start_time = time.time()
         if self.is_test_enabled(test, conf, server):
             short_status, result_checksum = test.run(server)
         else:
             color_stdout("[ disabled ]\n", schema='t_name')
             short_status = 'disabled'
             result_checksum = None
+        duration = time.time() - start_time
 
         # cleanup only if test passed or if --force mode enabled
         if Options().args.is_force or short_status == 'pass':
             inspector.cleanup_nondefault()
 
-        return short_status, result_checksum
+        return short_status, result_checksum, duration
 
     def is_parallel(self):
         return self.ini['is_parallel']

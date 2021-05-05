@@ -36,6 +36,7 @@ class StatisticsWatcher(BaseWatcher):
         self.stats = dict()
         self.field_size = 60
         self._sampler = sampler
+        self.duration_stats = dict()
         self.failed_tasks = []
         self.get_logfile = get_logfile
         self.long_tasks = set()
@@ -56,6 +57,8 @@ class StatisticsWatcher(BaseWatcher):
                                       obj.worker_name,
                                       obj.result_checksum,
                                       obj.show_reproduce_content))
+
+        self.duration_stats[obj.task_id] = obj.duration
 
     def get_long_mark(self, task):
         return '(long)' if task in self.long_tasks else ''
@@ -106,6 +109,42 @@ class StatisticsWatcher(BaseWatcher):
                                       rss_summary[task_id]))
         fd.close()
 
+    # Durations.
+    def print_duration(self, stats_dir):
+        top_durations = 10
+
+        # Print to stdout durations for all failed tasks.
+        if self.failed_tasks:
+            color_stdout('Duration of failed tests (seconds):\n',
+                         schema='info')
+            for task in self.failed_tasks:
+                task_id = task[0]
+                if task_id in self.duration_stats:
+                    color_stdout('* %6.2f %s %s\n' % (self.duration_stats[task_id],
+                                 self.prettify_task_name(task_id).ljust(self.field_size),
+                                 self.get_long_mark(task_id)),
+                                 schema='info')
+            color_stdout('\n')
+
+        # Print to stdout durations for some number of most long tasks.
+        color_stdout('Top {} longest tests (seconds):\n'.format(top_durations),
+                     schema='info')
+        results_sorted = sorted(self.duration_stats.items(), key=lambda x: x[1], reverse=True)
+        for task_id, duration in results_sorted[:top_durations]:
+            color_stdout('* %6.2f %s %s\n' % (duration,
+                         self.prettify_task_name(task_id).ljust(self.field_size),
+                         self.get_long_mark(task_id)), schema='info')
+
+        color_stdout('-' * 81, "\n", schema='separator')
+
+        # Print duration statistics to '<vardir>/statistics/duration.log' file.
+        filepath = os.path.join(stats_dir, 'duration.log')
+        fd = open(filepath, 'w')
+        for task_id in self.duration_stats:
+            fd.write("{} {}\n".format(self.prettify_task_name(task_id),
+                                      self.duration_stats[task_id]))
+        fd.close()
+
     def print_statistics(self):
         """Print statistics and results of testing."""
         # Prepare standalone subpath '<vardir>/statistics' for statistics files.
@@ -113,6 +152,7 @@ class StatisticsWatcher(BaseWatcher):
         safe_makedirs(stats_dir)
 
         self.print_rss_summary(stats_dir)
+        self.print_duration(stats_dir)
 
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
