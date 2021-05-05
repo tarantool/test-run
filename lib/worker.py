@@ -146,15 +146,17 @@ class WorkerTaskResult(BaseWorkerMessage):
     than binary True/False. The result_checksum (string) field saves the results
     file checksum on test fail. The task_id (any hashable object) field hold ID of
     the processed task. The is_long (boolean) field shows if task is in long test
-    list in suite.ini. The show_reproduce_content configuration from suite.ini.
+    list in suite.ini. The duration (float) field saves the task run time. The
+    show_reproduce_content configuration from suite.ini.
     """
     def __init__(self, worker_id, worker_name, task_id,
-                 short_status, result_checksum, is_long, show_reproduce_content):
+                 short_status, result_checksum, is_long, duration, show_reproduce_content):
         super(WorkerTaskResult, self).__init__(worker_id, worker_name)
         self.short_status = short_status
         self.result_checksum = result_checksum
         self.task_id = task_id
         self.is_long = is_long
+        self.duration = duration
         self.show_reproduce_content = show_reproduce_content
 
 
@@ -220,10 +222,10 @@ class Worker:
         return WorkerCurrentTask(self.id, self.name, task_name, task_param,
                                  task_result, task_tmp_result)
 
-    def wrap_result(self, task_id, short_status, result_checksum):
+    def wrap_result(self, task_id, short_status, result_checksum, duration):
         return WorkerTaskResult(self.id, self.name, task_id, short_status,
                                 result_checksum,
-                                self.suite.test_is_long(task_id),
+                                self.suite.test_is_long(task_id), duration,
                                 self.suite.show_reproduce_content())
 
     def sigterm_handler(self, signum, frame):
@@ -315,7 +317,7 @@ class Worker:
             with open(self.reproduce_file, 'a') as f:
                 task_id_str = yaml.safe_dump(task.id, default_flow_style=True)
                 f.write('- ' + task_id_str)
-            short_status, result_checksum = self.suite.run_test(
+            short_status, result_checksum, duration = self.suite.run_test(
                 task, self.server, self.inspector)
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
@@ -325,7 +327,7 @@ class Worker:
                 '\nWorker "%s" received the following error; stopping...\n'
                 % self.name + traceback.format_exc() + '\n', schema='error')
             raise
-        return short_status, result_checksum
+        return short_status, result_checksum, duration
 
     def run_loop(self, task_queue, result_queue):
         """ called from 'run_all' """
@@ -341,6 +343,7 @@ class Worker:
 
             short_status = None
             result_checksum = None
+            duration = 0.0
             result_queue.put(self.current_task(task_id))
             testname = os.path.basename(task_id[0])
             fragile_checksums = self.suite.get_test_fragile_checksums(testname)
@@ -356,14 +359,14 @@ class Worker:
                         ' file checksum: "%s", rerunning with server restart ...\n'
                         % (task_id[0], task_id[1], result_checksum), schema='error')
                 # run task and save the result to short_status
-                short_status, result_checksum = self.run_task(task_id)
+                short_status, result_checksum, duration = self.run_task(task_id)
                 # check if the results file checksum set on fail and if
                 # the newly created results file is known by checksum
                 if not result_checksum or (result_checksum not in fragile_checksums):
                     break
                 retries_left = retries_left - 1
 
-            result_queue.put(self.wrap_result(task_id, short_status, result_checksum))
+            result_queue.put(self.wrap_result(task_id, short_status, result_checksum, duration))
             if short_status == 'fail':
                 if Options().args.is_force:
                     self.restart_server()
