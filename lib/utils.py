@@ -256,6 +256,64 @@ def get_proc_stat_rss(pid):
     return rss
 
 
+def proc_diskstats_supported(vardir):
+    return get_vardir_device(vardir) != 'unknown' and os.path.isfile('/proc/diskstats')
+
+
+def get_vardir_device(vardir):
+    dev = 'unknown'
+    path = os.path.abspath(vardir)
+    while not os.path.ismount(path):
+        path = os.path.dirname(path)
+    try:
+        with open('/proc/mounts', 'r') as f:
+            for line in f:
+                if line.split()[1] == path:
+                    mount = line.split()[0]
+                    dev = mount.split('/')[2]
+    except (OSError, IOError, IndexError):
+        pass
+    return dev
+
+
+# This routine gets the value milliseconds spent doing I/Os
+# from the given 'vardir' device found at '/proc/diskstats'
+# and counts 'busy' value in percents like iostat tool does
+# for its '%util' field.
+#
+# Check for more information linux kernel documentation:
+#   https://www.kernel.org/doc/Documentation/iostats.txt
+#
+# We use Field 10 which has the 12th position in the file:
+#
+#   Field  9 -- # of I/Os currently in progress
+#     The only field that should go to zero. Incremented as requests are
+#     given to appropriate struct request_queue and decremented as they finish.
+#
+#   Field 10 -- # of milliseconds spent doing I/Os
+#     This field increases so long as field 9 is nonzero.
+def get_disk_bound_stat_busy(devname, previous):
+    """Function options are:
+    devname - initialy got by get_vardir_device()
+    previous - array of 2 fields:
+      [0] - previous time value
+      [1] - previous milliseconds spent doing I/Os value
+    """
+    busy = 0
+    times = time.time()
+    value = 0
+    try:
+        with open('/proc/diskstats', 'r') as f:
+            for line in f:
+                if line.split()[2] == devname:
+                    value = line.split()[12]
+                    busy = 100 * (int(value) - int(previous[1])) / \
+                        (1024 * (times - previous[0]))
+    except (OSError, IOError):
+        pass
+    return busy, [times, value]
+
+
 def set_fd_cloexec(socket):
     flags = fcntl.fcntl(socket, fcntl.F_GETFD)
     fcntl.fcntl(socket, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)

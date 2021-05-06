@@ -2,6 +2,7 @@ import os
 import sys
 import yaml
 import shutil
+import time
 
 from lib import Options
 from lib.colorer import color_stdout
@@ -16,6 +17,9 @@ from lib.utils import prefix_each_line
 from lib.utils import safe_makedirs
 from lib.utils import print_tail_n
 from lib.utils import print_unidiff
+from lib.utils import proc_diskstats_supported
+from lib.utils import get_vardir_device
+from lib.utils import get_disk_bound_stat_busy
 
 
 class BaseWatcher(object):
@@ -37,11 +41,23 @@ class StatisticsWatcher(BaseWatcher):
         self.field_size = 60
         self._sampler = sampler
         self.duration_stats = dict()
+        self.vardir = Options().args.vardir
+        self.proc_diskstats_supported = proc_diskstats_supported(self.vardir)
+        if self.proc_diskstats_supported:
+            self.vardir_devname = get_vardir_device(self.vardir)
+            self.vardir_usage = dict()
+            self.vardir_data = dict()
         self.failed_tasks = []
         self.get_logfile = get_logfile
         self.long_tasks = set()
 
     def process_result(self, obj):
+        # Called only once on task run initiated.
+        if self.proc_diskstats_supported and isinstance(obj, WorkerCurrentTask):
+            task_id = (obj.task_name, obj.task_param)
+            self.vardir_usage[task_id], self.vardir_data[task_id] = get_disk_bound_stat_busy(
+                    self.vardir_devname, [time.time(), 0])
+
         if not isinstance(obj, WorkerTaskResult):
             return
 
@@ -59,6 +75,10 @@ class StatisticsWatcher(BaseWatcher):
                                       obj.show_reproduce_content))
 
         self.duration_stats[obj.task_id] = obj.duration
+        if self.proc_diskstats_supported:
+            self.vardir_usage[obj.task_id], self.vardir_data[obj.task_id] = \
+                    get_disk_bound_stat_busy(self.vardir_devname,
+                                             self.vardir_data[obj.task_id])
 
     def get_long_mark(self, task):
         return '(long)' if task in self.long_tasks else ''
@@ -145,6 +165,42 @@ class StatisticsWatcher(BaseWatcher):
                                       self.duration_stats[task_id]))
         fd.close()
 
+    # Disk usage.
+    def print_disk_usage_summary(self, stats_dir):
+        if not self.proc_diskstats_supported:
+            return
+
+        top_usage = 10
+
+        # Print to stdout disk usage statistics for all failed tasks.
+        if self.failed_tasks:
+            color_stdout('Disk usage of failed tests:\n', schema='info')
+            for task in self.failed_tasks:
+                task_id = task[0]
+                if task_id in self.vardir_usage:
+                    color_stdout('* %3d    %s %s\n' % (self.vardir_usage[task_id],
+                                 self.prettify_task_name(task_id).ljust(self.field_size),
+                                 self.get_long_mark(task_id)),
+                                 schema='info')
+
+        # Print to stdout disk usage statistics for some number of most it used tasks.
+        color_stdout('Top {} tests by disk usage:\n'.format(top_usage), schema='info')
+        results_sorted = sorted(self.vardir_usage.items(), key=lambda x: x[1], reverse=True)
+        for task_id, usage in results_sorted[:top_usage]:
+            color_stdout('* %3d    %s %s\n' % (usage,
+                         self.prettify_task_name(task_id).ljust(self.field_size),
+                         self.get_long_mark(task_id)), schema='info')
+
+        color_stdout('-' * 81, "\n", schema='separator')
+
+        # Print disk usage statistics to '<vardir>/statistics/diskusage.log' file.
+        filepath = os.path.join(stats_dir, 'diskusage.log')
+        fd = open(filepath, 'w')
+        for task_id in self.vardir_usage:
+            fd.write("{} {}\n".format(self.prettify_task_name(task_id),
+                                      self.vardir_usage[task_id]))
+        fd.close()
+
     def print_statistics(self):
         """Print statistics and results of testing."""
         # Prepare standalone subpath '<vardir>/statistics' for statistics files.
@@ -153,6 +209,7 @@ class StatisticsWatcher(BaseWatcher):
 
         self.print_rss_summary(stats_dir)
         self.print_duration(stats_dir)
+        self.print_disk_usage_summary(stats_dir)
 
         if self.stats:
             color_stdout('Statistics:\n', schema='test_var')
