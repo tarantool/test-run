@@ -12,6 +12,7 @@ from lib.colorer import color_log
 from lib.colorer import qa_notice
 from lib.options import Options
 from lib.preprocessor import TestState
+from lib.sampler import sampler
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.tarantool_server import Test
@@ -30,9 +31,10 @@ def timeout_handler(server_process, test_timeout):
     server_process.kill()
 
 
-def run_server(execs, cwd, server, logfile, retval):
+def run_server(execs, cwd, server, logfile, retval, test_id):
     os.putenv("LISTEN", server.iproto)
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    sampler.register_process(server.process.pid, test_id, server.name)
     test_timeout = Options().args.test_timeout
     timer = Timer(test_timeout, timeout_handler, (server.process, test_timeout))
     timer.start()
@@ -56,7 +58,7 @@ class AppTest(Test):
         execs = server.prepare_args()
         retval = dict()
         tarantool = TestRunGreenlet(run_server, execs, server.vardir, server,
-                                    server.logfile, retval)
+                                    server.logfile, retval, self.id)
         self.current_test_greenlet = tarantool
 
         # Copy the snapshot right before starting the server.

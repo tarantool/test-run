@@ -32,6 +32,7 @@ from lib.colorer import color_log
 from lib.colorer import qa_notice
 from lib.options import Options
 from lib.preprocessor import TestState
+from lib.sampler import sampler
 from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.test import Test
@@ -332,6 +333,10 @@ class LuaTest(Test):
 
     def execute(self, server):
         super(LuaTest, self).execute(server)
+
+        # Track the same process metrics as part of another test.
+        sampler.register_process(server.process.pid, self.id, server.name)
+
         cls_name = server.__class__.__name__.lower()
         if 'gdb' in cls_name or 'lldb' in cls_name or 'strace' in cls_name:
             # don't propagate gdb/lldb/strace mixin to non-default servers,
@@ -399,6 +404,10 @@ class PythonTest(Test):
 
     def execute(self, server):
         super(PythonTest, self).execute(server)
+
+        # Track the same process metrics as part of another test.
+        sampler.register_process(server.process.pid, self.id, server.name)
+
         new_globals = dict(locals(), test_run_current_test=self, **server.__dict__)
         with open(self.name) as f:
             code = compile(f.read(), self.name, 'exec')
@@ -872,6 +881,12 @@ class TarantoolServer(Server):
 
         # Restore the actual PWD value.
         os.environ['PWD'] = os.getcwd()
+
+        # Track non-default server metrics as part of current
+        # test.
+        if self.current_test:
+            sampler.register_process(self.process.pid, self.current_test.id,
+                                     self.name)
 
         # gh-19 crash detection
         self.crash_detector = TestRunGreenlet(self.crash_detect)

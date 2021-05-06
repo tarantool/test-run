@@ -34,6 +34,7 @@ except ImportError:
     from multiprocessing.queues import SimpleQueue
 
 from lib import Options
+from lib.sampler import sampler
 from lib.utils import set_fd_cloexec
 from lib.worker import WorkerTaskResult, WorkerDone
 from lib.colorer import color_stdout
@@ -121,7 +122,7 @@ class Dispatcher:
             self.result_queues.append(task_queue_disp.result_queue)
             self.task_queues.append(task_queue_disp.task_queue)
 
-        self.report_timeout = 1.0
+        self.report_timeout = 0.1
 
         self.statistics = None
         self.artifacts = None
@@ -166,7 +167,8 @@ class Dispatcher:
         self.statistics = StatisticsWatcher(log_output_watcher.get_logfile)
         self.artifacts = ArtifactsWatcher(log_output_watcher.get_logfile)
         output_watcher = OutputWatcher()
-        self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
+        self.listeners = [self.statistics, log_output_watcher, output_watcher,
+                          self.artifacts, sampler.watcher]
         if watch_fail:
             self.fail_watcher = FailWatcher(self.terminate_all_workers)
             self.listeners.append(self.fail_watcher)
@@ -416,6 +418,7 @@ class TaskQueueDispatcher:
         os.environ['TEST_RUN_TCP_PORT_END'] = str(tcp_port_range[1])
         color_stdout.queue = self.result_queue
         worker = self.gen_worker(worker_id)
+        sampler.set_queue(self.result_queue, worker_id, worker.name)
         worker.run_all(self.task_queue, self.result_queue)
 
     def add_worker(self, worker_id, tcp_port_range):

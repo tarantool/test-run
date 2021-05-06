@@ -3,6 +3,7 @@ import sys
 import glob
 from subprocess import Popen, PIPE, STDOUT
 
+from lib.sampler import sampler
 from lib.server import Server
 from lib.tarantool_server import Test
 
@@ -16,6 +17,7 @@ class UnitTest(Test):
         server.current_test = self
         execs = server.prepare_args()
         proc = Popen(execs, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
+        sampler.register_process(proc.pid, self.id, server.name)
         sys.stdout.write_bytes(proc.communicate()[0])
 
 
