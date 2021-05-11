@@ -448,7 +448,7 @@ class TarantoolLog(object):
         while True:
             if os.path.exists(self.path):
                 break
-            time.sleep(0.001)
+            gevent.sleep(0.001)
 
         with open(self.path, 'r') as f:
             f.seek(self.log_begin, os.SEEK_SET)
@@ -459,7 +459,7 @@ class TarantoolLog(object):
                         raise TarantoolStartError(name)
                 log_str = f.readline()
                 if not log_str:
-                    time.sleep(0.001)
+                    gevent.sleep(0.001)
                     f.seek(cur_pos, os.SEEK_SET)
                     continue
                 if re.findall(msg, log_str):
@@ -1123,14 +1123,14 @@ class TarantoolServer(Server):
                 if e.errno == errno.ECONNREFUSED:
                     color_log(' | Connection refused; will retry every 0.1 '
                               'seconds...')
-                    time.sleep(0.1)
+                    gevent.sleep(0.1)
                     continue
                 raise
 
     def wait_until_stopped(self, pid):
         while True:
             try:
-                time.sleep(0.01)
+                gevent.sleep(0.01)
                 os.kill(pid, 0)
                 continue
             except OSError:
@@ -1221,7 +1221,7 @@ class TarantoolServer(Server):
     def wait_lsn(self, node_id, lsn):
         while (self.get_lsn(node_id) < lsn):
             # print("wait_lsn", node_id, lsn, self.get_param("vclock"))
-            time.sleep(0.01)
+            gevent.sleep(0.01)
 
     def get_log(self):
         return TarantoolLog(self.logfile).positioning()
