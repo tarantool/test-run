@@ -106,7 +106,7 @@ def reproduce_task_groups(task_groups):
     for i, task_id in enumerate(reproduce):
         for key, task_group in task_groups.items():
             if task_id in task_group['task_ids']:
-                found_keys.append(key)
+                found_keys.append(key.rstrip('_fragile'))
                 break
         if len(found_keys) != i + 1:
             raise ValueError('[reproduce] Cannot find test "%s"' %
