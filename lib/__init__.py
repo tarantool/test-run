@@ -5,6 +5,7 @@ import shutil
 from lib.options import Options
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
+from lib.app_server import AppServer
 from lib.utils import warn_unix_sockets_at_start
 
 
@@ -62,6 +63,7 @@ def module_init():
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
+    AppServer.find_exe(args.builddir)
 
     Options().check_schema_upgrade_option(TarantoolServer.debug)
 

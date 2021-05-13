@@ -1,6 +1,7 @@
 import glob
 import os
 import shutil
+import subprocess
 from itertools import product
 
 from lib.server_mixins import ValgrindMixin
@@ -12,7 +13,7 @@ from lib.server_mixins import LuacovMixin
 from lib.colorer import color_stdout
 from lib.options import Options
 from lib.utils import print_tail_n
-
+from lib.utils import bytes_to_str
 
 DEFAULT_CHECKPOINT_PATTERNS = ["*.snap", "*.xlog", "*.vylog", "*.inprogress",
                                "[0-9]*/"]
@@ -103,6 +104,13 @@ class Server(object):
         # Used in valgrind_log property. 'test_suite' is not None only for
         # default servers running in TestSuite.run_all()
         self.test_suite = test_suite
+
+    @classmethod
+    def version(cls):
+        p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
+        version = bytes_to_str(p.stdout.read()).rstrip()
+        p.wait()
+        return version
 
     def prepare_args(self, args=[]):
         return args

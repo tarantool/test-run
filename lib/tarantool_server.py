@@ -659,13 +659,6 @@ class TarantoolServer(Server):
             self.current_test = caller_globals['test_run_current_test']
 
     @classmethod
-    def version(cls):
-        p = subprocess.Popen([cls.binary, "--version"], stdout=subprocess.PIPE)
-        version = bytes_to_str(p.stdout.read()).rstrip()
-        p.wait()
-        return version
-
-    @classmethod
     def find_exe(cls, builddir, silent=True):
         cls.builddir = os.path.abspath(builddir)
         builddir = os.path.join(builddir, "src")
