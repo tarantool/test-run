@@ -1,6 +1,7 @@
 import errno
 import glob
 import os
+import re
 import shutil
 import signal
 import sys
@@ -107,11 +108,9 @@ class AppServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.builddir = ini['builddir']
-        self.debug = False
         self.lua_libs = ini['lua_libs']
         self.name = 'app_server'
         self.process = None
-        self.binary = TarantoolServer.binary
         self.use_unix_sockets_iproto = ini['use_unix_sockets_iproto']
 
     @property
@@ -222,6 +221,9 @@ class AppServer(Server):
     @classmethod
     def find_exe(cls, builddir):
         cls.builddir = builddir
+        cls.binary = TarantoolServer.binary
+        cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
+                                    re.I))
 
     @staticmethod
     def find_tests(test_suite, suite_path):

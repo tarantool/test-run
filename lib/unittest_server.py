@@ -1,10 +1,12 @@
 import os
+import re
 import sys
 import glob
 from subprocess import Popen, PIPE, STDOUT
 
 from lib.server import Server
 from lib.tarantool_server import Test
+from lib.tarantool_server import TarantoolServer
 
 
 class UnitTest(Test):
@@ -34,7 +36,6 @@ class UnittestServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.builddir = ini['builddir']
-        self.debug = False
         self.name = 'unittest_server'
 
     @property
@@ -58,6 +59,9 @@ class UnittestServer(Server):
     @classmethod
     def find_exe(cls, builddir):
         cls.builddir = builddir
+        cls.binary = TarantoolServer.binary
+        cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
+                                    re.I))
 
     @staticmethod
     def find_tests(test_suite, suite_path):
