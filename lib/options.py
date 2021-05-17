@@ -214,6 +214,14 @@ class Options(object):
                 Note: The option works now only with parallel testing.""")
 
         parser.add_argument(
+                "--server-start-timeout",
+                dest="server_start_timeout",
+                default=env_int('SERVER_START_TIMEOUT', 90),
+                type=int,
+                help="""Stop the server process if the server starts longer than
+                this amount of seconds. Default: 90 [seconds].""")
+
+        parser.add_argument(
                 "--test-timeout",
                 dest="test_timeout",
                 default=env_int('TEST_TIMEOUT', 110),

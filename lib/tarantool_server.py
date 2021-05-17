@@ -414,8 +414,15 @@ CON_SWITCH = {
 
 
 class TarantoolStartError(OSError):
-    def __init__(self, name=None):
+    def __init__(self, name=None, timeout=None):
         self.name = name
+        self.timeout = timeout
+
+    def __str__(self):
+        message = '[Instance "{}"] Failed to start'.format(self.name)
+        if self.timeout:
+            return "\n{} within {} seconds\n".format(message, self.timeout)
+        return "\n{}\n".format(message)
 
 
 class TarantoolLog(object):
@@ -444,16 +451,18 @@ class TarantoolLog(object):
                 if pos != -1:
                     return pos
 
-    def seek_wait(self, msg, proc=None, name=None):
-        while True:
+    def seek_wait(self, msg, proc=None, name=None, deadline=None):
+        while not deadline or time.time() < deadline:
             if os.path.exists(self.path):
                 break
             gevent.sleep(0.001)
+        else:
+            return False
 
         with open(self.path, 'r') as f:
             f.seek(self.log_begin, os.SEEK_SET)
             cur_pos = self.log_begin
-            while True:
+            while not deadline or time.time() < deadline:
                 if not (proc is None):
                     if not (proc.poll() is None):
                         raise TarantoolStartError(name)
@@ -463,8 +472,9 @@ class TarantoolLog(object):
                     f.seek(cur_pos, os.SEEK_SET)
                     continue
                 if re.findall(msg, log_str):
-                    return
+                    return True
                 cur_pos = f.tell()
+        return False
 
 
 class TarantoolServer(Server):
@@ -873,9 +883,10 @@ class TarantoolServer(Server):
         self.crash_detector.start()
 
         if wait:
+            deadline = time.time() + Options().args.server_start_timeout
             try:
-                self.wait_until_started(wait_load)
-            except TarantoolStartError:
+                self.wait_until_started(wait_load, deadline)
+            except TarantoolStartError as err:
                 # Python tests expect we raise an exception when non-default
                 # server fails
                 if self.crash_expected:
@@ -884,9 +895,7 @@ class TarantoolServer(Server):
                         self.current_test.is_crash_reported):
                     if self.current_test:
                         self.current_test.is_crash_reported = True
-                    color_stdout('\n[Instance "{0.name}"] Tarantool server '
-                                 'failed to start\n'.format(self),
-                                 schema='error')
+                    color_stdout(err, schema='error')
                     self.print_log(15)
                 # Raise exception when caller ask for it (e.g. in case of
                 # non-default servers)
@@ -1084,7 +1093,19 @@ class TarantoolServer(Server):
         self.wait_until_stopped(pid)
         return True
 
-    def wait_until_started(self, wait_load=True):
+    def wait_load(self, deadline):
+        """Wait until the server log file is matched the entry pattern
+
+        If the entry pattern couldn't be found in a log file until a timeout
+        is up, it will raise a TarantoolStartError exception.
+        """
+        msg = 'entering the event loop|will retry binding|hot standby mode'
+        p = self.process if not self.gdb and not self.lldb else None
+        if not self.logfile_pos.seek_wait(msg, p, self.name, deadline):
+            raise TarantoolStartError(
+                self.name, Options().args.server_start_timeout)
+
+    def wait_until_started(self, wait_load=True, deadline=None):
         """ Wait until server is started.
 
         Server consists of two parts:
@@ -1095,12 +1116,9 @@ class TarantoolServer(Server):
         color_log('DEBUG: [Instance {}] Waiting until started '
                   '(wait_load={})\n'.format(self.name, str(wait_load)),
                   schema='info')
-
         if wait_load:
-            msg = 'entering the event loop|will retry binding|hot standby mode'
-            p = self.process if not self.gdb and not self.lldb else None
-            self.logfile_pos.seek_wait(msg, p, self.name)
-        while True:
+            self.wait_load(deadline)
+        while not deadline or time.time() < deadline:
             try:
                 temp = AdminConnection('localhost', self.admin.port)
                 if not wait_load:
@@ -1126,6 +1144,9 @@ class TarantoolServer(Server):
                     gevent.sleep(0.1)
                     continue
                 raise
+        else:
+            raise TarantoolStartError(
+                self.name, Options().args.server_start_timeout)
 
     def wait_until_stopped(self, pid):
         while True:
