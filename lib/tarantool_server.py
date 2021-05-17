@@ -1119,7 +1119,7 @@ class TarantoolServer(Server):
                     color_log(" | Started {} (box.info.status: '{}')\n".format(
                         format_process(self.process.pid), ans))
                     return True
-                elif ans in ('loading'):
+                elif ans in ('loading',):
                     continue
                 else:
                     raise Exception(
