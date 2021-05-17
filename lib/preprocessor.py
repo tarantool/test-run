@@ -206,8 +206,9 @@ class TestState(object):
             if crash_expected:
                 # disable crash detector
                 self.servers[sname].crash_expected = True
-            self.servers[sname].start(silent=True, rais=True, wait=wait,
-                                      wait_load=wait_load, args=args)
+            self.servers[sname].start(
+                    silent=True, rais=True, wait=wait,
+                    wait_load=wait_load, args=args)
         except Exception as e:
             crash_occured = True
             if not (crash_expected and

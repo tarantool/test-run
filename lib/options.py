@@ -212,6 +212,14 @@ class Options(object):
                 longer than this amount of seconds. Default: 110 [seconds].""")
 
         parser.add_argument(
+            "--server-start-timeout",
+            dest="server_start_timeout",
+            default=env_int('SERVER_START_TIMEOUT', 90),
+            type=int,
+            help="""Break the test process with kill signal if the test starts
+            longer than this amount of seconds. Default: 90 [seconds].""")
+
+        parser.add_argument(
                 "--no-output-timeout",
                 dest="no_output_timeout",
                 default=env_int('NO_OUTPUT_TIMEOUT', 120),

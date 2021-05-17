@@ -94,6 +94,8 @@ def main_loop_parallel():
                  format(args.test_timeout), schema='tr_text')
     color_stdout("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.no_output_timeout), schema='tr_text')
+    color_stdout("START_TIMEOUT:" . ljust(26) + "{}\n" .
+                 format(args.server_start_timeout), schema='tr_text')
     color_stdout("\n", schema='tr_text')
 
     task_groups = get_task_groups()
