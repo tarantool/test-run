@@ -91,6 +91,8 @@ def main_loop_parallel():
 
     color_stdout("Timeout options:\n", schema='tr_text')
     color_stdout('-' * 19, "\n",       schema='separator')
+    color_stdout("SERVER_START_TIMEOUT:" . ljust(26) + "{}\n" .
+                 format(args.server_start_timeout), schema='tr_text')
     color_stdout("REPLICATION_SYNC_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.replication_sync_timeout), schema='tr_text')
     color_stdout("TEST_TIMEOUT:" . ljust(26) + "{}\n" .
