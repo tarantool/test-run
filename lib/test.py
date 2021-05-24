@@ -341,12 +341,12 @@ class Test(object):
 
     def check_tap_output(self):
         """ Returns is_tap, is_ok """
-        with open(self.tmp_result, 'r') as f:
-            content = f.read()
-        tap = pytap13.TAP13()
         try:
+            with open(self.tmp_result, 'r') as f:
+                content = f.read()
+            tap = pytap13.TAP13()
             tap.parse(content)
-        except ValueError as e:
+        except (ValueError, UnicodeDecodeError) as e:
             color_stdout('\nTAP13 parse failed (%s).\n' % str(e),
                          schema='error')
             color_stdout('\nNo result file (%s) found.\n' % self.result,
