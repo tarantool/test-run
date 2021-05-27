@@ -135,6 +135,7 @@ local function clean()
         ['_sql_stat_push'] = true,
         ['_sql_stat_init'] = true,
         ['LUA'] = true,
+        ['UUID'] = true,
     }
     box.space._func:pairs():map(function(tuple)
         local name = tuple[_FUNC_NAME]
