@@ -437,6 +437,7 @@ class TarantoolLog(object):
     def __init__(self, path):
         self.path = path
         self.log_begin = 0
+        self.last_position = 0
 
     def positioning(self):
         if os.path.exists(self.path):
@@ -459,14 +460,18 @@ class TarantoolLog(object):
                 if pos != -1:
                     return pos
 
-    def seek_wait(self, msg, proc=None, name=None, deadline=None, timeout=10):
+    def seek_wait(self, msg, proc=None, name=None, deadline=None, timeout=10,
+                  start_from_beginning=True):
         while True:
             if os.path.exists(self.path):
                 break
             gevent.sleep(0.001)
 
         with open(self.path, 'r') as f:
-            f.seek(self.log_begin, os.SEEK_SET)
+            if start_from_beginning:
+                f.seek(self.log_begin, os.SEEK_SET)
+            else:
+                f.seek(self.last_position, os.SEEK_SET)
             cur_pos = self.log_begin
             if deadline is None:
                 deadline = time.time() + timeout
@@ -479,7 +484,9 @@ class TarantoolLog(object):
                     gevent.sleep(0.001)
                     f.seek(cur_pos, os.SEEK_SET)
                     continue
-                if re.findall(msg, log_str):
+                if re.search(msg, log_str):
+                    self.last_position = re.search(msg, log_str).end() + \
+                                         cur_pos
                     return True
                 cur_pos = f.tell()
         return False

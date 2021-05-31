@@ -1,0 +1,25 @@
+-- test-run result file version 2
+--  box.schema.user.grant('guest', 'replication')replication
+local test_run = require('test_run').new()
+ | ---
+ | ...
+test_run:cmd('create server replica with rpl_master=default, script="xlog/replica.lua"')
+ | ---
+ | - error: '[string "return test_run:cmd(''create server replica wi..."]:1: attempt
+ |     to index global ''test_run'' (a nil value)'
+ | ...
+test_run:cmd('start server replica')
+ | ---
+ | - error: '[string "return test_run:cmd(''start server replica'') "]:1: attempt to
+ |     index global ''test_run'' (a nil value)'
+ | ...
+test_run:cmd('cleanup server replica')
+ | ---
+ | - error: '[string "return test_run:cmd(''cleanup server replica'') "]:1: attempt to
+ |     index global ''test_run'' (a nil value)'
+ | ...
+test_run:cmd('delete server replica')
+ | ---
+ | - error: '[string "return test_run:cmd(''delete server replica'') "]:1: attempt to
+ |     index global ''test_run'' (a nil value)'
+ | ...
