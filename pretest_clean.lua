@@ -253,6 +253,7 @@ local function clean()
         jit = true,
         ['jit.bc'] = true,
         ['jit.bcsave'] = true,
+        ['jit.dis_arm64'] = true,
         ['jit.dis_x64'] = true,
         ['jit.dis_x86'] = true,
         ['jit.dump'] = true,
