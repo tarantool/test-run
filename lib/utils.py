@@ -271,7 +271,7 @@ def get_vardir_device(vardir):
                 if line.split()[1] == path:
                     mount = line.split()[0]
                     dev = mount.split('/')[2]
-    except (OSError, IOError):
+    except (OSError, IOError, IndexError):
         pass
     return dev
 
