@@ -350,13 +350,13 @@ class Worker:
             retries_left = self.suite.fragile_retries()
             # let's run till short_status became 'pass'
             while short_status != 'pass' and retries_left >= 0:
+                self.restart_server()
                 # print message only after some fails occurred
                 if short_status == 'fail':
-                    self.restart_server()
                     color_stdout(
                         'Test "%s", conf: "%s"\n'
                         '\tfrom "fragile" list failed with results'
-                        ' file checksum: "%s", rerunning with server restart ...\n'
+                        ' file checksum: "%s", rerunning ...\n'
                         % (task_id[0], task_id[1], result_checksum), schema='error')
                 # run task and save the result to short_status
                 short_status, result_checksum, duration = self.run_task(task_id)
