@@ -122,25 +122,6 @@ class LuaTest(Test):
         sys.stdout.write(self.RESULT_FILE_VERSION_TEMPLATE.format(
                          self.result_file_version) + '\n')
 
-    def execute_pretest_clean(self, ts):
-        """ Clean globals, loaded packages, spaces, users, roles
-            and so on before each test if the option is set.
-
-            Return True as success (or if this feature is disabled
-            in suite.ini) and False in case of an error.
-        """
-        if not self.suite_ini['pretest_clean']:
-            return True
-
-        command = "require('pretest_clean').clean()"
-        result = self.send_command(command, ts, 'lua')
-        result = result.replace('\r\n', '\n')
-        if result != '---\n...\n':
-            sys.stdout.write(result)
-            return False
-
-        return True
-
     def execute_pragma_sql_default_engine(self, ts):
         """ Set default engine for an SQL test if it is provided
             in a configuration.
@@ -239,8 +220,6 @@ class LuaTest(Test):
 
     def exec_loop(self, ts):
         self.write_result_file_version_line()
-        if not self.execute_pretest_clean(ts):
-            return
         if not self.execute_pragma_sql_default_engine(ts):
             return
 
@@ -789,10 +768,6 @@ class TarantoolServer(Server):
         shutil.copy(tntctl_file, self.vardir)
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
-        # Need to use get here because of nondefault servers doesn't have ini.
-        if self.ini.get('pretest_clean', False):
-            shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pretest_clean.lua'),
-                        self.vardir)
 
         if self.snapshot_path:
             # Copy snapshot to the workdir.
@@ -819,8 +794,8 @@ class TarantoolServer(Server):
         return cli_args
 
     def pretest_clean(self):
-        # Don't delete snap and logs for 'default' tarantool server
-        # because it works during worker lifetime.
+        # Tarantool servers restarts before each test on the worker.
+        # Snap and logs are removed within it.
         pass
 
     def cleanup(self, *args, **kwargs):
