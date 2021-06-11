@@ -239,8 +239,6 @@ class LuaTest(Test):
 
     def exec_loop(self, ts):
         self.write_result_file_version_line()
-        if not self.execute_pretest_clean(ts):
-            return
         if not self.execute_pragma_sql_default_engine(ts):
             return
 
@@ -789,10 +787,6 @@ class TarantoolServer(Server):
         shutil.copy(tntctl_file, self.vardir)
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
-        # Need to use get here because of nondefault servers doesn't have ini.
-        if self.ini.get('pretest_clean', False):
-            shutil.copy(os.path.join(self.TEST_RUN_DIR, 'pretest_clean.lua'),
-                        self.vardir)
 
         if self.snapshot_path:
             # Copy snapshot to the workdir.
