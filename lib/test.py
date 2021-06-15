@@ -94,7 +94,13 @@ class FilteredStream:
 
 
 def get_filename_by_test(postfix, test_name):
-    rg = re.compile(r'\.test.*')
+    """For <..>/<name>_test.* or <..>/<name>.test.* return <name> + postfix
+
+    Examples:
+        postfix='.result', test_name='foo/bar.test.lua' => return 'bar.result'
+        postfix='.reject', test_name='bar_test.lua' => return 'bar.reject'
+    """
+    rg = re.compile(r'[._]test.*')
     return os.path.basename(rg.sub(postfix, test_name))
 
 

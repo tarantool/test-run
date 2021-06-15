@@ -13,6 +13,7 @@ import time
 
 from lib import Options
 from lib.app_server import AppServer
+from lib.luatest_server import LuatestServer
 from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
 from lib.server import Server
@@ -153,6 +154,8 @@ class TestSuite:
 
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
+        elif self.ini['core'] == 'luatest':
+            LuatestServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'app':
             AppServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'unittest':

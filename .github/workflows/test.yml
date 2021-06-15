@@ -35,6 +35,8 @@ jobs:
        sudo apt update -y
        sudo apt-get -y install lua5.1 luarocks
        sudo luarocks install luacheck
+       sudo tarantoolctl rocks install luatest
+       sudo .rocks/bin/luatest --help
     - name: set default pip to pip3
       run: |
        sudo rm -f /usr/local/bin/pip
