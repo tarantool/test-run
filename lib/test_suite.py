@@ -13,6 +13,7 @@ import time
 
 from lib import Options
 from lib.app_server import AppServer
+from lib.luatest_server import LuatestServer
 from lib.colorer import color_stdout
 from lib.inspector import TarantoolInspector
 from lib.server import Server
@@ -146,12 +147,17 @@ class TestSuite:
         # rid of all other side effects.
         self.tests_are_collected = False
 
+        if self.ini['core'] == 'luatest':
+            LuatestServer.verify_luatest_exe()
+
     def collect_tests(self):
         if self.tests_are_collected:
             return self.tests
 
         if self.ini['core'] == 'tarantool':
             TarantoolServer.find_tests(self, self.suite_path)
+        elif self.ini['core'] == 'luatest':
+            LuatestServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'app':
             AppServer.find_tests(self, self.suite_path)
         elif self.ini['core'] == 'unittest':
@@ -162,7 +168,8 @@ class TestSuite:
             self.tests_are_collected = True
             return self.tests
         else:
-            raise ValueError('Cannot collect tests of unknown type')
+            raise ValueError(
+                'Cannot collect tests of unknown type: %s' % self.ini['core'])
 
         # In given cases, this large output looks redundant.
         if not Options().args.reproduce and not Options().args.show_tags:

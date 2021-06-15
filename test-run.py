@@ -56,6 +56,7 @@ import time
 from lib import Options
 from lib.colorer import color_stdout
 from lib.utils import find_tags
+from lib.error import TestRunInitError
 from lib.utils import print_tail_n
 from lib.utils import PY3
 from lib.worker import get_task_groups
@@ -70,6 +71,7 @@ EXIT_HANG = 1
 EXIT_INTERRUPTED = 2
 EXIT_FAILED_TEST = 3
 EXIT_NOTDONE_TEST = 4
+EXIT_INIT_ERROR = 5
 EXIT_UNKNOWN_ERROR = 50
 
 
@@ -293,10 +295,14 @@ if __name__ == "__main__":
         show_tags()
         exit(status)
 
-    force_parallel = bool(Options().args.reproduce)
-    if not force_parallel and Options().args.jobs == -1:
-        status = main_consistent()
-    else:
-        status = main_parallel()
+    try:
+        force_parallel = bool(Options().args.reproduce)
+        if not force_parallel and Options().args.jobs == -1:
+            status = main_consistent()
+        else:
+            status = main_parallel()
+    except TestRunInitError as e:
+        color_stdout(str(e), '\n', schema='error')
+        status = EXIT_INIT_ERROR
 
     exit(status)

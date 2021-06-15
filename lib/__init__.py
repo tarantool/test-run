@@ -6,6 +6,7 @@ from lib.options import Options
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
 from lib.app_server import AppServer
+from lib.luatest_server import LuatestServer
 from lib.utils import warn_unix_sockets_at_start
 
 
@@ -31,6 +32,7 @@ def module_init():
     # If script executed with (python test-run.py) dirname is ''
     # so we need to make it .
     path = os.path.dirname(sys.argv[0])
+    os.environ['TEST_RUN_DIR'] = os.path.dirname(os.path.realpath(sys.argv[0]))
     if not path:
         path = '.'
     os.chdir(path)
@@ -56,14 +58,25 @@ def module_init():
     os.environ["SOURCEDIR"] = SOURCEDIR
     os.environ["BUILDDIR"] = BUILDDIR
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
-    os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
+
+    os.environ['LUA_PATH'] = (
+            SOURCEDIR + '/?.lua;' + SOURCEDIR + '/?/init.lua;'
+            + os.environ['TEST_RUN_DIR'] + '/lib/checks/?.lua;'
+            + os.environ['TEST_RUN_DIR'] + '/lib/luatest/?/init.lua;'
+            + os.environ['TEST_RUN_DIR'] + '/lib/luatest/?.lua;;'
+    )
+
     os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
 
+    os.environ['LUATEST_BIN'] = os.path.join(
+        os.environ['TEST_RUN_DIR'], 'lib/luatest/bin/luatest')
+
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
     AppServer.find_exe(args.builddir)
+    LuatestServer.find_exe(args.builddir)
 
     Options().check_schema_upgrade_option(TarantoolServer.debug)
 
