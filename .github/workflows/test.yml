@@ -35,6 +35,9 @@ jobs:
        sudo apt update -y
        sudo apt-get -y install lua5.1 luarocks
        sudo luarocks install luacheck
+       cd ..
+       sudo tarantoolctl rocks install luatest
+       cd -
     - name: set default pip to pip3
       run: |
        sudo rm -f /usr/local/bin/pip
@@ -58,6 +61,13 @@ jobs:
     - name: run regression tests
       run: |
        make test
+    - name: artifacts
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: test-run
+        retention-days: 7
+        path: /home/runner/work/test-run/test-run/test/var/rejects
     - name: code coverage
       if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
       run: |

@@ -1,4 +1,4 @@
-globals = {"box", "_TARANTOOL", "tonumber64"}
+globals = {"box", "_TARANTOOL", "tonumber64", "os"}
 ignore = {
     -- Accessing an undefined field of a global variable <debug>.
     "143/debug",
@@ -27,4 +27,5 @@ include_files = {
 exclude_files = {
     "lib/tarantool-python",
     "test/test-tarantool/*.test.lua",
+    ".rocks/**"
 }
