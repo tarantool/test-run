@@ -405,11 +405,33 @@ local function grep_log(self, node, what, bytes, opts)
     return found
 end
 
+-- Strip pcall()'s true or re-raise catched error.
+local function wait_cond_finish(res)
+    -- res: 1: pcall_ok
+    --      2: pcall_error / cond_function_res_1
+    --      3: cond_function_res_2
+    --      4: cond_function_res_3
+    --      ...
+    --
+    -- cond_function_res_1 is the 'ok' / 'not ok' indicator for
+    -- wait_cond(). But we return it: this is deliberate choice.
+    -- This way a user may understand, whether we finally hit
+    -- timeout or not.
+    if not res[1] then
+        error(res[2])
+    end
+    return select(2, unpack(res))
+end
+
 -- Block until the condition function returns a positive value
 -- (anything except `nil` and `false`) or until the timeout
 -- exceeds. Return the result of the last invocation of the
 -- condition function (it is `false` or `nil` in case of exiting
 -- by the timeout).
+--
+-- If the condition function raises a Lua error, wait_cond()
+-- continues retrying. If the latest attempt raises an error (and
+-- we hit a timeout), the error will be re-raised.
 local function wait_cond(self, cond, timeout, delay)
     assert(type(cond) == 'function')
 
@@ -417,18 +439,18 @@ local function wait_cond(self, cond, timeout, delay)
     local delay = delay or 0.001
 
     local start_time = clock.monotonic()
-    local res = {cond()}
+    local res = {pcall(cond)}
 
-    while not res[1] do
+    while not res[1] or not res[2] do
         local work_time = clock.monotonic() - start_time
         if work_time > timeout then
-            return unpack(res)
+            return wait_cond_finish(res)
         end
         fiber.sleep(delay)
-        res = {cond()}
+        res = {pcall(cond)}
     end
 
-    return unpack(res)
+    return wait_cond_finish(res)
 end
 
 -- Wrapper for grep_log, wait until expected log entry is appear
