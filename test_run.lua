@@ -28,7 +28,15 @@ end
 local eval_cmd = 'eval %s "%s"'
 
 local function eval(self, node, expr)
-    return self:cmd(eval_cmd:format(node, expr))
+    local result = self:cmd(eval_cmd:format(node, expr))
+    -- We always receive an array of results to handle Lua's
+    -- multireturn.
+    assert(type(result) == 'table')
+    -- Re-raise Lua error from a remote instance.
+    if type(result[1]) == 'table' and result[1].error ~= nil then
+        error(result[1].error, 0)
+    end
+    return result
 end
 
 local get_param_cmd = 'eval %s "return box.info%s"'
