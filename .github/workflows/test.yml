@@ -37,6 +37,7 @@ jobs:
        sudo luarocks install luacheck
        sudo tarantoolctl rocks install luatest
        sudo .rocks/bin/luatest --help
+       sudo .rocks/bin/luatest
     - name: set default pip to pip3
       run: |
        sudo rm -f /usr/local/bin/pip
@@ -54,9 +55,6 @@ jobs:
       run: |
        pip install -r requirements.txt
        pip install -r requirements-test.txt
-    - name: run static analysis
-      run: |
-       make lint
     - name: run regression tests
       run: |
        make test

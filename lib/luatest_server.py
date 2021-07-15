@@ -31,7 +31,7 @@ class LuatestTest(Test):
         Use capture mode.
         """
         server.current_test = self
-        command = [os.environ['LUATEST_BIN'], '-c', self.name,
+        command = [os.environ['LUATEST_BIN'], '-v', '-c', self.name,
                    '-o', 'tap',
                    '--shuffle', 'none']
         proc = Popen(command, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)

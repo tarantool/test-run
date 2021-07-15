@@ -58,11 +58,12 @@ def module_init():
     os.environ["SOURCEDIR"] = SOURCEDIR
     os.environ["BUILDDIR"] = BUILDDIR
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
-    os.environ["LUA_PATH"] = (LUATEST_DIR + "/?.lua;"
-                              + SOURCEDIR + "/test/?.lua;"
+    ROCKS_DIR = os.path.join(BUILDDIR, '.rocks/bin')
+    os.environ["PATH"] += ":" + ROCKS_DIR
+    os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;"
                               + SOURCEDIR + "/?.lua;"
                               + SOURCEDIR + "/?/init.lua;;")
-    os.environ['LUATEST_BIN'] = LUATEST_DIR + "/bin/luatest"
+    os.environ['LUATEST_BIN'] = os.path.join(ROCKS_DIR, "luatest")
     os.environ["LUA_CPATH"] = BUILDDIR + "/?." + soext + ";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
