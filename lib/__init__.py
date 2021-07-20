@@ -83,7 +83,8 @@ def module_init():
             '.rocks was not found in source dir = %s and build dir = %s' %
             (SOURCEDIR, BUILDDIR))
     os.environ["PATH"] += ":" + ROCKS_DIR
-    os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;"
+    os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;" +
+                              SOURCEDIR + "/test/luatest_helpers/?.lua;"
                               + SOURCEDIR + "/?.lua;"
                               + SOURCEDIR + "/?/init.lua;;")
     os.environ['LUATEST_BIN'] = os.path.join(ROCKS_DIR, "bin/luatest")
