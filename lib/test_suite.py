@@ -166,8 +166,7 @@ class TestSuite:
             self.tests_are_collected = True
             return self.tests
         else:
-            raise ValueError(
-                'Cannot collect tests of unknown type: %s' % self.ini['core'])
+            raise ValueError('Cannot collect tests of unknown type')
 
         if not Options().args.reproduce:
             color_stdout("Collecting tests in ", schema='ts_text')

@@ -206,7 +206,7 @@ class Options(object):
         parser.add_argument(
                 "--test-timeout",
                 dest="test_timeout",
-                default=env_int('TEST_TIMEOUT', 200),
+                default=env_int('TEST_TIMEOUT', 110),
                 type=int,
                 help="""Break the test process with kill signal if the test runs
                 longer than this amount of seconds. Default: 110 [seconds].""")
@@ -214,7 +214,7 @@ class Options(object):
         parser.add_argument(
                 "--no-output-timeout",
                 dest="no_output_timeout",
-                default=env_int('NO_OUTPUT_TIMEOUT', 200),
+                default=env_int('NO_OUTPUT_TIMEOUT', 120),
                 type=int,
                 help="""Exit if there was no output from workers during this
                 amount of seconds. Set it to -1 to disable hang detection.
