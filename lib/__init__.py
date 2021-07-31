@@ -82,11 +82,10 @@ def module_init():
         raise Exception(
             '.rocks was not found in source dir = %s and build dir = %s' %
             (SOURCEDIR, BUILDDIR))
-    os.environ["PATH"] += ":" + ROCKS_DIR
+    os.environ["PATH"] += ":" + os.path.join(ROCKS_DIR, 'bin')
     os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;"
                               + SOURCEDIR + "/?.lua;"
                               + SOURCEDIR + "/?/init.lua;;")
-    os.environ['LUATEST_BIN'] = os.path.join(ROCKS_DIR, "bin/luatest")
     os.environ["LUA_CPATH"] = BUILDDIR + "/?." + soext + ";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
