@@ -76,7 +76,9 @@ class LuatestServer(Server):
         cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
                                     re.I))
 
-        # Verify that luatest executable is available.
+    @classmethod
+    def verify_luatest_exe(cls):
+        """Verify that luatest executable is available."""
         if Popen(['luatest', '--version']).wait() != 0:
             raise RuntimeError('Unable to find luatest executable')
 

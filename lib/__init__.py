@@ -73,10 +73,6 @@ def module_init():
         if level:
             return find_dir(os.path.split(path)[0], dir_name, level)
 
-    def is_core_in_suite(core):
-        """Check there is core in current tests."""
-        return core in [suite.ini["core"] for suite in find_suites()]
-
     ROCKS_DIR = find_dir(SOURCEDIR, '.rocks') or find_dir(BUILDDIR, '.rocks')
     if ROCKS_DIR:
         os.environ["PATH"] += ":" + os.path.join(ROCKS_DIR, 'bin')
@@ -90,8 +86,7 @@ def module_init():
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
     AppServer.find_exe(args.builddir)
-    if is_core_in_suite('luatest'):
-        LuatestServer.find_exe(args.builddir)
+    LuatestServer.find_exe(args.builddir)
 
     Options().check_schema_upgrade_option(TarantoolServer.debug)
 

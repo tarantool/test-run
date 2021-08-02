@@ -148,6 +148,9 @@ class TestSuite:
         # rid of all other side effects.
         self.tests_are_collected = False
 
+        if self.ini['core'] == 'luatest':
+            LuatestServer.verify_luatest_exe()
+
     def collect_tests(self):
         if self.tests_are_collected:
             return self.tests
