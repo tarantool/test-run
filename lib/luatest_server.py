@@ -6,6 +6,7 @@ import sys
 from subprocess import Popen, PIPE
 from subprocess import STDOUT
 
+from lib.error import TestRunInitError
 from lib.sampler import sampler
 from lib.server import Server
 from lib.tarantool_server import Test
@@ -79,8 +80,20 @@ class LuatestServer(Server):
     @classmethod
     def verify_luatest_exe(cls):
         """Verify that luatest executable is available."""
-        if Popen(['luatest', '--version']).wait() != 0:
-            raise RuntimeError('Unable to find luatest executable')
+        try:
+            # Just check that the command returns zero exit code.
+            with open(os.devnull, 'w') as devnull:
+                returncode = Popen(['luatest', '--version'], stdout=devnull,
+                                   stderr=devnull).wait()
+            if returncode != 0:
+                raise TestRunInitError('Unable to run `luatest --version`',
+                                       {'returncode': returncode})
+        except OSError as e:
+            # Python 2 raises OSError if the executable is not
+            # found or if it has no executable bit. Python 3
+            # raises FileNotFoundError and PermissionError in
+            # those cases, which are childs of OSError anyway.
+            raise TestRunInitError('Unable to find luatest executable', e)
 
     @staticmethod
     def find_tests(test_suite, suite_path):
