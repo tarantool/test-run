@@ -78,11 +78,8 @@ def module_init():
         return core in [suite.ini["core"] for suite in find_suites()]
 
     ROCKS_DIR = find_dir(SOURCEDIR, '.rocks') or find_dir(BUILDDIR, '.rocks')
-    if not ROCKS_DIR and is_core_in_suite('luatest'):
-        raise Exception(
-            '.rocks was not found in source dir = %s and build dir = %s' %
-            (SOURCEDIR, BUILDDIR))
-    os.environ["PATH"] += ":" + os.path.join(ROCKS_DIR, 'bin')
+    if ROCKS_DIR:
+        os.environ["PATH"] += ":" + os.path.join(ROCKS_DIR, 'bin')
     os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;"
                               + SOURCEDIR + "/?.lua;"
                               + SOURCEDIR + "/?/init.lua;;")
@@ -93,7 +90,8 @@ def module_init():
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
     AppServer.find_exe(args.builddir)
-    LuatestServer.find_exe(args.builddir)
+    if is_core_in_suite('luatest'):
+        LuatestServer.find_exe(args.builddir)
 
     Options().check_schema_upgrade_option(TarantoolServer.debug)
 
