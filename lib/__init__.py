@@ -8,7 +8,6 @@ from lib.unittest_server import UnittestServer
 from lib.app_server import AppServer
 from lib.luatest_server import LuatestServer
 from lib.utils import warn_unix_sockets_at_start
-from lib.worker import find_suites
 
 __all__ = ['Options']
 
