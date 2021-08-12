@@ -24,6 +24,19 @@ def setenv():
         path = os.path.abspath(os.path.join(path, '../'))
 
 
+def rocks_bin_dir_list(start_dir):
+    res = []
+    cur_dir = start_dir
+    while True:
+        rocks_bin_dir = os.path.join(cur_dir, '.rocks', 'bin')
+        if os.path.isdir(rocks_bin_dir):
+            res.append(rocks_bin_dir)
+        if cur_dir == '/':
+            break
+        cur_dir = os.path.dirname(cur_dir)
+    return res
+
+
 def module_init():
     """ Called at import """
     args = Options().args
@@ -58,27 +71,17 @@ def module_init():
     os.environ["BUILDDIR"] = BUILDDIR
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
 
-    def find_dir(path, dir_name, level=2):
-        """Check directory exists at the path or on levels above.
+    # Find luatest executable in the same way as
+    # require('luatest') will find the module. Since we run
+    # luatest from a project source directory, find rocks
+    # directories starting from the project dir. Prefer an
+    # executable from rocks if there are both rocks and system
+    # luatest installations.
+    bin_dir_list = rocks_bin_dir_list(SOURCEDIR)
+    if bin_dir_list:
+        os.environ["PATH"] = ":".join(bin_dir_list) + ":" + os.environ["PATH"]
 
-        For example,
-            path = 'foo/bar',
-            dir_name = 'baz',
-            level = 2 (default)
-            Return True if baz exists by foo/bar/baz or foo/baz path.
-        """
-        level -= 1
-        if os.path.isdir(os.path.join(path, dir_name)):
-            return os.path.join(path, dir_name)
-        if level:
-            return find_dir(os.path.split(path)[0], dir_name, level)
-
-    ROCKS_DIR = find_dir(SOURCEDIR, '.rocks') or find_dir(BUILDDIR, '.rocks')
-    if ROCKS_DIR:
-        os.environ["PATH"] += ":" + os.path.join(ROCKS_DIR, 'bin')
-    os.environ["LUA_PATH"] = (SOURCEDIR + "/test/?.lua;"
-                              + SOURCEDIR + "/?.lua;"
-                              + SOURCEDIR + "/?/init.lua;;")
+    os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
     os.environ["LUA_CPATH"] = BUILDDIR + "/?." + soext + ";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator

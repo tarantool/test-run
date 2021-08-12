@@ -32,9 +32,21 @@ class LuatestTest(Test):
         Use capture mode.
         """
         server.current_test = self
-        command = ['luatest', '-v', '-c', self.name, '-o', 'tap',
+        script = os.path.join(os.path.basename(server.testdir), self.name)
+        command = ['luatest', '-v', '-c', script, '-o', 'tap',
                    '--shuffle', 'none']
-        proc = Popen(command, cwd=server.vardir, stdout=PIPE, stderr=STDOUT)
+        # Tarantool's build directory is added to PATH in
+        # TarantoolServer.find_exe().
+        #
+        # We start luatest from the project source directory, it
+        # is the usual way to use luatest.
+        #
+        # VARDIR (${BUILDDIR}/test/var/001_foo) will be used for
+        # write ahead logs, snapshots, logs, unix domain sockets
+        # and so on.
+        os.environ['VARDIR'] = server.vardir
+        project_dir = os.environ['SOURCEDIR']
+        proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=STDOUT)
         sampler.register_process(proc.pid, self.id, server.name)
         sys.stdout.write_bytes(proc.communicate()[0])
 
