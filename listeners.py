@@ -221,7 +221,7 @@ class ArtifactsWatcher(BaseWatcher):
             shutil.copytree(os.path.join(vardir, worker_name),
                             os.path.join(artifacts_dir, worker_name),
                             ignore=shutil.ignore_patterns(
-                                '*.socket-iproto', '*.socket-admin',
+                                '*.i', '*.c',
                                 '*.sock', '*.control'))
         shutil.copytree(os.path.join(vardir, 'statistics'),
                         os.path.join(artifacts_dir, 'statistics'))
