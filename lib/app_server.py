@@ -154,7 +154,7 @@ class AppServer(Server):
                         continue
                     raise
         if self.use_unix_sockets_iproto:
-            path = os.path.join(self.vardir, self.name + ".socket-iproto")
+            path = os.path.join(self.vardir, self.name + ".i")
             warn_unix_socket(path)
             self.iproto = path
         else:

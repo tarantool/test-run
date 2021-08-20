@@ -718,14 +718,14 @@ class TarantoolServer(Server):
         self.copy_files()
 
         if self.use_unix_sockets:
-            path = os.path.join(self.vardir, self.name + ".socket-admin")
+            path = os.path.join(self.vardir, self.name + ".c")
             warn_unix_socket(path)
             self._admin = path
         else:
             self._admin = find_port()
 
         if self.use_unix_sockets_iproto:
-            path = os.path.join(self.vardir, self.name + ".socket-iproto")
+            path = os.path.join(self.vardir, self.name + ".i")
             warn_unix_socket(path)
             self._iproto = path
         else:
