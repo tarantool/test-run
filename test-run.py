@@ -92,7 +92,7 @@ def main_loop_parallel():
                  format(args.replication_sync_timeout), schema='tr_text')
     color_stdout("TEST_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.test_timeout), schema='tr_text')
-    color_log("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
+    color_stdout("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.no_output_timeout), schema='tr_text')
     color_stdout("\n", schema='tr_text')
 
