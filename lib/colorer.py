@@ -209,11 +209,12 @@ class Colorer(object):
         sys.stdout = self.stdout
 
     def _write(self, obj, log_only):
+        from lib import Options
         if self.queue:
             if self.queue_msg_wrapper:
                 obj = self.queue_msg_wrapper(obj, log_only)
             self.queue.put(obj)
-        elif not log_only:
+        elif not log_only or Options().args.debug:
             self.stdout.write(obj)
 
     def _flush(self):

@@ -54,7 +54,7 @@ import sys
 import time
 
 from lib import Options
-from lib.colorer import color_stdout
+from lib.colorer import color_stdout, color_log
 from lib.utils import print_tail_n
 from lib.utils import PY3
 from lib.worker import get_task_groups
@@ -92,7 +92,7 @@ def main_loop_parallel():
                  format(args.replication_sync_timeout), schema='tr_text')
     color_stdout("TEST_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.test_timeout), schema='tr_text')
-    color_stdout("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
+    color_log("NO_OUTPUT_TIMEOUT:" . ljust(26) + "{}\n" .
                  format(args.no_output_timeout), schema='tr_text')
     color_stdout("\n", schema='tr_text')
 
