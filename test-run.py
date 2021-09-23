@@ -172,7 +172,10 @@ def main_loop_consistent(failed_test_ids):
         worker_id = 1
         worker = task_group['gen_worker'](worker_id)
         for task_id in task_ids:
-            short_status = worker.run_task(task_id)
+            # The 'run_task' method returns a tuple of three items:
+            # (short_status, result_checksum, duration). So taking the first
+            # item of this tuple for failure check.
+            short_status = worker.run_task(task_id)[0]
             if short_status == 'fail':
                 reproduce_file_path = \
                     get_reproduce_file(worker.name)
