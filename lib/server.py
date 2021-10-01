@@ -14,6 +14,7 @@ from lib.colorer import color_stdout
 from lib.options import Options
 from lib.utils import print_tail_n
 from lib.utils import bytes_to_str
+from lib.utils import find_tags
 
 DEFAULT_CHECKPOINT_PATTERNS = ["*.snap", "*.xlog", "*.vylog", "*.inprogress",
                                "[0-9]*/"]
@@ -156,14 +157,40 @@ class Server(object):
 
     @staticmethod
     def exclude_tests(test_names, exclude_patterns):
-        def match_any(test_name, patterns):
+        """ Filter out test files by several criteria:
+
+            exclude_patters: a list of strings. If a string is
+            a substring of the test full name, exclude it.
+
+            If --tags option is provided, exclude tests, which
+            have no a tag from the provided list.
+        """
+
+        # TODO: Support filtering by another file (for unit
+        # tests). Transform a test name into a test source name.
+        # Don't forget about out of source build.
+        # TODO: Support multiline comments (mainly for unit
+        # tests).
+
+        def match_any_pattern(test_name, patterns):
             for pattern in patterns:
                 if pattern in test_name:
                     return True
             return False
 
+        def match_any_tag(test_name, accepted_tags):
+            tags = find_tags(test_name)
+            for tag in tags:
+                if tag in accepted_tags:
+                    return True
+            return False
+
+        accepted_tags = Options().args.tags
+
         res = []
         for test_name in test_names:
-            if not match_any(test_name, exclude_patterns):
+            if match_any_pattern(test_name, exclude_patterns):
+                continue
+            if accepted_tags is None or match_any_tag(test_name, accepted_tags):
                 res.append(test_name)
         return res

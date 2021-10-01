@@ -376,3 +376,37 @@ def str_to_bytes(s):
     if PY2:
         return s
     return s.encode('utf-8')
+
+
+def parse_tag_line(line):
+    tags_str = line.split(':', 1)[1].strip()
+    return [tag.strip() for tag in tags_str.split(',')]
+
+
+def find_tags(filename):
+    """ Extract tags from a first comment in the file.
+    """
+    # TODO: Support multiline comments. See exclude_tests() in
+    # lib/server.py.
+    if filename.endswith('.lua') or filename.endswith('.sql'):
+        singleline_comment = '--'
+    elif filename.endswith('.py'):
+        singleline_comment = '#'
+    else:
+        return []
+
+    tags = []
+    with open(filename, 'r') as f:
+        for line in f:
+            line = line.rstrip('\n')
+            if line.startswith('#!'):
+                pass
+            elif line == '':
+                pass
+            elif line.startswith(singleline_comment + ' tags:'):
+                tags.extend(parse_tag_line(line))
+            elif line.startswith(singleline_comment):
+                pass
+            else:
+                break
+    return tags

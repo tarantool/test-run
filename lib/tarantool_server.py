@@ -76,6 +76,7 @@ class LuaTest(Test):
     RESULT_FILE_VERSION_LINE_RE = re.compile(
         r'^-- test-run result file version (?P<version>\d+)$')
     RESULT_FILE_VERSION_TEMPLATE = '-- test-run result file version {}'
+    TAGS_LINE_RE = re.compile(r'^-- tags:')
 
     def __init__(self, *args, **kwargs):
         super(LuaTest, self).__init__(*args, **kwargs)
@@ -250,6 +251,16 @@ class LuaTest(Test):
         for line in open(self.name, 'r'):
             # Normalize a line.
             line = line.rstrip('\n')
+
+            # Skip metainformation (only tags at the moment).
+            #
+            # It is to reduce noise changes in result files, when
+            # tags are added or edited.
+            #
+            # TODO: Ideally we should do that only on a first
+            # comment in the file.
+            if self.TAGS_LINE_RE.match(line):
+                continue
 
             # Show empty lines / comments in a result file, but
             # don't send them to tarantool.
