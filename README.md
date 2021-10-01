@@ -353,6 +353,55 @@ The following files will be removed:
 * `*.inprogress`
 * `[0-9]*/`
 
+### Tags
+
+Usage:
+
+```sh
+./test-run.py --tags foo
+./test-run.py --tags foo,bar app/ app-tap/
+```
+
+test-run will run only those tests, which have at least one of the
+provided tags.
+
+The tags metainfo should be placed within a first comment of a test
+file.
+
+Examples:
+
+* .lua file:
+
+  ```lua
+  #!/usr/bin/tarantool
+
+  -- tags: foo, bar
+  -- tags: one, more
+
+  <...>
+  ```
+
+* .sql file:
+
+  ```sql
+  -- tags: foo
+  -- tags: bar
+  <...>
+  ```
+
+* .py file:
+
+  ```python
+  # tags: foo
+
+  <...>
+  ```
+
+Unsupported features:
+
+* Marking unit tests with tags.
+* Multiline comments (use singleline ones for now).
+
 ### Used By
 
 - [Tarantool](https://github.com/tarantool/tarantool) - in-memory database and application server

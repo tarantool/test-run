@@ -22,6 +22,13 @@ def env_list(name, default):
     return value_list or default
 
 
+def split_list(tags_str):
+    # Accept both ', ' and ',' as a separator.
+    #
+    # It is consistent with parsing of tags within a test file.
+    return [tag.strip() for tag in tags_str.split(',')]
+
+
 class Options(object):
     """Handle options of test-runner"""
 
@@ -270,6 +277,17 @@ class Options(object):
                 dest="memtx_allocator",
                 default=os.environ.get("MEMTX_ALLOCATOR", "small"),
                 help="""Memtx allocator type for tests""")
+        parser.add_argument(
+                '--tags',
+                dest='tags',
+                default=None,
+                type=split_list,
+                help="""Comma separated list of tags.
+
+                If tags are provided, test-run will run only those
+                tests, which are marked with ANY of the provided
+                tags.
+                """)
 
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
