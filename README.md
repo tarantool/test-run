@@ -365,6 +365,13 @@ Usage:
 test-run will run only those tests, which have at least one of the
 provided tags.
 
+Show a list of tags:
+
+```sh
+./test-run.py --tags
+./test-run.py app-tap/ --tags
+```
+
 The tags metainfo should be placed within a first comment of a test
 file.
 

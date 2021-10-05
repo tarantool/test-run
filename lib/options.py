@@ -35,6 +35,9 @@ class Options(object):
     _instance = None
     _initialized = False
 
+    # Just some unique marker.
+    _show_tags = {}
+
     def __new__(cls, *args, **kwargs):
         """Make the class singleton."""
         if cls._instance:
@@ -280,6 +283,8 @@ class Options(object):
         parser.add_argument(
                 '--tags',
                 dest='tags',
+                const=self._show_tags,
+                nargs='?',
                 default=None,
                 type=split_list,
                 help="""Comma separated list of tags.
@@ -287,12 +292,28 @@ class Options(object):
                 If tags are provided, test-run will run only those
                 tests, which are marked with ANY of the provided
                 tags.
+
+                If the option is given without a parameter (at the
+                last position), test-run will show a list of tags
+                and stop.
                 """)
 
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
         # ./test-run.py foo --exclude bar baz
         self.args = parser.parse_args()
+
+        # If `--tags foo,bar` is passed, just keep the list in
+        # `args.tags`.
+        #
+        # If `--tags` is passed without a parameter, clean up
+        # `args.tags` and toggle `args.show_tags`.
+        if self.args.tags == self._show_tags:
+            self.args.tags = None
+            self.args.show_tags = True
+        else:
+            self.args.show_tags = False
+
         self.check()
 
         Options._initialized = True
