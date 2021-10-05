@@ -55,6 +55,7 @@ import time
 
 from lib import Options
 from lib.colorer import color_stdout
+from lib.utils import find_tags
 from lib.utils import print_tail_n
 from lib.utils import PY3
 from lib.worker import get_task_groups
@@ -221,6 +222,19 @@ def main_consistent():
     return (-1 if failed_test_ids else 0)
 
 
+def show_tags():
+    # Collect tests in the same way as when we run them.
+    collected_tags = set()
+    for name, task_group in get_task_groups().items():
+        for task_id in task_group['task_ids']:
+            test_name, _ = task_id
+            for tag in find_tags(test_name):
+                collected_tags.add(tag)
+
+    for tag in sorted(collected_tags):
+        color_stdout(tag + '\n')
+
+
 if __name__ == "__main__":
     # In Python 3 start method 'spawn' in multiprocessing module becomes
     # default on Mac OS.
@@ -274,6 +288,10 @@ if __name__ == "__main__":
     os.environ['OMP_NUM_THREADS'] = '2'
 
     status = 0
+
+    if Options().args.show_tags:
+        show_tags()
+        exit(status)
 
     force_parallel = bool(Options().args.reproduce)
     if not force_parallel and Options().args.jobs == -1:

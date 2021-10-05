@@ -164,7 +164,8 @@ class TestSuite:
         else:
             raise ValueError('Cannot collect tests of unknown type')
 
-        if not Options().args.reproduce:
+        # In given cases, this large output looks redundant.
+        if not Options().args.reproduce and not Options().args.show_tags:
             color_stdout("Collecting tests in ", schema='ts_text')
             color_stdout(
                 '%s (Found %s tests)' % (
