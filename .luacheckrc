@@ -27,4 +27,6 @@ include_files = {
 exclude_files = {
     "lib/tarantool-python",
     "test/test-tarantool/*.test.lua",
+    "lib/luatest/**",
+    "lib/checks/**",
 }

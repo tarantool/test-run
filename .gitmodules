@@ -4,3 +4,9 @@
 [submodule "lib/tarantool-python"]
 	path = lib/tarantool-python
 	url = https://github.com/tarantool/tarantool-python.git
+[submodule "lib/checks"]
+	path = lib/checks
+	url = https://github.com/tarantool/checks.git
+[submodule "lib/luatest"]
+	path = lib/luatest
+	url = https://github.com/tarantool/luatest.git
