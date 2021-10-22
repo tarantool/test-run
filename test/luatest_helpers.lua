@@ -42,18 +42,4 @@ function luatest_helpers.instance_uri(alias, instance_id)
     return ('%s/%s%s.iproto'):format(luatest_helpers.SOCKET_DIR, alias, instance_id);
 end
 
-function luatest_helpers.workdir(name)
-    local vardir = fio.abspath(os.getenv('VARDIR') or 'test/var')
-
-    local random = digest.urandom(9)
-    local id = digest.base64_encode(random, {urlsafe = true})
-    if name ~= nil then
-        name = 'tmp_workdir'
-    end
-    local workdir = ('%s/%s-%s'):format(vardir, name, id)
-    fio.mktree(workdir)
-
-    return workdir
-end
-
 return luatest_helpers
