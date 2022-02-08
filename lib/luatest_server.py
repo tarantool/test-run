@@ -10,6 +10,7 @@ from lib.error import TestRunInitError
 from lib.sampler import sampler
 from lib.server import Server
 from lib.tarantool_server import Test
+from lib.tarantool_server import TestExecutionError
 from lib.tarantool_server import TarantoolServer
 
 
@@ -50,6 +51,8 @@ class LuatestTest(Test):
         proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=STDOUT)
         sampler.register_process(proc.pid, self.id, server.name)
         sys.stdout.write_bytes(proc.communicate()[0])
+        if proc.returncode != 0:
+            raise TestExecutionError
 
 
 class LuatestServer(Server):
