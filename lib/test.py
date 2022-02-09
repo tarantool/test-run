@@ -7,7 +7,6 @@ import shutil
 import sys
 import traceback
 from functools import partial
-from hashlib import md5
 
 from lib import Options
 from lib.colorer import color_stdout
@@ -167,7 +166,7 @@ class Test(object):
             it to stdout.
 
             Returns short status of the test as a string: 'skip', 'pass',
-            'new', 'updated' or 'fail' and results file checksum on fail.
+            'new', 'updated' or 'fail'.
             There is also one possible value for short_status, 'disabled',
             but it returned in the caller, TestSuite.run_test().
         """
@@ -237,7 +236,6 @@ class Test(object):
             self.is_valgrind_clean = not bool(non_empty_logs)
 
         short_status = None
-        result_checksum = None
 
         if self.skip:
             short_status = 'skip'
@@ -272,8 +270,6 @@ class Test(object):
             if has_result:
                 safe_makedirs(self.var_suite_path)
                 shutil.copy(self.tmp_result, self.reject)
-                with open(self.tmp_result, mode='rb') as result_file:
-                    result_checksum = md5(result_file.read()).hexdigest()
             short_status = 'fail'
             color_stdout("[ fail ]\n", schema='test_fail')
 
@@ -299,7 +295,7 @@ class Test(object):
                                            "Test failed! Output from log file "
                                            "{0}:\n".format(log_file))
                 where = ": there were warnings in the valgrind log file(s)"
-        return short_status, result_checksum
+        return short_status
 
     def print_diagnostics(self, log_file, message):
         """Print whole lines of client program output leading to test

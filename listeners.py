@@ -55,7 +55,6 @@ class StatisticsWatcher(BaseWatcher):
         if obj.short_status == 'fail':
             self.failed_tasks.append((obj.task_id,
                                       obj.worker_name,
-                                      obj.result_checksum,
                                       obj.show_reproduce_content))
 
         self.duration_stats[obj.task_id] = obj.duration
@@ -163,11 +162,10 @@ class StatisticsWatcher(BaseWatcher):
             return False
 
         color_stdout('Failed tasks:\n', schema='test_var')
-        for task_id, worker_name, result_checksum, show_reproduce_content in self.failed_tasks:
+        for task_id, worker_name, show_reproduce_content in self.failed_tasks:
             logfile = self.get_logfile(worker_name)
             task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
             color_stdout('- %s' % task_id_str, schema='test_var')
-            color_stdout('# results file checksum: %s\n' % result_checksum)
             color_stdout('# logfile:        %s\n' % logfile)
             reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
