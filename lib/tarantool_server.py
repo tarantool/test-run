@@ -1016,16 +1016,6 @@ class TarantoolServer(Server):
             color_log('Server [%s] start against running ...\n',
                       schema='test_var')
             return
-        if self.status != 'started':
-            if not silent:
-                raise Exception('Server is not started')
-            else:
-                color_log(
-                    'Server [{0.name}] is not started '
-                    '(status:{0.status}) ...\n'.format(self),
-                    schema='test_var'
-                )
-            return
         if not silent:
             color_stdout('[Instance {}] Stopping the server...\n'.format(
                 self.name), schema='info')
