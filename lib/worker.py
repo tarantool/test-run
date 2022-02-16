@@ -352,7 +352,7 @@ class Worker:
                 )
             retries_left = self.suite.fragile_retries()
             # let's run till short_status became 'pass'
-            while short_status != 'pass' and retries_left >= 0:
+            while short_status in (None, 'fail') and retries_left >= 0:
                 self.restart_server()
                 # print message only after some fails occurred
                 if short_status == 'fail':
