@@ -34,9 +34,13 @@ Server.constructor_checks = fun.chain(Server.constructor_checks, {
     engine = '?string',
 }):tomap()
 
-function Server:initialize()
-    local vardir = fio.abspath(os.getenv('VARDIR') or 'test/var')
+Server.socketdir = fio.abspath(os.getenv('VARDIR') or 'test/var')
 
+function Server.build_instance_uri(alias)
+    return ('%s/%s.iproto'):format(Server.socketdir, alias)
+end
+
+function Server:initialize()
     if self.id == nil then
         local random = digest.urandom(9)
         self.id = digest.base64_encode(random, {urlsafe = true})
@@ -45,13 +49,13 @@ function Server:initialize()
         self.command = 'test/instances/default.lua'
     end
     if self.workdir == nil then
-        self.workdir = ('%s/%s-%s'):format(vardir, self.alias, self.id)
+        self.workdir = ('%s/%s-%s'):format(self.socketdir, self.alias, self.id)
         fio.rmtree(self.workdir)
         fio.mktree(self.workdir)
     end
     if self.net_box_port == nil and self.net_box_uri == nil then
-        self.net_box_uri = ('%s/%s.iproto'):format(vardir, self.alias)
-        fio.mktree(vardir)
+        self.net_box_uri = self.build_instance_uri(self.alias)
+        fio.mktree(self.socketdir)
     end
 
     -- AFAIU, the inner getmetatable() returns our helpers.Server
