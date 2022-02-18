@@ -15,7 +15,7 @@ luacheck:
 	luacheck --config .luacheckrc .
 
 test_integration:
-	PYTHONPATH=$(PROJECT_DIR) $(PYTHON) test/test-run.py --force $(TEST_RUN_EXTRA_PARAMS)
+	PYTHONPATH=$(PROJECT_DIR) $(PYTHON) test/test-run.py --force --exclude unittest $(TEST_RUN_EXTRA_PARAMS)
 
 test_unittest:
 	$(PYTHON) -m unittest discover test/unittest/
