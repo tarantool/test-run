@@ -44,6 +44,7 @@ from lib.utils import safe_makedirs
 from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
+from lib.utils import prepend_path
 from lib.test import TestRunGreenlet, TestExecutionError
 
 
@@ -693,11 +694,8 @@ class TarantoolServer(Server):
                 cls.ctl_plugins = os.path.abspath(
                     os.path.join(ctl_dir, '..')
                 )
-                os.environ["PATH"] = os.pathsep.join([
-                    os.path.abspath(ctl_dir),
-                    os.path.abspath(_dir),
-                    os.environ["PATH"]
-                ])
+                prepend_path(ctl_dir)
+                prepend_path(_dir)
                 os.environ["TARANTOOLCTL"] = ctl
                 if need_lua_path:
                     os.environ["LUA_PATH"] = \
