@@ -8,6 +8,7 @@ from lib.unittest_server import UnittestServer
 from lib.app_server import AppServer
 from lib.luatest_server import LuatestServer
 from lib.utils import warn_unix_sockets_at_start
+from lib.utils import prepend_path
 
 
 __all__ = ['Options']
@@ -70,9 +71,7 @@ def module_init():
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
 
-    luatest_bin_dir = os.path.join(os.environ['TEST_RUN_DIR'],
-                                   'lib/luatest/bin')
-    os.environ['PATH'] = ':'.join((luatest_bin_dir, os.environ['PATH']))
+    prepend_path(os.path.join(os.environ['TEST_RUN_DIR'], 'lib/luatest/bin'))
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)

@@ -410,3 +410,12 @@ def find_tags(filename):
             else:
                 break
     return tags
+
+
+def prepend_path(p):
+    """ Add an absolute path into PATH (at start) if it is not already there.
+    """
+    p = os.path.abspath(p)
+    if p in os.environ['PATH'].split(os.pathsep):
+        return
+    os.environ['PATH'] = os.pathsep.join((p, os.environ['PATH']))
