@@ -34,8 +34,8 @@ class LuatestTest(Test):
         """
         server.current_test = self
         script = os.path.join(os.path.basename(server.testdir), self.name)
-        command = [os.environ['LUATEST_BIN'], '-c', '-v', script, '-o', 'tap',
-                   '--shuffle', 'none']
+        command = ['luatest', '-c', '-v', script, '-o', 'tap', '--shuffle',
+                   'none']
 
         # Tarantool's build directory is added to PATH in
         # TarantoolServer.find_exe().
@@ -99,7 +99,7 @@ class LuatestServer(Server):
         try:
             # Just check that the command returns zero exit code.
             with open(os.devnull, 'w') as devnull:
-                returncode = Popen([os.environ['LUATEST_BIN'], '--version'],
+                returncode = Popen(['luatest', '--version'],
                                    stdout=devnull,
                                    stderr=devnull).wait()
             if returncode != 0:

@@ -70,8 +70,9 @@ def module_init():
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
 
-    os.environ['LUATEST_BIN'] = os.path.join(
-        os.environ['TEST_RUN_DIR'], 'lib/luatest/bin/luatest')
+    luatest_bin_dir = os.path.join(os.environ['TEST_RUN_DIR'],
+                                   'lib/luatest/bin')
+    os.environ['PATH'] = ':'.join((luatest_bin_dir, os.environ['PATH']))
 
     TarantoolServer.find_exe(args.builddir)
     UnittestServer.find_exe(args.builddir)
