@@ -315,6 +315,21 @@ class Options(object):
                 last position), test-run will show a list of tags
                 and stop.
                 """)
+        parser.add_argument(
+                '--env',
+                dest='show_env',
+                action='store_true',
+                default=False,
+                help="""Print environment variables, which are set by test-run.
+
+                Useful for, say, running built-in luatest executable.
+
+                Usage: just source it into a current environment:
+
+                ```
+                . <(./test/test-run.py --env)
+                ```
+                """)
 
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
