@@ -2,16 +2,10 @@ import os
 import glob
 import shlex
 
-try:
-    # Python 3.3+.
-    from shlex import quote as shlex_quote
-except ImportError:
-    # Python 2.7.
-    from pipes import quote as shlex_quote
-
 from lib.utils import find_in_path
 from lib.utils import print_tail_n
 from lib.utils import non_empty_valgrind_logs
+from lib.utils import shlex_quote
 from lib.colorer import color_log
 from lib.colorer import color_stdout
 
