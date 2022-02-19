@@ -11,12 +11,20 @@ import json
 import subprocess
 from gevent import socket
 from lib.colorer import color_stdout
+
 try:
     # Python3.5 or above
     from signal import Signals
 except ImportError:
     # Python2
     Signals = None
+
+try:
+    # Python 3.3+.
+    from shlex import quote as _shlex_quote
+except ImportError:
+    # Python 2.7.
+    from pipes import quote as _shlex_quote
 
 
 UNIX_SOCKET_LEN_LIMIT = 107
@@ -419,3 +427,7 @@ def prepend_path(p):
     if p in os.environ['PATH'].split(os.pathsep):
         return
     os.environ['PATH'] = os.pathsep.join((p, os.environ['PATH']))
+
+
+def shlex_quote(s):
+    return _shlex_quote(s)
