@@ -11,7 +11,7 @@ from lib.utils import warn_unix_sockets_at_start
 from lib.utils import prepend_path
 
 
-__all__ = ['Options']
+__all__ = ['Options', 'saved_env']
 
 
 def setenv():
@@ -25,8 +25,18 @@ def setenv():
         path = os.path.abspath(os.path.join(path, '../'))
 
 
+_saved_env = None
+
+
+def saved_env():
+    return _saved_env
+
+
 def module_init():
     """ Called at import """
+    global _saved_env
+    _saved_env = dict(os.environ)
+
     args = Options().args
     # Change the current working directory to where all test
     # collections are supposed to reside

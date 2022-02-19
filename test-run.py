@@ -54,8 +54,10 @@ import sys
 import time
 
 from lib import Options
+from lib import saved_env
 from lib.colorer import color_stdout
 from lib.utils import find_tags
+from lib.utils import shlex_quote
 from lib.error import TestRunInitError
 from lib.utils import print_tail_n
 from lib.utils import PY3
@@ -237,6 +239,39 @@ def show_tags():
         color_stdout(tag + '\n')
 
 
+def show_env():
+    """ Print new values of changed environment variables.
+
+        The format is suitable for sourcing in a shell.
+    """
+    original_env = saved_env()
+    for k, v in os.environ.items():
+        # Don't change PWD.
+        #
+        # test-run changes current working directory and set PWD
+        # environment variable. If we'll just export PWD (and
+        # don't change a current directory), it will be very
+        # misleading. Moreover, changing the directory by test-run
+        # is more like an implementation detail. It would be good
+        # to get rid from this approach in a future.
+        if k == 'PWD':
+            continue
+
+        # Don't print unchanged environment variables.
+        #
+        # It would be harmless, but if we filter them out, the
+        # output is nicely short.
+        if original_env.get(k) == v:
+            continue
+
+        color_stdout('export {}={}\n'.format(shlex_quote(k), shlex_quote(v)))
+
+    # test-run doesn't call `del os.environ['FOO']` anywhere, so
+    # all changed variables are present in `os.environ`. We don't
+    # need an extra traverse over `original_env` as it would be in
+    # the general case of comparing two dictionaries.
+
+
 if __name__ == "__main__":
     # In Python 3 start method 'spawn' in multiprocessing module becomes
     # default on Mac OS.
@@ -293,6 +328,10 @@ if __name__ == "__main__":
 
     if Options().args.show_tags:
         show_tags()
+        exit(status)
+
+    if Options().args.show_env:
+        show_env()
         exit(status)
 
     try:
