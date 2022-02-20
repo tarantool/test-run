@@ -25,6 +25,7 @@ and a number of fields:
 
 Field `core` must be one of:
 
+* `luatest` - [luatest][luatest] compatible test suite
 * `tarantool` - Test-Suite for Functional Testing
 * `app` - Another functional Test-Suite
 * `unittest` - Unit-Testing Test Suite
@@ -409,9 +410,36 @@ Unsupported features:
 * Marking unit tests with tags.
 * Multiline comments (use singleline ones for now).
 
+### Using luatest
+
+test-run supports tests written in the [luatest][luatest] format. `*_test.lua`
+files in a `core = luatest` test suite are run as part of `./test/test-run.py`
+invocation: no extra actions are needed.
+
+You can also run a particular test using a substring of its full name:
+
+```shell
+$ ./test/test-run.py foo-luatest/bar_test.lua
+$ ./test/test-run.py bar_test.lua
+$ ./test/test-run.py bar
+```
+
+If you need to run a particular test case from a luatest compatible test, use
+`luatest` command directly. In order to use luatest, which is bundled into
+test-run, source test-run's environment:
+
+```shell
+$ . <(./test/test-run.py --env)
+$ luatest -v -p my_specific_test_case
+```
+
 ### Used By
 
 - [Tarantool](https://github.com/tarantool/tarantool) - in-memory database and application server
 - [memcached](https://github.com/tarantool/memcached) - Memcached protocol 'wrapper' for Tarantool
 - [vshard](https://github.com/tarantool/vshard) - sharding based on virtual buckets
 - xsync (internal project)
+
+<!-- References -->
+
+[luatest]: https://github.com/tarantool/luatest
