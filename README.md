@@ -56,10 +56,11 @@ Below is a list of configuration values (fields) in the `suite.ini` file.
 * `core` — major type of tests in this suite.
   Should have one of the following values:
 
-  * `tarantool` — diff-test, a test that reads a file with commands, 
+  * `tarantool` — a test that reads a file with commands
     feeds it line by line to the tarantool console,
     writes requests and responses to an output file,
     and then compares that file with a reference file.
+    Often called a "diff-test".
   * `app` — a Lua script test.
     Most of such tests produce
     [TAP13 output](http://testanything.org/tap-version-13-specification.html)
@@ -74,7 +75,7 @@ Below is a list of configuration values (fields) in the `suite.ini` file.
 * `script` — A file with Tarantool commands.
   It is used to start the default server using `tarantoolctl`.
   The value should be a file in the same directory as `suite.ini`, like `box.lua` or `master.lua`.
-  This setting is mandatory for suites with diff-tests (`core = tarantool`)
+  This setting is mandatory for test suites with `core = tarantool`
   and ignored with other types of tests.
   
 * `config` — name of a test configuration file, for example, `engine.cfg`.
@@ -146,8 +147,8 @@ fragile = {
 Each test consists of the following files:
 
 * Test file: `<name>.test.lua`, `<name>_test.lua`, `<name>.test.py`, or `<name>.test.sql`.
-* Reference file: `<name>.result`.
-* Skip condition file: `<name>.skipcond`.
+* Reference file (optional): `<name>.result` .
+* Skip condition file (optional): `<name>.skipcond`.
 
 Reference file contains saved test output.
 It is required for tests with non-TAP13 output.
@@ -155,9 +156,20 @@ Running `test-run.py` with `--update-result` option will update
 the `.result` files with new test output.
 
 The optional skip condition file is a Python script.
+It is used to skip a test on some conditions, typically on a certain OS.
 In the local Python environment of a test run there's a `self` object,
 which is an instance of the [`Test` class](./lib/test.py).
 Set `self.skip = 1` to skip this test.
+For example, to skip `sometest` on OpenBSD,
+add the following `sometest.skipcond` file:
+
+```python 
+import platform
+
+# Disabled on OpenBSD due to fail #XXXX.
+if platform.system() == 'OpenBSD':
+    self.skip = 1
+```
 
 
 ## Test execution
@@ -172,26 +184,41 @@ Otherwise, test-run compares it with the `.result` file.
 If there's a difference between `.reject` and `.result`, the test fails and
 the last 15 lines of diff are printed to output.
 
-Whenever a test fails, the `.reject` file is saved in the `<vardir>/rejects/<suite>`
-subdirectory given in options or set locally as `var/rejects/<suite>` by default.
-If the test is considered successful, the `.reject` file is deleted.
+Whenever a test fails, the `.reject` file is saved
+and the path to this file is printed to output.
 
 ## Test configuration
 
 Test configuration file contains configuration for multiple runs.
 For each test section, system runs a separate test and compares the result to the common `.result` file.
-For  example, we need to run a test with different DB engines (`"*"` means the default
-configuration):
+
+For example, `my.test.lua` will run with two different sets of parameters:
 
 ```json
 {
     "my.test.lua": {
         "first": {"a": 1, "b": 2},
         "second": {"a": 1, "b": 3}
+    }
+}
+```
+
+A common case is to run a test with different DB engines.
+In the example below:
+
+* `first.test.lua` will run only on the memtx engine;
+* `second.test.lua` will run as is, without parameterizing;
+* all other tests in the suite (`*`) will be parameterized to run on both memtx and vinyl engines.
+* 
+```json
+{
+    "first.test.lua": {
+      "memtx": {"engine": "memtx"}
     },
+    "second.test.lua": {},
     "*": {
         "memtx": {"engine": "memtx"},
-        "sophia": {"engine": "sophia"}
+        "vinyl": {"engine": "vinyl"}
     }
 }
 ```
@@ -201,7 +228,7 @@ In the test case we can get configuration from the inspector:
 ```lua
 engine = test_run:get_cfg('engine')
 -- first run engine is 'memtx'
--- second run engine is 'sophia'
+-- second run engine is 'vinyl'
 ```
 
 "engine" value has a special meaning for `*.test.sql` files: if it is "memtx" or
