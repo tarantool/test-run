@@ -38,17 +38,6 @@ description = Example test suite using luatest
 ...
 ```
 
-There's a syntax for single- and multiline lists. (TODO see ./sql-tap/suite.ini)
-For example:
-
-```ini
-single_line = first.test.lua second.test.lua third.test.lua
-multiline = first.test.lua ;
-            second.test.lua ;
-            third.test.lua ;
-            ...
-```
-
 Below is a list of configuration values (fields) in the `suite.ini` file.
 
 ### General configuration values
@@ -56,10 +45,8 @@ Below is a list of configuration values (fields) in the `suite.ini` file.
 * `core` — major type of tests in this suite.
   Should have one of the following values:
 
-  * `tarantool` — a test that reads a file with commands
-    feeds it line by line to the tarantool console,
-    writes requests and responses to an output file,
-    and then compares that file with a reference file.
+  * `tarantool` — a test that runs `tarantool` commands from a file,
+    and then compares output with a reference file.
     Often called a "diff-test".
   * `app` — a Lua script test.
     Most of such tests produce
@@ -72,11 +59,11 @@ Below is a list of configuration values (fields) in the `suite.ini` file.
 
 * `description`
 
-* `script` — A file with Tarantool commands.
+* `script` — The file with Tarantool commands, used in `core = tarantool` tests.
   It is used to start the default server using `tarantoolctl`.
   The value should be a file in the same directory as `suite.ini`, like `box.lua` or `master.lua`.
   This setting is mandatory for test suites with `core = tarantool`
-  and ignored with other types of tests.
+  and ignored in other types of tests.
   
 * `config` — name of a test configuration file, for example, `engine.cfg`.
   For details, see the [test configuration](#test-configuration) section below.
@@ -92,7 +79,7 @@ Below is a list of configuration values (fields) in the `suite.ini` file.
 
 A number of fields are used to disable certain tests:
 
-* `disabled` — list of tests that should be skipped.
+* `disabled` — list of tests that should be skipped under all conditions.
 
 * `release_disabled` — list of tests that should only run when Tarantool is
    built in the debug mode (with `-DCMAKE_BUILD_TYPE=Debug` and not `=RelWithDebInfo`).
@@ -107,19 +94,23 @@ A number of fields are used to disable certain tests:
   long_run = t1.test.lua t2.test.lua
   ```
 
-### Other parameters
+Note that there's also an option to conditionally skip a test with [.skipcond](#test-composition) files.
 
-* `show_reproduce_content` (optional, `True` by default) — when set to `True`,
-  show the contents of the reproduce file for each failed test.
-  Reproduce files are not required for investigating results of
-  tests that run each case in a separate Tarantool instance.
-  For such tests it makes sense to set `show_reproduce_content = False`.
-  (Implemented in [#113](https://github.com/tarantool/test-run/issues/113))
+### Other parameters
 
 * `is_parallel` (optional, `False` by default) — whether the tests in the suite can run in parallel
 
-* `use_unix_sockets` (optional, `False` by default) — use hard-coded UNIX sockets
-* `use_unix_sockets_iproto` (optional, `False` by default) — use hard-coded UNIX sockets for IProto.
+* `use_unix_sockets` (optional, `False` by default) — use UNIX sockets for console
+* `use_unix_sockets_iproto` (optional, `False` by default) — use UNIX sockets for IProto.
+
+* `show_reproduce_content` (optional, `True` by default) — when set to `True`,
+  show the contents of the reproduce file for each failed test.
+  (Implemented in [#113](https://github.com/tarantool/test-run/issues/113))
+
+  Reproduce files are not required for investigating results of
+  tests that run each case in a separate Tarantool instance,
+  which is the preferred way to run tests.
+  For such tests it makes sense to set `show_reproduce_content = False`.
 
 ### Fragile tests
 
@@ -157,6 +148,7 @@ the `.result` files with new test output.
 
 The optional skip condition file is a Python script.
 It is used to skip a test on some conditions, typically on a certain OS.
+
 In the local Python environment of a test run there's a `self` object,
 which is an instance of the [`Test` class](./lib/test.py).
 Set `self.skip = 1` to skip this test.
@@ -175,8 +167,7 @@ if platform.system() == 'OpenBSD':
 ## Test execution
 
 Running a test begins with executing the `.skipcond` file.
-If `self.skip` is set to `1`, test-run skips this test
-and reports TODO.
+If after execution `self.skip` equals `1`, test-run skips this test.
 
 Next, the test file is executed and the output is written to a `.reject` file.
 If the output is TAP13-compatible, test-run validates it.
@@ -209,7 +200,7 @@ In the example below:
 * `first.test.lua` will run only on the memtx engine;
 * `second.test.lua` will run as is, without parameterizing;
 * all other tests in the suite (`*`) will be parameterized to run on both memtx and vinyl engines.
-* 
+
 ```json
 {
     "first.test.lua": {
