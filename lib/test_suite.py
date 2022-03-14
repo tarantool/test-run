@@ -45,6 +45,9 @@ class TestSuite:
     server for this suite, the client program to execute individual
     tests and other suite properties. The server is started once per
     suite."""
+
+    RETRIES_COUNT = 3
+
     def get_multirun_conf(self, suite_path):
         conf_name = self.ini.get('config', None)
         if conf_name is None:
@@ -91,7 +94,7 @@ class TestSuite:
         self.args = args
         self.tests = []
         self.ini = {}
-        self.fragile = {'retries': 0, 'tests': {}}
+        self.fragile = {'retries': self.RETRIES_COUNT, 'tests': {}}
         self.suite_path = suite_path
         self.ini["core"] = "tarantool"
 
@@ -128,7 +131,7 @@ class TestSuite:
         if config.has_option("default", "fragile"):
             fragiles = config.get("default", "fragile")
             try:
-                self.fragile = json.loads(fragiles)
+                self.fragile.update(json.loads(fragiles))
                 if 'tests' not in self.fragile:
                     raise RuntimeError(
                         "Key 'tests' absent in 'fragile' json: {}"
@@ -288,7 +291,7 @@ class TestSuite:
         return self.ini['is_parallel']
 
     def fragile_retries(self):
-        return self.fragile.get('retries', 0)
+        return self.fragile['retries']
 
     def show_reproduce_content(self):
         return self.ini['show_reproduce_content']

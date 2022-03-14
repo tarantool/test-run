@@ -350,20 +350,25 @@ class Worker:
                                   'defined in suite.ini but this functionality '
                                   'is dropped' % testname)
                 )
-            retries_left = self.suite.fragile_retries()
+            retries_left = self.suite.RETRIES_COUNT
+            if testname in self.suite.fragile['tests']:
+                retries_left = self.suite.fragile_retries()
             # let's run till short_status became 'pass'
             while short_status in (None, 'fail') and retries_left >= 0:
                 self.restart_server()
                 # print message only after some fails occurred
                 if short_status == 'fail':
-                    color_stdout(
-                        'Test "%s", conf: "%s"\n'
-                        '\tfrom "fragile" list failed, rerunning ...\n'
-                        % (task_id[0], task_id[1]), schema='error')
+                    if testname not in self.suite.fragile['tests']:
+                        color_stdout(
+                            'Test "%s", conf: "%s"\n\tfailed, rerunning ...\n'
+                            % (task_id[0], task_id[1]), schema='error')
+                    else:
+                        color_stdout(
+                            'Test "%s", conf: "%s"\n'
+                            '\tfrom "fragile" list failed, rerunning ...\n'
+                            % (task_id[0], task_id[1]), schema='error')
                 # run task and save the result to short_status
                 short_status, duration = self.run_task(task_id)
-                if testname not in self.suite.fragile['tests']:
-                    break
                 retries_left = retries_left - 1
 
             result_queue.put(self.wrap_result(task_id, short_status, duration))
