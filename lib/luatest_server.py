@@ -1,6 +1,8 @@
+import errno
 import glob
 import os
 import re
+import shutil
 import sys
 
 from subprocess import Popen, PIPE
@@ -71,6 +73,7 @@ class LuatestServer(Server):
         self.testdir = os.path.abspath(os.curdir)
         self.vardir = ini['vardir']
         self.builddir = ini['builddir']
+        self.lua_libs = ini['lua_libs']
         self.name = 'luatest_server'
 
     @property
@@ -85,6 +88,21 @@ class LuatestServer(Server):
         self.vardir = vardir
         if not os.access(self.vardir, os.F_OK):
             os.makedirs(self.vardir)
+        if self.lua_libs:
+            for i in self.lua_libs:
+                source = os.path.join(self.testdir, i)
+                try:
+                    if os.path.isdir(source):
+                        shutil.copytree(source,
+                                        os.path.join(self.vardir,
+                                                     os.path.basename(source)))
+                    else:
+                        shutil.copy(source, self.vardir)
+                except IOError as e:
+                    if e.errno == errno.ENOENT:
+                        continue
+                    raise
+            os.environ["LUA_PATH"] = self.vardir + '/?.lua;' + os.environ.get("LUA_PATH", ";")
 
     @classmethod
     def find_exe(cls, builddir):
