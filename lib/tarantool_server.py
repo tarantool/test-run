@@ -1016,7 +1016,7 @@ class TarantoolServer(Server):
             color_log('Server [%s] start against running ...\n',
                       schema='test_var')
             return
-        if self.status != 'started':
+        if self.status != 'started' and not hasattr(self, 'process'):
             if not silent:
                 raise Exception('Server is not started')
             else:
