@@ -46,7 +46,7 @@ class TestSuite:
     tests and other suite properties. The server is started once per
     suite."""
 
-    RETRIES_COUNT = 3
+    RETRIES_COUNT = Options().args.retries
 
     def get_multirun_conf(self, suite_path):
         conf_name = self.ini.get('config', None)

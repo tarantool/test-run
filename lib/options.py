@@ -206,6 +206,16 @@ class Options(object):
                 (single process). """)
 
         parser.add_argument(
+                "-r", "--retries",
+                dest='retries',
+                default=env_int('TEST_RUN_RETRIES', 3),
+                type=int,
+                help="""The number of test run retries after a failure.
+                Default: ${TEST_RUN_RETRIES} or 3. It is also the default value
+                for 'fragile' tests unless the `retries` option is set in the
+                suite.ini config file.""")
+
+        parser.add_argument(
                 "--reproduce",
                 dest="reproduce",
                 default=None,
