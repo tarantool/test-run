@@ -256,7 +256,7 @@ class Options(object):
         parser.add_argument(
                 "--vardir",
                 dest="vardir",
-                default="var",
+                default='/tmp/t',
                 help=format_help(
                     """
                     Path to data directory.
@@ -265,7 +265,7 @@ class Options(object):
                     where all tests reside. **NOT** a current directory of a
                     parent shell.
 
-                    Default: var.
+                    Default: /tmp/t.
                     """))
 
         parser.add_argument(
