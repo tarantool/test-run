@@ -46,6 +46,23 @@ def qa_notice(*args, **kwargs):
     color_stdout(data, **kwargs)
 
 
+def final_report(*args, **kwargs):
+    color_stdout(*args, **kwargs)
+
+    # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
+    summary_file = os.environ.get('GITHUB_STEP_SUMMARY')
+    if not summary_file:
+        return
+
+    # Join all positional arguments (like color_stdout() do) and
+    # decolor it.
+    data = ''.join([str(msg) for msg in args])
+    data = color_stdout.decolor(data)
+
+    with open(summary_file, 'a') as f:
+        f.write(data)
+
+
 class CSchema(object):
     objects = {}
 
