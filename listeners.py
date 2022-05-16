@@ -5,6 +5,7 @@ import shutil
 
 from lib import Options
 from lib.colorer import color_stdout
+from lib.colorer import final_report
 from lib.colorer import decolor
 from lib.sampler import sampler
 from lib.worker import WorkerCurrentTask
@@ -75,30 +76,34 @@ class StatisticsWatcher(BaseWatcher):
 
         # Print to stdout RSS statistics for all failed tasks.
         if self.failed_tasks:
-            color_stdout('Occupied memory in failed tests (RSS, Mb):\n', schema='info')
+            final_report('Occupied memory in failed tests (RSS, Mb):\n', schema='info')
             for task in self.failed_tasks:
                 task_id = task[0]
                 if task_id in rss_summary:
-                    color_stdout('* %6.1f %s %s\n' % (float(rss_summary[task_id]) / 1024,
+                    final_report('* %6.1f %s %s\n' % (float(rss_summary[task_id]) / 1024,
                                  self.prettify_task_name(task_id).ljust(self.field_size),
                                  self.get_long_mark(task_id)),
                                  schema='info')
-            color_stdout('\n')
+            final_report('\n')
 
         # Print to stdout RSS statistics for some number of most it used tasks.
-        color_stdout('Top {} tests by occupied memory (RSS, Mb):\n'.format(
+        final_report('Top {} tests by occupied memory (RSS, Mb):\n'.format(
                      top_rss), schema='info')
         results_sorted = sorted(rss_summary.items(), key=lambda x: x[1], reverse=True)
         for task_id, rss in results_sorted[:top_rss]:
-            color_stdout('* %6.1f %s %s\n' % (float(rss) / 1024,
+            final_report('* %6.1f %s %s\n' % (float(rss) / 1024,
                          self.prettify_task_name(task_id).ljust(self.field_size),
                          self.get_long_mark(task_id)), schema='info')
-        color_stdout('\n')
+        final_report('\n')
 
-        color_stdout('(Tests quicker than {} seconds may be missed.)\n'.format(
+        # Add two newlines at the end to split this paragraph from
+        # dashes below. Otherwise GitHub's Markdown parser
+        # interprets the paragraph as a header and renders it as a
+        # header on the job summary page (in the Actions tab).
+        final_report('(Tests quicker than {} seconds may be missed.)\n\n'.format(
                      self._sampler.sample_interval), schema='info')
 
-        color_stdout('-' * 81, "\n", schema='separator')
+        final_report('-' * 81, "\n", schema='separator')
 
         # Print RSS statistics to '<vardir>/statistics/rss.log' file.
         filepath = os.path.join(stats_dir, 'rss.log')
@@ -114,27 +119,27 @@ class StatisticsWatcher(BaseWatcher):
 
         # Print to stdout durations for all failed tasks.
         if self.failed_tasks:
-            color_stdout('Duration of failed tests (seconds):\n',
+            final_report('Duration of failed tests (seconds):\n',
                          schema='info')
             for task in self.failed_tasks:
                 task_id = task[0]
                 if task_id in self.duration_stats:
-                    color_stdout('* %6.2f %s %s\n' % (self.duration_stats[task_id],
+                    final_report('* %6.2f %s %s\n' % (self.duration_stats[task_id],
                                  self.prettify_task_name(task_id).ljust(self.field_size),
                                  self.get_long_mark(task_id)),
                                  schema='info')
-            color_stdout('\n')
+            final_report('\n')
 
         # Print to stdout durations for some number of most long tasks.
-        color_stdout('Top {} longest tests (seconds):\n'.format(top_durations),
+        final_report('Top {} longest tests (seconds):\n'.format(top_durations),
                      schema='info')
         results_sorted = sorted(self.duration_stats.items(), key=lambda x: x[1], reverse=True)
         for task_id, duration in results_sorted[:top_durations]:
-            color_stdout('* %6.2f %s %s\n' % (duration,
+            final_report('* %6.2f %s %s\n' % (duration,
                          self.prettify_task_name(task_id).ljust(self.field_size),
                          self.get_long_mark(task_id)), schema='info')
 
-        color_stdout('-' * 81, "\n", schema='separator')
+        final_report('-' * 81, "\n", schema='separator')
 
         # Print duration statistics to '<vardir>/statistics/duration.log' file.
         filepath = os.path.join(stats_dir, 'duration.log')
@@ -154,18 +159,18 @@ class StatisticsWatcher(BaseWatcher):
         self.print_duration(stats_dir)
 
         if self.stats:
-            color_stdout('Statistics:\n', schema='test_var')
+            final_report('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
-            color_stdout('* %s: %d\n' % (short_status, cnt), schema='test_var')
+            final_report('* %s: %d\n' % (short_status, cnt), schema='test_var')
 
         if not self.failed_tasks:
             return False
 
-        color_stdout('Failed tasks:\n', schema='test_var')
+        final_report('Failed tasks:\n', schema='test_var')
         for task_id, worker_name, show_reproduce_content in self.failed_tasks:
             logfile = self.get_logfile(worker_name)
             task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
-            color_stdout('- %s' % task_id_str, schema='test_var')
+            final_report('- %s' % task_id_str, schema='test_var')
             color_stdout('# logfile:        %s\n' % logfile)
             reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
