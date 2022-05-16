@@ -55,9 +55,14 @@ jobs:
     - name: run static analysis
       run: |
        make lint
-    - name: run regression tests
+    - name: run unit testing
       run: |
-       make test
+        # Flush the variable to don't spoil job summary with tests,
+        # which are expected to fail.
+        GITHUB_STEP_SUMMARY= make test_unittest
+    - name: run integration testing
+      run: |
+        make test_integration
     - name: code coverage
       if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
       run: |
