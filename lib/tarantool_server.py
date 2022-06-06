@@ -402,7 +402,13 @@ class PythonTest(Test):
         new_globals = dict(locals(), test_run_current_test=self, **server.__dict__)
         with open(self.name) as f:
             code = compile(f.read(), self.name, 'exec')
+
+        try:
             exec(code, new_globals)
+        except TarantoolStartError:
+            # fail tests in the case of catching server start errors
+            raise TestExecutionError
+
         # crash was detected (possibly on non-default server)
         if server.current_test.is_crash_reported:
             raise TestExecutionError
