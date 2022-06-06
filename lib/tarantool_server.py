@@ -459,11 +459,14 @@ class TarantoolLog(object):
                     return pos
 
     def seek_wait(self, msg, proc=None, name=None, deadline=None):
+        timeout = Options().args.server_start_timeout
         while not deadline or time.time() < deadline:
             if os.path.exists(self.path):
                 break
             gevent.sleep(0.001)
         else:
+            color_stdout("\nFailed to locate {} logfile within {} "
+                         "seconds\n".format(self.path, timeout), schema='error')
             return False
 
         with open(self.path, 'r') as f:
@@ -471,7 +474,10 @@ class TarantoolLog(object):
             cur_pos = self.log_begin
             while not deadline or time.time() < deadline:
                 if not (proc is None):
+                    # proc.poll() returns None if the process is working. When
+                    # the process completed, it returns the process exit code.
                     if not (proc.poll() is None):
+                        # Raise an error since the process completed.
                         raise TarantoolStartError(name)
                 log_str = f.readline()
                 if not log_str:
@@ -481,6 +487,11 @@ class TarantoolLog(object):
                 if re.findall(msg, log_str):
                     return True
                 cur_pos = f.tell()
+
+        color_stdout("\nFailed to find '{}' pattern in {} logfile within {} "
+                     "seconds\n".format(msg, self.path, timeout),
+                     schema='error')
+
         return False
 
 
