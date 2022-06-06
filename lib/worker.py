@@ -266,9 +266,9 @@ class Worker:
                          'the tasks will be ignored...\n' % self.name,
                          schema='error')
             color_stdout("The raised exception is '%s' of type '%s'.\n"
-                         % (str(e), str(type(e))), schema='error')
+                         % (str(e).strip(), str(type(e))), schema='error')
             color_stdout('Worker "%s" received the following error:\n'
-                         % self.name + traceback.format_exc() + '\n',
+                         % self.name + traceback.format_exc().strip() + '\n',
                          schema='error')
             self.stop_server(cleanup=False)
 
