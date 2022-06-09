@@ -481,11 +481,20 @@ class TarantoolLog(object):
                         raise TarantoolStartError(name)
                 log_str = f.readline()
                 if not log_str:
+                    # We reached the end of the logfile.
                     gevent.sleep(0.001)
                     f.seek(cur_pos, os.SEEK_SET)
                     continue
-                if re.findall(msg, log_str):
-                    return True
+                else:
+                    # if the whole line is read, check the pattern in the line.
+                    # Otherwise, set the cursor back to read the line again.
+                    if log_str.endswith('\n'):
+                        if re.findall(msg, log_str):
+                            return True
+                    else:
+                        gevent.sleep(0.001)
+                        f.seek(cur_pos, os.SEEK_SET)
+                        continue
                 cur_pos = f.tell()
 
         color_stdout("\nFailed to find '{}' pattern in {} logfile within {} "
