@@ -59,7 +59,7 @@ class TestState(object):
             self.curcon = [self.connections['default']]
             nmsp = Namespace()
             setattr(nmsp, 'admin', default_server.admin.uri)
-            setattr(nmsp, 'listen', default_server.iproto.uri)
+            setattr(nmsp, 'listen', default_server.listen_uri)
             setattr(self.environ, 'default', nmsp)
         # for propagating 'current_test' to non-default servers
         self.default_server_no_connect = kwargs.get(
@@ -282,13 +282,13 @@ class TestState(object):
                 copy_to
             ))
         nmsp = Namespace()
-        setattr(nmsp, 'admin', temp.admin.port)
-        setattr(nmsp, 'listen', temp.iproto.port)
+        setattr(nmsp, 'admin', temp.admin.uri)
+        setattr(nmsp, 'listen', temp.listen_uri)
         if temp.rpl_master:
-            setattr(nmsp, 'master', temp.rpl_master.iproto.port)
+            setattr(nmsp, 'master', temp.rpl_master.iproto.uri)
         setattr(self.environ, sname, nmsp)
         if 'return_listen_uri' in opts and opts['return_listen_uri'] == 'True':
-            return self.servers[sname].iproto.uri
+            return self.servers[sname].listen_uri
 
     def server_deploy(self, ctype, sname, opts):
         self.servers[sname].install()
@@ -341,6 +341,9 @@ class TestState(object):
         finally:
             # remove proxy
             self.server_stop('stop', 'proxy', {})
+
+    def server_get_iproto_uri(self, ctype, sname, opts):
+        return self.servers[sname].iproto.uri
 
     def server(self, ctype, sname, opts):
         attr = 'server_%s' % ctype
