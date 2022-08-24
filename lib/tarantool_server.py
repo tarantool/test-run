@@ -38,7 +38,6 @@ from lib.server import Server
 from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.test import Test
 from lib.utils import bytes_to_str
-from lib.utils import find_port
 from lib.utils import extract_schema_from_snapshot
 from lib.utils import format_process
 from lib.utils import safe_makedirs
@@ -598,7 +597,7 @@ class TarantoolServer(Server):
             del self.admin
         if not hasattr(self, 'tests_type'):
             self.tests_type = 'lua'
-        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
+        self.admin = CON_SWITCH[self.tests_type](self.localhost, port)
 
     @property
     def _iproto(self):
@@ -610,7 +609,7 @@ class TarantoolServer(Server):
     def _iproto(self, port):
         if hasattr(self, 'iproto'):
             del self.iproto
-        self.iproto = BoxConnection('localhost', port)
+        self.iproto = BoxConnection(self.localhost, port)
 
     @property
     def log_des(self):
@@ -672,9 +671,8 @@ class TarantoolServer(Server):
         self.name = "default"
         self.conf = {}
         self.status = None
-        # -----InitBasicVars-----#
         self.core = ini['core']
-
+        self.localhost = '127.0.0.1'
         self.gdb = ini['gdb']
         self.lldb = ini['lldb']
         self.script = ini['script']
@@ -686,10 +684,8 @@ class TarantoolServer(Server):
         self.crash_detector = None
         # use this option with inspector to enable crashes in test
         self.crash_enabled = False
-
         # set in from a test let test-run ignore server's crashes
         self.crash_expected = False
-
         # filled in {Test,FuncTest,LuaTest,PythonTest}.execute()
         # or passed through execfile() for PythonTest
         self.current_test = None
@@ -772,9 +768,10 @@ class TarantoolServer(Server):
         if self.use_unix_sockets_iproto:
             path = os.path.join(self.vardir, self.name + ".i")
             warn_unix_socket(path)
+            self.listen_uri = path
             self._iproto = path
         else:
-            self._iproto = find_port()
+            self.listen_uri = self.localhost + ':0'
 
         # these sockets will be created by tarantool itself
         path = os.path.join(self.vardir, self.name + '.control')
@@ -872,7 +869,7 @@ class TarantoolServer(Server):
         color_log(prefix_each_line(' | ', self.version()) + '\n',
                   schema='version')
 
-        os.putenv("LISTEN", self.iproto.uri)
+        os.putenv("LISTEN", self.listen_uri)
         os.putenv("ADMIN", self.admin.uri)
         if self.rpl_master:
             os.putenv("MASTER", self.rpl_master.iproto.uri)
@@ -933,7 +930,12 @@ class TarantoolServer(Server):
 
         port = self.admin.port
         self.admin.disconnect()
-        self.admin = CON_SWITCH[self.tests_type]('localhost', port)
+        self.admin = CON_SWITCH[self.tests_type](self.localhost, port)
+
+        if not self.use_unix_sockets_iproto:
+            if wait and wait_load and not self.crash_expected:
+                self._iproto = self.get_iproto_port()
+
         self.status = 'started'
 
         # Verify that the schema actually was not upgraded.
@@ -1144,7 +1146,7 @@ class TarantoolServer(Server):
             self.wait_load(deadline)
         while not deadline or time.time() < deadline:
             try:
-                temp = AdminConnection('localhost', self.admin.port)
+                temp = AdminConnection(self.localhost, self.admin.port)
                 if not wait_load:
                     ans = yaml.safe_load(temp.execute("2 + 2"))
                     color_log(" | Successful connection check; don't wait for "
@@ -1270,3 +1272,60 @@ class TarantoolServer(Server):
 
     def get_log(self):
         return TarantoolLog(self.logfile).positioning()
+
+    def get_iproto_port(self):
+        # Check the `box.cfg.listen` option, if it wasn't defined, just return.
+        res = yaml.safe_load(self.admin('box.cfg.listen', silent=True))[0]
+        if res is None:
+            return
+
+        # If `box.info.listen` (available for tarantool version >= 2.4.1) gives
+        # `nil`, use a simple script intended for tarantool version < 2.4.1 to
+        # get the listening socket of the instance. First, the script catches
+        # both server (listening) and client (sending) sockets (they usually
+        # occur when starting an instance as a replica). Then it finds the
+        # listening socket among caught sockets.
+        script = """
+            local ffi = require('ffi')
+            local socket = require('socket')
+            local uri = require('uri')
+            local res = box.info.listen
+            if res then
+                local listen_uri = uri.parse(res)
+                return {{host = listen_uri.host, port = listen_uri.service}}
+            else
+                res = {{}}
+                local val = ffi.new('int[1]')
+                local len = ffi.new('size_t[1]', ffi.sizeof('int'))
+                for fd = 0, 65535 do
+                    local addrinfo = socket.internal.name(fd)
+                    local is_matched = addrinfo ~= nil and
+                        addrinfo.host == '{localhost}' and
+                        addrinfo.family == 'AF_INET' and
+                        addrinfo.type == 'SOCK_STREAM' and
+                        addrinfo.protocol == 'tcp' and
+                        type(addrinfo.port) == 'number'
+                    if is_matched then
+                        local lvl = socket.internal.SOL_SOCKET
+                        ffi.C.getsockopt(fd, lvl,
+                            socket.internal.SO_OPT[lvl].SO_REUSEADDR.iname,
+                            val, len)
+                        if val[0] > 0 then
+                            table.insert(res, addrinfo)
+                        end
+                    end
+                end
+                if #res ~= 1 then
+                    error(("Zero or more than one listening TCP sockets: %s")
+                        :format(#res))
+                end
+                return {{host = res[1].host, port = res[1].port}}
+            end
+        """.format(localhost=self.localhost)
+        res = yaml.safe_load(self.admin(script, silent=True))[0]
+        if res.get('error'):
+            color_stdout("Failed to get iproto port: {}\n".format(res['error']),
+                         schema='error')
+            raise TarantoolStartError(self.name)
+
+        return int(res['port'])
