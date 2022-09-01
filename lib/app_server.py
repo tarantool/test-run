@@ -19,7 +19,6 @@ from lib.server import DEFAULT_SNAPSHOT_NAME
 from lib.tarantool_server import Test
 from lib.tarantool_server import TarantoolServer
 from lib.tarantool_server import TarantoolStartError
-from lib.utils import find_port
 from lib.utils import format_process
 from lib.utils import signame
 from lib.utils import warn_unix_socket
@@ -33,7 +32,7 @@ def timeout_handler(server_process, test_timeout):
 
 
 def run_server(execs, cwd, server, logfile, retval, test_id):
-    os.putenv("LISTEN", server.iproto)
+    os.putenv("LISTEN", server.listen_uri)
     server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
     sampler.register_process(server.process.pid, test_id, server.name)
     test_timeout = Options().args.test_timeout
@@ -113,6 +112,7 @@ class AppServer(Server):
         self.lua_libs = ini['lua_libs']
         self.name = 'app_server'
         self.process = None
+        self.localhost = '127.0.0.1'
         self.use_unix_sockets_iproto = ini['use_unix_sockets_iproto']
 
     @property
@@ -156,9 +156,9 @@ class AppServer(Server):
         if self.use_unix_sockets_iproto:
             path = os.path.join(self.vardir, self.name + ".i")
             warn_unix_socket(path)
-            self.iproto = path
+            self.listen_uri = path
         else:
-            self.iproto = str(find_port())
+            self.listen_uri = self.localhost + ':0'
         shutil.copy(os.path.join(self.TEST_RUN_DIR, 'test_run.lua'),
                     self.vardir)
 
