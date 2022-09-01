@@ -10,6 +10,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import textwrap
 import time
 import yaml
 
@@ -655,12 +656,15 @@ class TarantoolServer(Server):
             'lua_libs': [],
             'valgrind': False,
             'vardir': None,
-            'use_unix_sockets': False,
             'use_unix_sockets_iproto': False,
             'tarantool_port': None,
             'strace': False
         }
         ini.update(_ini)
+        if ini.get('use_unix_sockets') is not None:
+            qa_notice(textwrap.fill('The "use_unix_sockets" option is defined '
+                                    'in suite.ini, but it was dropped in favor '
+                                    'of permanent using Unix sockets'))
         Server.__init__(self, ini, test_suite)
         self.testdir = os.path.abspath(os.curdir)
         self.sourcedir = os.path.abspath(os.path.join(os.path.basename(
@@ -677,7 +681,6 @@ class TarantoolServer(Server):
         self.lua_libs = ini['lua_libs']
         self.valgrind = ini['valgrind']
         self.strace = ini['strace']
-        self.use_unix_sockets = ini['use_unix_sockets']
         self.use_unix_sockets_iproto = ini['use_unix_sockets_iproto']
         self._start_against_running = ini['tarantool_port']
         self.crash_detector = None
@@ -762,12 +765,9 @@ class TarantoolServer(Server):
             self.cleanup()
         self.copy_files()
 
-        if self.use_unix_sockets:
-            path = os.path.join(self.vardir, self.name + ".c")
-            warn_unix_socket(path)
-            self._admin = path
-        else:
-            self._admin = find_port()
+        path = os.path.join(self.vardir, self.name + ".c")
+        warn_unix_socket(path)
+        self._admin = path
 
         if self.use_unix_sockets_iproto:
             path = os.path.join(self.vardir, self.name + ".i")
