@@ -23,12 +23,14 @@ __author__ = "Konstantin Osipov <kostja.osipov@gmail.com>"
 
 import errno
 import ctypes
+import re
 import socket
 
 from lib.tarantool_connection import TarantoolConnection
 
 # monkey patch tarantool and msgpack
 from lib.utils import check_libs
+from lib.utils import warn_unix_socket
 check_libs()
 
 from tarantool import Connection as tnt_connection  # noqa: E402
@@ -41,6 +43,10 @@ SEPARATOR = '\n'
 class BoxConnection(TarantoolConnection):
     def __init__(self, host, port):
         super(BoxConnection, self).__init__(host, port)
+        if self.host == 'unix/' or re.search(r'^/', str(self.port)):
+            warn_unix_socket(self.port)
+            host = None
+
         self.py_con = tnt_connection(host, port, connect_now=False,
                                      socket_timeout=100)
         self.py_con.error = False
