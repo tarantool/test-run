@@ -3,13 +3,11 @@ import os
 import sys
 import collections
 import signal
-import random
 import fcntl
 import difflib
 import time
 import json
 import subprocess
-from gevent import socket
 from lib.colorer import color_stdout
 
 try:
@@ -83,63 +81,6 @@ def print_tail_n(filename, num_lines=None):
         tail_n = collections.deque(logfile, num_lines)
         for line in tail_n:
             color_stdout(line, schema='tail')
-
-
-def check_port(port, rais=True, ipv4=True, ipv6=True):
-    """ True -- it's possible to listen on this port for TCP/IPv4 or TCP/IPv6
-    connections (UNIX Sockets in case of file path). False -- otherwise.
-    """
-    try:
-        if isinstance(port, integer_types):
-            if ipv4:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.bind(('127.0.0.1', port))
-                sock.listen(5)
-                sock.close()
-            if ipv6:
-                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-                sock.bind(('::1', port))
-                sock.listen(5)
-                sock.close()
-        else:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect(port)
-    except socket.error:
-        if rais:
-            raise RuntimeError(
-                "The server is already running on port {0}".format(port))
-        return False
-    return True
-
-
-# A list of ports used so far. Avoid reusing ports
-# to reduce race conditions between starting and stopping servers.
-# We're using tarantoolctl for instance control, and it reports
-# a successful stop of the server before it really closes its
-# network sockets
-ports = {}
-
-
-is_ipv6_supported = check_port(port=0, rais=False, ipv4=False, ipv6=True)
-
-
-def find_port():
-    global ports
-    start_port = int(os.environ.get('TEST_RUN_TCP_PORT_START', '3000'))
-    end_port = int(os.environ.get('TEST_RUN_TCP_PORT_END', '65535'))
-    port = random.randrange(start_port, end_port + 1)
-
-    while port <= end_port:
-        is_free = check_port(port, False, ipv4=True, ipv6=is_ipv6_supported)
-        if port not in ports and is_free:
-            ports[port] = True
-            return port
-        port += 1
-
-    # We've made a full circle, clear the list of used ports and start
-    # from scratch
-    ports = {}
-    return find_port()
 
 
 def find_in_path(name):
