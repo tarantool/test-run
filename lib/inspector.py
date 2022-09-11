@@ -7,7 +7,6 @@ from gevent.lock import Semaphore
 from gevent.server import StreamServer
 
 from lib.utils import bytes_to_str
-from lib.utils import find_port
 from lib.utils import prefix_each_line
 from lib.utils import str_to_bytes
 from lib.colorer import color_stdout
@@ -52,10 +51,6 @@ class TarantoolInspector(StreamServer):
     """
 
     def __init__(self, host, port):
-        # When specific port range was acquired for current worker, don't allow
-        # OS set port for us that isn't from specified range.
-        if port == 0:
-            port = find_port()
         super(TarantoolInspector, self).__init__((host, port))
         self.parser = None
 
