@@ -1315,11 +1315,20 @@ class TarantoolServer(Server):
                         end
                     end
                 end
-                if #res ~= 1 then
-                    error(("Zero or more than one listening TCP sockets: %s")
-                        :format(#res))
+                local l_sockets = {{}}
+                local con_timeout = 0.1
+                for i, s in ipairs(res) do
+                    con = socket.tcp_connect(s.host, s.port, con_timeout)
+                    if con then
+                        con:close()
+                        table.insert(l_sockets, s)
+                    end
                 end
-                return {{host = res[1].host, port = res[1].port}}
+                if #l_sockets ~= 1 then
+                    error(("Zero or more than one listening TCP sockets: %s")
+                        :format(#l_sockets))
+                end
+                return {{host = l_sockets[1].host, port = l_sockets[1].port}}
             end
         """.format(localhost=self.localhost)
         res = yaml.safe_load(self.admin(script, silent=True))[0]
