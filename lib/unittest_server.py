@@ -62,7 +62,7 @@ class UnittestServer(Server):
     def find_exe(cls, builddir):
         cls.builddir = builddir
         cls.binary = TarantoolServer.binary
-        cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
+        cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
                                     re.I))
 
     @staticmethod
