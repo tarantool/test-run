@@ -727,8 +727,8 @@ class TarantoolServer(Server):
                         ctl_dir + '/?.lua;' + \
                         ctl_dir + '/?/init.lua;' + \
                         os.environ.get("LUA_PATH", ";;")
-                cls.debug = bool(re.findall(r'-Debug', str(cls.version()),
-                                 re.I))
+                cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
+                                            re.I))
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
