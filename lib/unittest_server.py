@@ -63,7 +63,7 @@ class UnittestServer(Server):
         cls.builddir = builddir
         cls.binary = TarantoolServer.binary
         cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
-                                    re.I))
+                                    re.M))
 
     @staticmethod
     def find_tests(test_suite, suite_path):
