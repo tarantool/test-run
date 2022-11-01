@@ -728,19 +728,21 @@ class TarantoolServer(Server):
                         ctl_dir + '/?/init.lua;' + \
                         os.environ.get("LUA_PATH", ";;")
                 cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
-                                            re.I))
+                                            re.M))
                 return exe
         raise RuntimeError("Can't find server executable in " + path)
 
     @classmethod
     def print_exe(cls):
-        color_stdout('Tarantool server information\n', schema='info')
+        color_stdout('Tarantool server information:\n', schema='info')
         if cls.binary:
             color_stdout(' | Found executable at {}\n'.format(cls.binary))
         if cls.ctl_path:
             color_stdout(' | Found tarantoolctl at {}\n'.format(cls.ctl_path))
         color_stdout('\n' + prefix_each_line(' | ', cls.version()) + '\n',
                      schema='version')
+        color_stdout('Detected build mode: {}\n'.format(
+                     'Debug' if cls.debug else 'Release'), schema='info')
 
     def install(self, silent=True):
         if self._start_against_running:

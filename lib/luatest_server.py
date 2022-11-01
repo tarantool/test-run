@@ -91,7 +91,7 @@ class LuatestServer(Server):
         cls.builddir = builddir
         cls.binary = TarantoolServer.binary
         cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
-                                    re.I))
+                                    re.M))
 
     @classmethod
     def verify_luatest_exe(cls):
