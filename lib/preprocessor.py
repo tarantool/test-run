@@ -438,9 +438,12 @@ class TestState(object):
                                                 names), schema='info')
         if sys.stdout.__class__.__name__ == 'FilteredStream':
             sys.stdout.clear_all_filters()
-        for k, v in self.servers.items():
+        # The self.servers can be updated during this loop, need a copy
+        # for safe traverse of the self.servers dictionary
+        l_servers = self.servers.copy()
+        for k, v in l_servers.items():
             # don't stop the default server
-            if k == 'default':
+            if k == 'default' or k not in self.servers:
                 continue
             v.stop(silent=True, signal=signal)
             if k in self.connections:
