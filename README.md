@@ -58,7 +58,7 @@ configuration):
     },
     "*": {
         "memtx": {"engine": "memtx"},
-        "sophia": {"engine": "sophia"}
+        "vinyl": {"engine": "vinyl"}
     }
 }
 ```
@@ -68,7 +68,7 @@ In test case we can get configuration from inspector:
 ```lua
 engine = test_run:get_cfg('engine')
 -- first run engine is 'memtx'
--- second run engine is 'sophia'
+-- second run engine is 'vinyl'
 ```
 
 "engine" value has a special meaning for *.test.sql files: if it is "memtx" or
