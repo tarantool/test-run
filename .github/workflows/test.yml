@@ -17,15 +17,15 @@ jobs:
         tarantool-version: [2.6, 2.7]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: update git submodules
       run: git submodule update --init --recursive
     - name: set up Tarantool ${{ matrix.tarantool-version }}
-      uses: tarantool/setup-tarantool@v1
+      uses: tarantool/setup-tarantool@v2
       with:
         tarantool-version: ${{ matrix.tarantool-version }}
     - name: set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: display python version
