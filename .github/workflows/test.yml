@@ -13,13 +13,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['2.7', '3.5', '3.6', '3.7', '3.8', '3.9', '3.10']
-        tarantool-version: [2.6, 2.7]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        tarantool-version: ['2.8', '2.10']
 
     steps:
     - uses: actions/checkout@v3
-    - name: update git submodules
-      run: git submodule update --init --recursive
+      with:
+        fetch-depth: 1
+        submodules: recursive
     - name: set up Tarantool ${{ matrix.tarantool-version }}
       uses: tarantool/setup-tarantool@v2
       with:
@@ -35,19 +36,6 @@ jobs:
        sudo apt update -y
        sudo apt-get -y install lua5.1 luarocks
        sudo luarocks install luacheck
-    - name: set default pip to pip3
-      run: |
-       sudo rm -f /usr/local/bin/pip
-       sudo ln -s /usr/bin/pip3 /usr/local/bin/pip
-    - name: set default python and pip to v2.7
-      if: ${{ matrix.python-version }} == 2.7
-      run: |
-       curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-       sudo python2 get-pip.py
-       sudo rm -f /usr/bin/python
-       sudo ln -s /usr/bin/python2 /usr/bin/python
-       sudo rm -f /usr/local/bin/pip
-       sudo ln -s /usr/local/bin/pip2 /usr/local/bin/pip
     - name: setup python dependencies
       run: |
        pip install -r requirements.txt
@@ -64,12 +52,12 @@ jobs:
       run: |
         make test_integration
     - name: code coverage
-      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
+      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.10' }}
       run: |
        pip install coveralls==3.*
        make coverage
     - name: upload coverage data to coveralls.io
-      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.7' }}
+      if: ${{ matrix.python-version == '3.8' && matrix.tarantool-version == '2.10' }}
       run: coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
