@@ -79,8 +79,13 @@ local function wait_lsn(self, waiter, master)
     end
 end
 
-local function get_vclock(self, node)
-    return self:get_param(node, 'vclock')[1]
+local function get_vclock(self, node, opts)
+    local opts = opts or {}
+    local vclock = self:get_param(node, 'vclock')[1]
+    if opts.ignore_zero then
+        vclock[0] = nil
+    end
+    return vclock
 end
 
 local function wait_vclock(self, node, to_vclock)
