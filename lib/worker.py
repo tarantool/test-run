@@ -160,6 +160,15 @@ class WorkerTaskResult(BaseWorkerMessage):
         self.show_reproduce_content = show_reproduce_content
 
 
+class WorkerFlakedTask(BaseWorkerMessage):
+    """Passed into the result queue when a task flaked.
+    The task_id (any hashable object) field holds ID of the flaked task.
+    """
+    def __init__(self, worker_id, worker_name, task_id):
+        super(WorkerFlakedTask, self).__init__(worker_id, worker_name)
+        self.task_id = task_id
+
+
 class WorkerOutput(BaseWorkerMessage):
     """The output passed by worker processes via color_stdout/color_log
     functions. The output wrapped into objects of this class by setting queue
@@ -226,6 +235,9 @@ class Worker:
         return WorkerTaskResult(self.id, self.name, task_id, short_status,
                                 self.suite.test_is_long(task_id), duration,
                                 self.suite.show_reproduce_content())
+
+    def wrap_flaked_task(self, task_id):
+        return WorkerFlakedTask(self.id, self.name, task_id)
 
     def sigterm_handler(self, signum, frame):
         self.sigterm_received = True
@@ -341,6 +353,7 @@ class Worker:
                 break
 
             short_status = None
+            fails_count = 0
             duration = 0.0
             result_queue.put(self.current_task(task_id))
             testname = os.path.basename(task_id[0])
@@ -358,6 +371,7 @@ class Worker:
                 self.restart_server()
                 # print message only after some fails occurred
                 if short_status == 'fail':
+                    fails_count += 1
                     if testname not in self.suite.fragile['tests']:
                         color_stdout(
                             'Test "%s", conf: "%s"\n\tfailed, rerunning ...\n'
@@ -372,6 +386,10 @@ class Worker:
                 retries_left = retries_left - 1
 
             result_queue.put(self.wrap_result(task_id, short_status, duration))
+
+            if fails_count > 0 and short_status == 'pass':
+                result_queue.put(self.wrap_flaked_task(task_id))
+
             if short_status == 'fail':
                 if Options().args.is_force:
                     self.restart_server()
