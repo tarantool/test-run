@@ -126,12 +126,13 @@ def main_loop_parallel():
         dispatcher.wait()
         dispatcher.wait_processes()
         color_stdout('-' * 81, "\n", schema='separator')
-        has_failed = dispatcher.statistics.print_statistics()
+        has_failed, has_flaked = dispatcher.statistics.print_statistics()
         has_undone = dispatcher.report_undone(
             verbose=bool(is_force or not has_failed))
-        if has_failed:
+        if any([has_failed, has_flaked]):
             dispatcher.artifacts.save_artifacts()
-            return EXIT_FAILED_TEST
+            if has_failed:
+                return EXIT_FAILED_TEST
         if has_undone:
             return EXIT_NOTDONE_TEST
     except KeyboardInterrupt:

@@ -10,6 +10,7 @@ from lib.colorer import decolor
 from lib.sampler import sampler
 from lib.worker import WorkerCurrentTask
 from lib.worker import WorkerDone
+from lib.worker import WorkerFlakedTask
 from lib.worker import WorkerOutput
 from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
@@ -39,26 +40,28 @@ class StatisticsWatcher(BaseWatcher):
         self._sampler = sampler
         self.duration_stats = dict()
         self.failed_tasks = []
+        self.flaked_tasks = []
         self.get_logfile = get_logfile
         self.long_tasks = set()
 
     def process_result(self, obj):
-        if not isinstance(obj, WorkerTaskResult):
-            return
+        if isinstance(obj, WorkerTaskResult):
+            if obj.is_long:
+                self.long_tasks.add(obj.task_id)
 
-        if obj.is_long:
-            self.long_tasks.add(obj.task_id)
+            if obj.short_status not in self.stats:
+                self.stats[obj.short_status] = 0
+            self.stats[obj.short_status] += 1
 
-        if obj.short_status not in self.stats:
-            self.stats[obj.short_status] = 0
-        self.stats[obj.short_status] += 1
+            if obj.short_status == 'fail':
+                self.failed_tasks.append((obj.task_id,
+                                          obj.worker_name,
+                                          obj.show_reproduce_content))
 
-        if obj.short_status == 'fail':
-            self.failed_tasks.append((obj.task_id,
-                                      obj.worker_name,
-                                      obj.show_reproduce_content))
+            self.duration_stats[obj.task_id] = obj.duration
 
-        self.duration_stats[obj.task_id] = obj.duration
+        if isinstance(obj, WorkerFlakedTask):
+            self.flaked_tasks.append((obj.task_id, obj.worker_name, False))
 
     def get_long_mark(self, task):
         return '(long)' if task in self.long_tasks else ''
@@ -149,6 +152,19 @@ class StatisticsWatcher(BaseWatcher):
                                       self.duration_stats[task_id]))
         fd.close()
 
+    def print_tasks_info(self, tasks):
+        for task_id, worker_name, show_reproduce_content in tasks:
+            logfile = self.get_logfile(worker_name)
+            task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
+            final_report('- %s' % task_id_str, schema='test_var')
+            color_stdout('# logfile:        %s\n' % logfile)
+            reproduce_file_path = get_reproduce_file(worker_name)
+            color_stdout('# reproduce file: %s\n' % reproduce_file_path)
+            if show_reproduce_content:
+                color_stdout("---\n", schema='separator')
+                print_tail_n(reproduce_file_path)
+                color_stdout("...\n", schema='separator')
+
     def print_statistics(self):
         """Print statistics and results of testing."""
         # Prepare standalone subpath '<vardir>/statistics' for statistics files.
@@ -161,25 +177,25 @@ class StatisticsWatcher(BaseWatcher):
         if self.stats:
             final_report('Statistics:\n', schema='test_var')
         for short_status, cnt in self.stats.items():
-            final_report('* %s: %d\n' % (short_status, cnt), schema='test_var')
+            if short_status == 'pass' and self.flaked_tasks:
+                final_report('* %s: %d (flaky: %d)\n' %
+                             (short_status, cnt, len(self.flaked_tasks)),
+                             schema='test_var')
+            else:
+                final_report('* %s: %d\n' % (short_status, cnt),
+                             schema='test_var')
+
+        if self.flaked_tasks:
+            final_report('Flaked tasks:\n', schema='test_var')
+            self.print_tasks_info(self.flaked_tasks)
 
         if not self.failed_tasks:
-            return False
+            return False, bool(self.flaked_tasks)
 
         final_report('Failed tasks:\n', schema='test_var')
-        for task_id, worker_name, show_reproduce_content in self.failed_tasks:
-            logfile = self.get_logfile(worker_name)
-            task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
-            final_report('- %s' % task_id_str, schema='test_var')
-            color_stdout('# logfile:        %s\n' % logfile)
-            reproduce_file_path = get_reproduce_file(worker_name)
-            color_stdout('# reproduce file: %s\n' % reproduce_file_path)
-            if show_reproduce_content:
-                color_stdout("---\n", schema='separator')
-                print_tail_n(reproduce_file_path)
-                color_stdout("...\n", schema='separator')
+        self.print_tasks_info(self.failed_tasks)
 
-        return True
+        return True, bool(self.flaked_tasks)
 
 
 class ArtifactsWatcher(BaseWatcher):
@@ -193,10 +209,12 @@ class ArtifactsWatcher(BaseWatcher):
         self.get_logfile = get_logfile
 
     def process_result(self, obj):
-        if not isinstance(obj, WorkerTaskResult):
-            return
+        if isinstance(obj, WorkerTaskResult) and \
+                obj.short_status == 'fail' and \
+                obj.worker_name not in self.failed_workers:
+            self.failed_workers.append(obj.worker_name)
 
-        if obj.short_status == 'fail' and \
+        if isinstance(obj, WorkerFlakedTask) and \
                 obj.worker_name not in self.failed_workers:
             self.failed_workers.append(obj.worker_name)
 
