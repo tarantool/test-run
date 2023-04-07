@@ -222,6 +222,14 @@ class ArtifactsWatcher(BaseWatcher):
         if not self.failed_workers:
             return
 
+        def copytree_ignore(path, filenames):
+            ignored_filenames = []
+            for filename in filenames:
+                filepath = os.path.join(path, filename)
+                if not (os.path.isfile(filepath) or os.path.isdir(filepath)):
+                    ignored_filenames.append(filename)
+            return ignored_filenames
+
         vardir = Options().args.vardir
         artifacts_dir = os.path.join(vardir, 'artifacts')
         artifacts_log_dir = os.path.join(artifacts_dir, 'log')
@@ -241,9 +249,7 @@ class ArtifactsWatcher(BaseWatcher):
                                      os.path.basename(reproduce_file_path)))
             shutil.copytree(os.path.join(vardir, worker_name),
                             os.path.join(artifacts_dir, worker_name),
-                            ignore=shutil.ignore_patterns(
-                                '*.i', '*.c',
-                                '*.sock', '*.control'))
+                            ignore=copytree_ignore)
         shutil.copytree(os.path.join(vardir, 'statistics'),
                         os.path.join(artifacts_dir, 'statistics'))
 
