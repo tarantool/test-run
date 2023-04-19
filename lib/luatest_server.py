@@ -99,12 +99,15 @@ class LuatestServer(Server):
         try:
             # Just check that the command returns zero exit code.
             with open(os.devnull, 'w') as devnull:
-                returncode = Popen(['luatest', '--version'],
-                                   stdout=devnull,
-                                   stderr=devnull).wait()
-            if returncode != 0:
+                proc = Popen(['luatest', '--version'],
+                                   stdout=PIPE,
+                                   stderr=STDOUT)
+                proc.wait()
+
+            if proc.returncode != 0:
                 raise TestRunInitError('Unable to run `luatest --version`',
-                                       {'returncode': returncode})
+                                       {'returncode': proc.returncode,
+                                        'stdout': proc.stdout.read()})
         except OSError as e:
             # Python 2 raises OSError if the executable is not
             # found or if it has no executable bit. Python 3
