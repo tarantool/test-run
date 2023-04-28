@@ -320,6 +320,19 @@ class Options(object):
                     """))
 
         parser.add_argument(
+                "-p", "--pattern",
+                dest='pattern',
+                nargs='+',
+                help=format_help(
+                    """
+                    Execute all luatest tests with names matching the given
+                    Lua PATTERN.
+
+                    Values may be repeated to include several patterns.
+                    Use --verbose to control which tests were executed.
+                    """))
+
+        parser.add_argument(
                 "--reproduce",
                 dest="reproduce",
                 default=None,

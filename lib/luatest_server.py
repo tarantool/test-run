@@ -44,6 +44,9 @@ class LuatestTest(Test):
         script = os.path.join(os.path.basename(server.testdir), self.name)
         command = ['luatest', '-c', '-v', script, '-o', 'tap', '--shuffle',
                    'none']
+        if Options().args.pattern:
+            for p in Options().args.pattern:
+                command.extend(['--pattern', p])
 
         # Tarantool's build directory is added to PATH in
         # TarantoolServer.find_exe().
