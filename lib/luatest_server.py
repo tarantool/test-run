@@ -35,15 +35,14 @@ class LuatestTest(Test):
     def execute(self, server):
         """Execute test by luatest command
 
-        Execute 'luatest -c -v <name>_test.lua -o tap --shuffle none'
-        Provide a verbose output in the tap format.
-        Use shuffle option in none mode for avoiding mixing tests.
-        Use capture mode.
+        Execute `luatest -c --verbose <name>_test.lua --output tap` command.
+        Use capture mode. Provide a verbose output in the tap format.
+        Extend the command by `--pattern <pattern>` if the corresponding
+        option is provided.
         """
         server.current_test = self
         script = os.path.join(os.path.basename(server.testdir), self.name)
-        command = ['luatest', '-c', '-v', script, '-o', 'tap', '--shuffle',
-                   'none']
+        command = ['luatest', '-c', '--verbose', script, '--output', 'tap']
         if Options().args.pattern:
             for p in Options().args.pattern:
                 command.extend(['--pattern', p])
