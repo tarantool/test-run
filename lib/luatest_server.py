@@ -5,13 +5,21 @@ import sys
 
 from subprocess import Popen, PIPE
 from subprocess import STDOUT
+from threading import Timer
 
+from lib.colorer import color_stdout
 from lib.error import TestRunInitError
+from lib.options import Options
 from lib.sampler import sampler
 from lib.server import Server
 from lib.tarantool_server import Test
 from lib.tarantool_server import TestExecutionError
 from lib.tarantool_server import TarantoolServer
+
+
+def timeout_handler(process, test_timeout):
+    color_stdout("Test timeout of %d secs reached\t" % test_timeout, schema='error')
+    process.kill()
 
 
 class LuatestTest(Test):
@@ -50,7 +58,11 @@ class LuatestTest(Test):
         project_dir = os.environ['SOURCEDIR']
         proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=STDOUT)
         sampler.register_process(proc.pid, self.id, server.name)
+        test_timeout = Options().args.test_timeout
+        timer = Timer(test_timeout, timeout_handler, (proc, test_timeout))
+        timer.start()
         sys.stdout.write_bytes(proc.communicate()[0])
+        timer.cancel()
         if proc.returncode != 0:
             raise TestExecutionError
 
