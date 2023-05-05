@@ -225,8 +225,9 @@ class Test(object):
                     color_stdout('\n')
                     with open(self.tmp_result, 'r') as f:
                         color_stdout(f.read(), schema='log')
-                is_tap, is_ok = self.check_tap_output()
+                is_tap, is_ok, is_skip = self.check_tap_output()
                 self.is_equal_result = is_ok
+                self.skip = is_skip
         else:
             self.is_equal_result = 1
 
@@ -342,7 +343,7 @@ class Test(object):
             color_stdout('\n', schema='error')
 
     def check_tap_output(self):
-        """ Returns is_tap, is_ok """
+        """ Returns is_tap, is_ok, is_skip """
         try:
             with open(self.tmp_result, 'r') as f:
                 content = f.read()
@@ -360,7 +361,11 @@ class Test(object):
             return False, False
 
         is_ok = True
+        is_skip = False
+        num_skipped_tests = 0
         for test_case in tap.tests:
+            if test_case.directive == "SKIP":
+                num_skipped_tests += 1
             if test_case.result == 'ok':
                 continue
             if is_ok:
@@ -378,4 +383,7 @@ class Test(object):
             color_stdout('Rejected result file: %s\n' % self.reject,
                          schema='test_var')
             self.is_crash_reported = True
-        return True, is_ok
+        if num_skipped_tests == len(tap.tests):
+            is_skip = True
+
+        return True, is_ok, is_skip
