@@ -34,7 +34,7 @@ class BaseWatcher(object):
 
 
 class StatisticsWatcher(BaseWatcher):
-    def __init__(self, get_logfile):
+    def __init__(self, get_logfile, total_tasks_cnt):
         self.stats = dict()
         self.field_size = 60
         self._sampler = sampler
@@ -43,9 +43,12 @@ class StatisticsWatcher(BaseWatcher):
         self.flaked_tasks = []
         self.get_logfile = get_logfile
         self.long_tasks = set()
+        self.total_tasks_cnt = total_tasks_cnt
+        self.finished_tasks_cnt = 0
 
     def process_result(self, obj):
         if isinstance(obj, WorkerTaskResult):
+            self.finished_tasks_cnt += 1
             if obj.is_long:
                 self.long_tasks.add(obj.task_id)
 
@@ -59,9 +62,11 @@ class StatisticsWatcher(BaseWatcher):
                                           obj.show_reproduce_content))
 
             self.duration_stats[obj.task_id] = obj.duration
+            self.print_status_line()
 
         if isinstance(obj, WorkerFlakedTask):
             self.flaked_tasks.append((obj.task_id, obj.worker_name, False))
+            self.print_status_line()
 
     def get_long_mark(self, task):
         return '(long)' if task in self.long_tasks else ''
@@ -196,6 +201,28 @@ class StatisticsWatcher(BaseWatcher):
         self.print_tasks_info(self.failed_tasks)
 
         return True, bool(self.flaked_tasks)
+
+    def print_status_line(self):
+        if not color_stdout.is_term:
+            return
+
+        lstats = ['{}: {}'.format(k, v) for k, v in self.stats.items()]
+        report = '[{}/{}] [{}]'.format(
+                self.finished_tasks_cnt,
+                self.total_tasks_cnt,
+                ', '.join(sorted(lstats)))
+        if self.flaked_tasks:
+            report += ' [flaky: {}]'.format(len(self.flaked_tasks))
+
+        if self.stats.get('fail', 0) > 0:
+            color_schema = 'bad_status'
+        elif self.flaked_tasks:
+            color_schema = 'tentative_status'
+        else:
+            color_schema = 'good_status'
+
+        color_stdout(report, schema=color_schema)
+        color_stdout('\b' * len(report))
 
 
 class ArtifactsWatcher(BaseWatcher):

@@ -92,6 +92,7 @@ class Dispatcher:
             self.task_queue_disps[key] = task_queue_disp
             self.result_queues.append(task_queue_disp.result_queue)
             self.task_queues.append(task_queue_disp.task_queue)
+        self.total_tasks_cnt = tasks_cnt
 
         self.report_timeout = 0.1
 
@@ -133,7 +134,8 @@ class Dispatcher:
         watch_fail = not Options().args.is_force
 
         log_output_watcher = LogOutputWatcher()
-        self.statistics = StatisticsWatcher(log_output_watcher.get_logfile)
+        self.statistics = StatisticsWatcher(log_output_watcher.get_logfile,
+                                            self.total_tasks_cnt)
         self.artifacts = ArtifactsWatcher(log_output_watcher.get_logfile)
         output_watcher = OutputWatcher()
         self.listeners = [self.statistics, log_output_watcher, output_watcher, self.artifacts]
