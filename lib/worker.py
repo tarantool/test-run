@@ -49,9 +49,22 @@ def parse_reproduce_file(filepath):
     return reproduce
 
 
+def main_vardir():
+    """
+    A 'var directory' term is used in two different meanings
+    across test-run.
+
+    There is the --vardir option, VARDIR environment variable and
+    /tmp/t default. Let's call this directory the 'main vardir'.
+
+    There are per worker subdirectories within the main vardir:
+    'ddd-suite-name'. Let's call such a directory worker's vardir.
+    """
+    return os.path.realpath(Options().args.vardir)
+
+
 def get_reproduce_file(worker_name):
-    main_vardir = os.path.realpath(Options().args.vardir)
-    reproduce_dir = os.path.join(main_vardir, 'reproduce')
+    reproduce_dir = os.path.join(main_vardir(), 'reproduce')
     return os.path.join(reproduce_dir, '%s.list.yaml' % worker_name)
 
 
@@ -255,8 +268,7 @@ class Worker:
         self.suite = suite
         self.name = '%03d_%s' % (self.id, self.suite.suite_path)
 
-        main_vardir = self.suite.ini['vardir']
-        self.suite.ini['vardir'] = os.path.join(main_vardir, self.name)
+        self.suite.ini['vardir'] = os.path.join(main_vardir(), self.name)
 
         self.reproduce_file = get_reproduce_file(self.name)
         safe_makedirs(os.path.dirname(self.reproduce_file))
