@@ -323,10 +323,6 @@ if __name__ == "__main__":
 
         __builtins__.open = open_as_utf8
 
-    # don't sure why, but it values 1 or 2 gives 1.5x speedup for parallel
-    # test-run (and almost doesn't affect consistent test-run)
-    os.environ['OMP_NUM_THREADS'] = '2'
-
     status = 0
 
     if Options().args.show_tags:
