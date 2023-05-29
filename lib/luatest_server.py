@@ -41,14 +41,17 @@ class LuatestTest(Test):
         """
         server.current_test = self
         script = os.path.join(os.path.basename(server.testdir), self.name)
-        command = ['luatest', '-c', '--verbose', script, '--output', 'tap']
+
+        # Disable stdout buffering.
+        command = [server.binary, '-e', "io.stdout:setvbuf('no')"]
+        # Add luatest as the script.
+        command.extend([server.luatest])
+        # Add luatest command-line options.
+        command.extend(['-c', '--verbose', script, '--output', 'tap'])
         if Options().args.pattern:
             for p in Options().args.pattern:
                 command.extend(['--pattern', p])
 
-        # Tarantool's build directory is added to PATH in
-        # TarantoolServer.find_exe().
-        #
         # We start luatest from the project source directory, it
         # is the usual way to use luatest.
         #
@@ -113,6 +116,7 @@ class LuatestServer(Server):
         cls.binary = TarantoolServer.binary
         cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
                                     re.M))
+        cls.luatest = os.environ['TEST_RUN_DIR'] + '/lib/luatest/bin/luatest'
 
     @classmethod
     def verify_luatest_exe(cls):
@@ -120,7 +124,7 @@ class LuatestServer(Server):
         try:
             # Just check that the command returns zero exit code.
             with open(os.devnull, 'w') as devnull:
-                returncode = Popen(['luatest', '--version'],
+                returncode = Popen([cls.luatest, '--version'],
                                    stdout=devnull,
                                    stderr=devnull).wait()
             if returncode != 0:
