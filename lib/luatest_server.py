@@ -3,7 +3,7 @@ import os
 import re
 import sys
 
-from subprocess import Popen, PIPE
+from subprocess import Popen
 from threading import Timer
 
 from lib.colorer import color_stdout
@@ -59,12 +59,12 @@ class LuatestTest(Test):
         project_dir = os.environ['SOURCEDIR']
 
         with open(server.logfile, 'ab') as f:
-            proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=f)
+            proc = Popen(command, cwd=project_dir, stdout=sys.stdout, stderr=f)
         sampler.register_process(proc.pid, self.id, server.name)
         test_timeout = Options().args.test_timeout
         timer = Timer(test_timeout, timeout_handler, (proc, test_timeout))
         timer.start()
-        sys.stdout.write_bytes(proc.communicate()[0])
+        proc.wait()
         timer.cancel()
         if proc.returncode != 0:
             raise TestExecutionError
