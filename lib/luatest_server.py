@@ -102,10 +102,6 @@ class LuatestServer(Server):
         # Put into vardir.
         return os.path.join(self.vardir, file_name)
 
-    @property
-    def binary(self):
-        return LuatestServer.prepare_args(self)[0]
-
     def deploy(self, vardir=None, silent=True, wait=True):
         self.vardir = vardir
         if not os.access(self.vardir, os.F_OK):
