@@ -125,10 +125,18 @@ class AppServer(Server):
         return os.path.join(self.vardir, file_name)
 
     def prepare_args(self, args=[]):
-        cli_args = [os.path.join(os.getcwd(), self.current_test.name)] + args
+        # Disable stdout bufferization.
+        cli_args = [self.binary, '-e', "io.stdout:setvbuf('no')"]
+
+        # Disable schema upgrade if requested.
         if self.disable_schema_upgrade:
-            cli_args = [self.binary, '-e',
-                        self.DISABLE_AUTO_UPGRADE] + cli_args
+            cli_args.extend(['-e', self.DISABLE_AUTO_UPGRADE])
+
+        # Add path to the script (the test).
+        cli_args.extend([os.path.join(os.getcwd(), self.current_test.name)])
+
+        # Add extra args if provided.
+        cli_args.extend(args)
 
         return cli_args
 
