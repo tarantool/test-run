@@ -889,7 +889,7 @@ class TarantoolServer(Server):
                                         cwd=self.vardir,
                                         stdout=self.log_des,
                                         stderr=self.log_des)
-        del(self.log_des)
+        del self.log_des
 
         # Restore the actual PWD value.
         os.environ['PWD'] = os.getcwd()
