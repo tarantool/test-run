@@ -4,7 +4,6 @@ import re
 import sys
 
 from subprocess import Popen, PIPE
-from subprocess import STDOUT
 from threading import Timer
 
 from lib.colorer import color_stdout
@@ -58,7 +57,9 @@ class LuatestTest(Test):
         # and so on.
         os.environ['VARDIR'] = server.vardir
         project_dir = os.environ['SOURCEDIR']
-        proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=STDOUT)
+
+        with open(server.logfile, 'ab') as f:
+            proc = Popen(command, cwd=project_dir, stdout=PIPE, stderr=f)
         sampler.register_process(proc.pid, self.id, server.name)
         test_timeout = Options().args.test_timeout
         timer = Timer(test_timeout, timeout_handler, (proc, test_timeout))
@@ -89,7 +90,17 @@ class LuatestServer(Server):
 
     @property
     def logfile(self):
-        return self.current_test.tmp_result
+        # Remove the suite name using basename().
+        test_name = os.path.basename(self.current_test.name)
+        # Strip '.lua' from the end.
+        #
+        # The '_test' postfix is kept to ease distinguish this
+        # log file from luatest.server instance logs.
+        test_name = test_name[:-len('.lua')]
+        # Add '.log'.
+        file_name = test_name + '.log'
+        # Put into vardir.
+        return os.path.join(self.vardir, file_name)
 
     @property
     def binary(self):
@@ -145,6 +156,3 @@ class LuatestServer(Server):
                             for k in sorted(tests)]
         test_suite.tests = sum([patterned(x, test_suite.args.tests)
                                 for x in test_suite.tests], [])
-
-    def print_log(self, lines):
-        pass
