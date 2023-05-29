@@ -91,6 +91,11 @@ class FilteredStream:
     def flush(self):
         self.stream.flush()
 
+    def fileno(self):
+        """ May be used for direct writting. Discards any filters.
+        """
+        return self.stream.fileno()
+
 
 def get_filename_by_test(postfix, test_name):
     """For <..>/<name>_test.* or <..>/<name>.test.* return <name> + postfix

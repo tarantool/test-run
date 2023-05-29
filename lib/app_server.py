@@ -6,7 +6,7 @@ import shutil
 import signal
 import sys
 
-from gevent.subprocess import Popen, PIPE
+from gevent.subprocess import Popen
 
 from lib.colorer import color_stdout
 from lib.colorer import color_log
@@ -33,17 +33,14 @@ def timeout_handler(server_process, test_timeout):
 
 def run_server(execs, cwd, server, logfile, retval, test_id):
     os.putenv("LISTEN", server.listen_uri)
-    server.process = Popen(execs, stdout=PIPE, stderr=PIPE, cwd=cwd)
+    with open(logfile, 'ab') as f:
+        server.process = Popen(execs, stdout=sys.stdout, stderr=f, cwd=cwd)
     sampler.register_process(server.process.pid, test_id, server.name)
     test_timeout = Options().args.test_timeout
     timer = Timer(test_timeout, timeout_handler, (server.process, test_timeout))
     timer.start()
-    stdout, stderr = server.process.communicate()
-    timer.cancel()
-    sys.stdout.write_bytes(stdout)
-    with open(logfile, 'ab') as f:
-        f.write(stderr)
     retval['returncode'] = server.process.wait()
+    timer.cancel()
     server.process = None
 
 
