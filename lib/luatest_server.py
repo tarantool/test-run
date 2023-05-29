@@ -36,7 +36,7 @@ class LuatestTest(Test):
         """Execute test by luatest command
 
         Execute `luatest -c --verbose <name>_test.lua --output tap` command.
-        Use capture mode. Provide a verbose output in the tap format.
+        Disable capture mode. Provide a verbose output in the tap format.
         Extend the command by `--pattern <pattern>` if the corresponding
         option is provided.
         """
