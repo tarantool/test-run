@@ -143,17 +143,31 @@ class Server(object):
     def restart(self):
         pass
 
-    def print_log(self, lines=None):
-        msg = ('\n{prefix} of Tarantool Log file [Instance "{instance}"]' +
-               '[{logfile}]:\n').format(
-            prefix="Last {0} lines".format(lines) if lines else "Output",
-            instance=self.name,
-            logfile=self.logfile or 'null')
-        color_stdout(msg, schema='error')
-        if os.path.exists(self.logfile):
-            print_tail_n(self.logfile, lines)
+    def print_log(self, num_lines=None):
+        """ Show information from the given log file.
+        """
+        prefix = '\n[test-run server "{instance}"] '.format(instance=self.name)
+        if not self.logfile:
+            msg = 'No log file is set (internal test-run error)\n'
+            color_stdout(prefix + msg, schema='error')
+        elif not os.path.exists(self.logfile):
+            fmt_str = 'The log file {logfile} does not exist\n'
+            msg = fmt_str.format(logfile=self.logfile)
+            color_stdout(prefix + msg, schema='error')
+        elif os.path.getsize(self.logfile) == 0:
+            fmt_str = 'The log file {logfile} has zero size\n'
+            msg = fmt_str.format(logfile=self.logfile)
+            color_stdout(prefix + msg, schema='error')
+        elif num_lines:
+            fmt_str = 'Last {num_lines} lines of the log file {logfile}:\n'
+            msg = fmt_str.format(logfile=self.logfile, num_lines=num_lines)
+            color_stdout(prefix + msg, schema='error')
+            print_tail_n(self.logfile, num_lines)
         else:
-            color_stdout("    Can't find log:\n", schema='error')
+            fmt_str = 'The log file {logfile}:\n'
+            msg = fmt_str.format(logfile=self.logfile)
+            color_stdout(msg, schema='error')
+            print_tail_n(self.logfile, num_lines)
 
     @staticmethod
     def exclude_tests(test_names, exclude_patterns):
