@@ -583,7 +583,7 @@ class TarantoolServer(Server):
                 delattr(self, '_script')
             return
         self._script = os.path.abspath(val)
-        self.name = os.path.basename(self._script).split('.')[0]
+        self.name = os.path.basename(self._script).rsplit(".", maxsplit=1)[0]
 
     @property
     def _admin(self):
