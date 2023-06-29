@@ -511,7 +511,19 @@ class Options(object):
 
         self.check()
 
+        self.check_timeouts()
+
         Options._initialized = True
+
+    def check_timeouts(self) -> None:
+        default_time_offset = 10
+        if (self.args.no_output_timeout - self.args.test_timeout) < default_time_offset or \
+                (self.args.test_timeout - self.args.server_start_timeout) < default_time_offset:
+            color_stdout("Some timeouts are set incorrectly.\n"
+                         "Change the value(s) so that --no-output-timeout is at least 10 seconds "
+                         "longer than --test-timeout\nand --test-timeout is at least 10 seconds "
+                         "longer than --server-start-timeout\n", schema='error')
+            exit(1)
 
     def check(self):
         """Check the arguments for correctness."""
