@@ -493,6 +493,17 @@ class Options(object):
                     $ . <(./test/test-run.py --env)
                     """))
 
+        parser.add_argument(
+                '--executable',
+                dest='executable',
+                default=None,
+                help=format_help(
+                    """
+                    Set a custom path to the Tarantool executable.
+
+                    Useful when Tarantool binary is not in $BUILDDIR and $PATH.
+                    """))
+
         # XXX: We can use parser.parse_intermixed_args() on
         # Python 3.7 to understand commands like
         # ./test-run.py foo --exclude bar baz
