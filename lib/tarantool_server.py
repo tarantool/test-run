@@ -702,11 +702,7 @@ class TarantoolServer(Server):
         color_log(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
             exe = executable or os.path.join(_dir, cls.default_tarantool["bin"])
-            ctl_dir = _dir
-            # check local tarantoolctl source
-            if _dir == builddir:
-                ctl_dir = os.path.join(_dir, '../extra/dist')
-
+            ctl_dir = cls.TEST_RUN_DIR
             ctl = os.path.join(ctl_dir, cls.default_tarantool['ctl'])
             need_lua_path = False
             if os.path.isdir(ctl) or not os.access(ctl, os.X_OK):
