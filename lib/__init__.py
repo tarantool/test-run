@@ -83,7 +83,7 @@ def module_init():
 
     prepend_path(os.path.join(os.environ['TEST_RUN_DIR'], 'lib/luatest/bin'))
 
-    TarantoolServer.find_exe(args.builddir)
+    TarantoolServer.find_exe(args.builddir, executable=args.executable)
     UnittestServer.find_exe(args.builddir)
     AppServer.find_exe(args.builddir)
     LuatestServer.find_exe(args.builddir)

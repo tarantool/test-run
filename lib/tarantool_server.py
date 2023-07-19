@@ -694,14 +694,14 @@ class TarantoolServer(Server):
             self.current_test = caller_globals['test_run_current_test']
 
     @classmethod
-    def find_exe(cls, builddir, silent=True):
+    def find_exe(cls, builddir, silent=True, executable=None):
         cls.builddir = os.path.abspath(builddir)
         builddir = os.path.join(builddir, "src")
         path = builddir + os.pathsep + os.environ["PATH"]
         color_log("Looking for server binary in ", schema='serv_text')
         color_log(path + ' ...\n', schema='path')
         for _dir in path.split(os.pathsep):
-            exe = os.path.join(_dir, cls.default_tarantool["bin"])
+            exe = executable or os.path.join(_dir, cls.default_tarantool["bin"])
             ctl_dir = _dir
             # check local tarantoolctl source
             if _dir == builddir:
