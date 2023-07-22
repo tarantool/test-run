@@ -116,9 +116,9 @@ class AppServer(Server):
     def logfile(self):
         # remove suite name using basename
         test_name = os.path.basename(self.current_test.name)
-        # add :conf_name if any
+        # add .conf_name if any
         if self.current_test.conf_name is not None:
-            test_name += ':' + self.current_test.conf_name
+            test_name += '.' + self.current_test.conf_name
         # add '.tarantool.log'
         file_name = test_name + '.tarantool.log'
         # put into vardir
