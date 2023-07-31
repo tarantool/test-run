@@ -13,6 +13,7 @@ from lib.colorer import qa_notice
 from lib.colorer import color_log
 from lib.colorer import color_stdout
 from lib.tarantool_server import TarantoolServer
+from lib.tarantool_server import TarantoolStartError
 from lib.test import get_result
 from lib.test_suite import TestSuite
 from lib.utils import safe_makedirs
@@ -284,6 +285,9 @@ class Worker:
             self.initialized = True
         except KeyboardInterrupt:
             self.report_keyboard_interrupt()
+            self.stop_server(cleanup=False)
+        except TarantoolStartError as e:
+            color_stdout(e, schema='error')
             self.stop_server(cleanup=False)
         except Exception as e:
             color_stdout('Worker "%s" cannot start tarantool server; '
