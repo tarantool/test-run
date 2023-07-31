@@ -80,6 +80,10 @@ class ExecMixIn(object):
         return res
 
 
+class BrokenConsoleHandshake(RuntimeError):
+    pass
+
+
 class AdminConnection(TarantoolConnection, ExecMixIn):
     def execute_no_reconnect(self, command, silent):
         if not command:
@@ -93,7 +97,7 @@ class AdminConnection(TarantoolConnection, ExecMixIn):
         super(AdminConnection, self).connect()
         handshake = get_handshake(self.socket)
         if not re.search(r'^Tarantool.*console.*', str(handshake)):
-            raise RuntimeError('Broken tarantool console handshake')
+            raise BrokenConsoleHandshake('Broken tarantool console handshake')
 
 
 class AdminAsyncConnection(TarantoolAsyncConnection, ExecMixIn):

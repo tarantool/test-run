@@ -26,7 +26,7 @@ except ImportError:
     # Python 3
     from io import StringIO
 
-from lib.admin_connection import AdminConnection, AdminAsyncConnection
+from lib.admin_connection import AdminConnection, AdminAsyncConnection, BrokenConsoleHandshake
 from lib.box_connection import BoxConnection
 from lib.colorer import color_stdout
 from lib.colorer import color_log
@@ -421,14 +421,17 @@ CON_SWITCH = {
 
 
 class TarantoolStartError(OSError):
-    def __init__(self, name=None, timeout=None):
+    def __init__(self, name=None, timeout=None, reason=None):
         self.name = name
         self.timeout = timeout
+        self.reason = reason
 
     def __str__(self):
         message = '[Instance "{}"] Failed to start'.format(self.name)
         if self.timeout:
-            return "\n{} within {} seconds\n".format(message, self.timeout)
+            message = "{} within {} seconds".format(message, self.timeout)
+        if self.reason:
+            message = "{}: {}".format(message, self.reason)
         return "\n{}\n".format(message)
 
 
@@ -957,7 +960,7 @@ class TarantoolServer(Server):
             if self.process.returncode is None:
                 gevent.sleep(0.1)
 
-        if self.process.returncode in [0, -signal.SIGKILL, -signal.SIGTERM]:
+        if self.process.returncode in [0, -signal.SIGABRT, -signal.SIGKILL, -signal.SIGTERM]:
             return
 
         self.kill_current_test()
@@ -1168,6 +1171,8 @@ class TarantoolServer(Server):
                     gevent.sleep(0.1)
                     continue
                 raise
+            except BrokenConsoleHandshake as e:
+                raise TarantoolStartError(self.name, reason=e)
         else:
             raise TarantoolStartError(
                 self.name, Options().args.server_start_timeout)
