@@ -57,9 +57,7 @@ class StatisticsWatcher(BaseWatcher):
             self.stats[obj.short_status] += 1
 
             if obj.short_status == 'fail':
-                self.failed_tasks.append((obj.task_id,
-                                          obj.worker_name,
-                                          obj.show_reproduce_content))
+                self.failed_tasks.append((obj.task_id, obj.worker_name, False))
 
             self.duration_stats[obj.task_id] = obj.duration
             self.print_status_line()
