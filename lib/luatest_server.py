@@ -34,10 +34,10 @@ class LuatestTest(Test):
     def execute(self, server):
         """Execute test by luatest command
 
-        Execute `luatest -c --verbose <name>_test.lua --output tap` command.
-        Disable capture mode. Provide a verbose output in the tap format.
-        Extend the command by `--pattern <pattern>` if the corresponding
-        option is provided.
+        Execute `luatest -c --no-clean --verbose <name>_test.lua --output tap`
+        command. Disable capture mode and deletion of the var directory.
+        Provide a verbose output in the tap format. Extend the command by
+        `--pattern <pattern>` if the corresponding option is provided.
         """
         server.current_test = self
         script = os.path.join(os.path.basename(server.testdir), self.name)
@@ -47,7 +47,7 @@ class LuatestTest(Test):
         # Add luatest as the script.
         command.extend([server.luatest])
         # Add luatest command-line options.
-        command.extend(['-c', '--verbose', script, '--output', 'tap'])
+        command.extend(['-c', '--no-clean', '--verbose', script, '--output', 'tap'])
         if Options().args.pattern:
             for p in Options().args.pattern:
                 command.extend(['--pattern', p])
