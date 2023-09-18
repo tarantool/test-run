@@ -62,7 +62,10 @@ class LuatestTest(Test):
         project_dir = os.environ['SOURCEDIR']
 
         with open(server.logfile, 'ab') as f:
-            proc = Popen(command, cwd=project_dir, stdout=sys.stdout, stderr=f)
+            stderr = f
+            if Options().args.show_capture:
+                stderr = sys.stdout
+            proc = Popen(command, cwd=project_dir, stdout=sys.stdout, stderr=stderr)
         sampler.register_process(proc.pid, self.id, server.name)
         test_timeout = Options().args.test_timeout
         timer = Timer(test_timeout, timeout_handler, (proc, test_timeout))
