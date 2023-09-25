@@ -37,17 +37,6 @@ def format_help(s):
     return textwrap.dedent(s.lstrip('\n')) + '\n'
 
 
-class DeprecationWarning(argparse._StoreTrueAction):
-    """Сustom definition of the 'store_true' procedure"""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        color_stdout(
-                "Argument %s is deprecated and is ignored.\n" % self.option_strings,
-                schema='info'
-        )
-        setattr(namespace, self.dest, values)
-
-
 class Options(object):
     """Handle options of test-runner"""
 
@@ -135,13 +124,12 @@ class Options(object):
                     """))
 
         parser.add_argument(
-                "--verbose",
+                "-v", "--verbose",
                 dest='is_verbose',
-                action=DeprecationWarning,
+                action='store_true',
                 default=False,
                 help=format_help(
                     """
-                    Deprecated.
                     Print TAP13 test output to log.
 
                     Default: false.

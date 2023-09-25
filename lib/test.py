@@ -226,7 +226,7 @@ class Test(object):
                 self.is_equal_result = filecmp.cmp(self.result,
                                                    self.tmp_result)
             elif self.is_executed_ok:
-                if Options().args.show_capture:
+                if Options().args.is_verbose:
                     color_stdout('\n')
                     with open(self.tmp_result, 'r') as f:
                         color_stdout(f.read(), schema='log')
