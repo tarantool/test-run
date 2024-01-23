@@ -1314,13 +1314,13 @@ class TarantoolServer(Server):
                             socket.internal.SO_OPT[lvl].SO_REUSEADDR.iname,
                             val, len)
                         if val[0] > 0 then
-                            table.insert(res, addrinfo)
+                            res[addrinfo.port] = addrinfo
                         end
                     end
                 end
                 local l_sockets = {{}}
                 local con_timeout = 0.1
-                for i, s in ipairs(res) do
+                for _, s in pairs(res) do
                     con = socket.tcp_connect(s.host, s.port, con_timeout)
                     if con then
                         con:close()
