@@ -45,6 +45,7 @@ from lib.utils import signame
 from lib.utils import warn_unix_socket
 from lib.utils import prefix_each_line
 from lib.utils import prepend_path
+from lib.utils import PY3
 from lib.test import TestRunGreenlet, TestExecutionError
 
 
@@ -440,9 +441,19 @@ class TarantoolLog(object):
         self.path = path
         self.log_begin = 0
 
+    def open(self, mode, **kwargs):
+        if PY3:
+            # Sometimes the server's log file may contain bytes that cannot be
+            # decoded by utf-8 codec and test-run fails with an error like this:
+            #     UnicodeDecodeError: 'utf-8' codec can't decode byte 0xf0 in
+            #         position 660: invalid continuation byte
+            # The option below fixes it. Note, Python2 doesn't know the option.
+            kwargs['errors'] = 'replace'
+        return open(self.path, mode, **kwargs)
+
     def positioning(self):
         if os.path.exists(self.path):
-            with open(self.path, 'r') as f:
+            with self.open('r') as f:
                 f.seek(0, os.SEEK_END)
                 self.log_begin = f.tell()
         return self
@@ -450,7 +461,7 @@ class TarantoolLog(object):
     def seek_once(self, msg):
         if not os.path.exists(self.path):
             return -1
-        with open(self.path, 'r') as f:
+        with self.open('r') as f:
             f.seek(self.log_begin, os.SEEK_SET)
             while True:
                 log_str = f.readline()
@@ -472,7 +483,7 @@ class TarantoolLog(object):
                          "seconds\n".format(self.path, timeout), schema='error')
             return False
 
-        with open(self.path, 'r') as f:
+        with self.open('r') as f:
             f.seek(self.log_begin, os.SEEK_SET)
             cur_pos = self.log_begin
             while not deadline or time.time() < deadline:
@@ -979,7 +990,7 @@ class TarantoolServer(Server):
         # find and save backtrace or assertion fail
         assert_lines = list()
         bt = list()
-        with open(self.logfile, 'r') as log:
+        with self.logfile_pos.open('r') as log:
             lines = log.readlines()
             for rpos, line in enumerate(reversed(lines)):
                 if line.startswith('Segmentation fault'):
