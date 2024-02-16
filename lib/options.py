@@ -124,13 +124,25 @@ class Options(object):
                     """))
 
         parser.add_argument(
-                "--verbose",
+                "-v", "--verbose",
                 dest='is_verbose',
-                action="store_true",
+                action='store_true',
                 default=False,
                 help=format_help(
                     """
                     Print TAP13 test output to log.
+
+                    Default: false.
+                    """))
+
+        parser.add_argument(
+                "-c", "--show-capture",
+                dest='show_capture',
+                action='store_true',
+                default=False,
+                help=format_help(
+                    """
+                    Whether to show captured TAP13 output or not.
 
                     Default: false.
                     """))

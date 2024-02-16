@@ -372,3 +372,23 @@ def prepend_path(p):
 
 def shlex_quote(s):
     return _shlex_quote(s)
+
+
+class captured_stderr:
+    def __init__(self, logfile):
+        self.prevfd = None
+        self.prev = None
+        self.f = logfile
+
+    def __enter__(self):
+        self.prevfde = os.dup(self.f.fileno())
+
+        os.dup2(sys.stderr.fileno(), self.f.fileno())
+
+        self.preve = sys.stderr
+        sys.stderr = os.fdopen(self.prevfde, "w")
+        return self.f
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.dup2(self.prevfde, self.preve.fileno())
+        sys.stderr = self.preve
