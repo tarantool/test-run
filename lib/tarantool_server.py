@@ -839,11 +839,12 @@ class TarantoolServer(Server):
             shutil.copy(self.snapshot_path, snapshot_dest)
 
     def prepare_args(self, args=[]):
-        cli_args = [self.ctl_path, 'start',
+        cli_args = [self.binary, '-e', self.DISABLE_BOX_ERROR_SERIALIZE_VERBOSE,
+                    self.ctl_path, 'start',
                     os.path.basename(self.script)] + args
         if self.disable_schema_upgrade:
-            cli_args = [self.binary, '-e',
-                        self.DISABLE_AUTO_UPGRADE] + cli_args
+            cli_args = cli_args[0] + ['-e', self.DISABLE_AUTO_UPGRADE] + \
+                       cli_args[1:]
 
         return cli_args
 

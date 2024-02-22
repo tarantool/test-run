@@ -35,6 +35,13 @@ class Server(object):
         assert(box.error.injection.set('ERRINJ_AUTO_UPGRADE', true) == 'ok', \
         'no such errinj')"
 
+    # Since the verbose box.error representation contains the diagnostic trace,
+    # it is unsuitable for diff tests, and we disable it from the CLI.
+    DISABLE_BOX_ERROR_SERIALIZE_VERBOSE = \
+        "_, tweaks = pcall(require, 'internal.tweaks') " \
+        "if tweaks ~= nil and tweaks.box_error_serialize_verbose ~= nil then " \
+        "tweaks.box_error_serialize_verbose = false end"
+
     @property
     def vardir(self):
         if not hasattr(self, '_vardir'):

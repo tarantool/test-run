@@ -9,4 +9,4 @@
 	url = https://github.com/tarantool/checks.git
 [submodule "lib/luatest"]
 	path = lib/luatest
-	url = https://github.com/tarantool/luatest.git
+	url = https://github.com/curiousgeorgiy/luatest.git
