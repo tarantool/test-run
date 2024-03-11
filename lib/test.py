@@ -363,7 +363,7 @@ class Test(object):
                 msg = 'Run the test with --update-result option to write the new result file.\n'
                 color_stdout(msg, schema='error')
             self.is_crash_reported = True
-            return False, False
+            return False, False, False
 
         is_ok = True
         is_skip = False
