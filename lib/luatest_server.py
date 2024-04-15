@@ -14,6 +14,7 @@ from lib.server import Server
 from lib.tarantool_server import Test
 from lib.tarantool_server import TestExecutionError
 from lib.tarantool_server import TarantoolServer
+from lib.utils import captured_stderr
 
 
 def timeout_handler(process, test_timeout):
@@ -62,7 +63,8 @@ class LuatestTest(Test):
         project_dir = os.environ['SOURCEDIR']
 
         with open(server.logfile, 'ab') as f:
-            proc = Popen(command, cwd=project_dir, stdout=sys.stdout, stderr=f)
+            with captured_stderr(f):
+                proc = Popen(command, cwd=project_dir, stdout=sys.stdout, stderr=f)
         sampler.register_process(proc.pid, self.id, server.name)
         test_timeout = Options().args.test_timeout
         timer = Timer(test_timeout, timeout_handler, (proc, test_timeout))
