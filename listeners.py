@@ -14,6 +14,7 @@ from lib.worker import WorkerFlakedTask
 from lib.worker import WorkerOutput
 from lib.worker import WorkerTaskResult
 from lib.worker import get_reproduce_file
+from lib.worker import get_luatest_logfile
 from lib.utils import prefix_each_line
 from lib.utils import safe_makedirs
 from lib.utils import print_tail_n
@@ -161,6 +162,9 @@ class StatisticsWatcher(BaseWatcher):
             task_id_str = yaml.safe_dump(task_id, default_flow_style=True)
             final_report('- %s' % task_id_str, schema='test_var')
             color_stdout('# logfile:        %s\n' % logfile)
+            luatest_logfile = get_luatest_logfile(worker_name)
+            if luatest_logfile:
+                color_stdout('# luatest logfile: %s\n' % luatest_logfile)
             reproduce_file_path = get_reproduce_file(worker_name)
             color_stdout('# reproduce file: %s\n' % reproduce_file_path)
             if show_reproduce_content:

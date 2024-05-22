@@ -69,6 +69,16 @@ def get_reproduce_file(worker_name):
     return os.path.join(reproduce_dir, '%s.list.yaml' % worker_name)
 
 
+def get_luatest_logfile(worker_name):
+    # Luatest logging is only for LuatestServer workers.
+    # It doesn't always guarantee a log file.
+    # If it doesn't exist, it will return None.
+    if 'luatest' in worker_name:
+        path = os.path.join(main_vardir(), worker_name, 'run.log')
+        if os.path.isfile(path):
+            return path
+
+
 def print_greetings():
     # print information about tarantool
     color_stdout('\n')
