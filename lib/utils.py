@@ -292,7 +292,7 @@ def extract_schema_from_snapshot(snapshot_path):
 def assert_bytes(b):
     """ Ensure given value is <bytes>.
     """
-    if type(b) != bytes:
+    if type(b) is not bytes:
         raise ValueError('Internal error: expected {}, got {}: {}'.format(
             str(bytes), str(type(b)), repr(b)))
 
@@ -300,7 +300,7 @@ def assert_bytes(b):
 def assert_str(s):
     """ Ensure given value is <str>.
     """
-    if type(s) != str:
+    if type(s) is not str:
         raise ValueError('Internal error: expected {}, got {}: {}'.format(
             str(str), str(type(s)), repr(s)))
 

@@ -1272,9 +1272,9 @@ class TarantoolServer(Server):
 
     def get_lsn(self, node_id):
         nodes = self.get_param("vclock")
-        if type(nodes) == dict and node_id in nodes:
+        if type(nodes) is dict and node_id in nodes:
             return int(nodes[node_id])
-        elif type(nodes) == list and node_id <= len(nodes):
+        elif type(nodes) is list and node_id <= len(nodes):
             return int(nodes[node_id - 1])
         else:
             return -1
