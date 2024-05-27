@@ -15,11 +15,11 @@ from lib import Options
 from lib.app_server import AppServer
 from lib.luatest_server import LuatestServer
 from lib.colorer import color_stdout
+from lib.colorer import test_line
 from lib.inspector import TarantoolInspector
 from lib.server import Server
 from lib.tarantool_server import TarantoolServer
 from lib.unittest_server import UnittestServer
-from lib.utils import just_and_trim
 
 
 class ConfigurationError(RuntimeError):
@@ -217,7 +217,7 @@ class TestSuite:
 
     def is_test_enabled(self, test, conf, server):
         test_name = os.path.basename(test.name)
-        tconf = '%s:%s' % (test_name, conf)
+        tconf = '%s:%s' % (test_name, conf or '')
         checks = [
             (True, self.ini["disabled"]),
             (not server.debug, self.ini["release_disabled"]),
@@ -264,16 +264,10 @@ class TestSuite:
         test.inspector = inspector
         test_name = os.path.basename(test.name)
         full_test_name = os.path.join(self.ini['suite'], test_name)
-        color_stdout(just_and_trim(full_test_name, 47) + ' ', schema='t_name')
-        # for better diagnostics in case of a long-running test
-
-        conf = ''
-        if test.run_params:
-            conf = test.conf_name
-        color_stdout(just_and_trim(conf, 15) + ' ', schema='test_var')
+        test_line(full_test_name, test.conf_name)
 
         start_time = time.time()
-        if self.is_test_enabled(test, conf, server):
+        if self.is_test_enabled(test, test.conf_name, server):
             short_status = test.run(server)
         else:
             color_stdout("[ disabled ]\n", schema='t_name')

@@ -56,6 +56,8 @@ import time
 from lib import Options
 from lib import saved_env
 from lib.colorer import color_stdout
+from lib.colorer import separator
+from lib.colorer import test_line
 from lib.utils import find_tags
 from lib.utils import shlex_quote
 from lib.error import TestRunInitError
@@ -114,18 +116,18 @@ def main_loop_parallel():
 
     print_greetings()
 
-    color_stdout("\n", '=' * 86, "\n", schema='separator')
-    color_stdout("WORKR".ljust(6),     schema='t_name')
-    color_stdout("TEST".ljust(48),     schema='t_name')
-    color_stdout("PARAMS".ljust(16),   schema='test_var')
-    color_stdout("RESULT\n",           schema='test_pass')
-    color_stdout('-' * 81, "\n",       schema='separator')
+    color_stdout('\n')
+    separator('=')
+    color_stdout('WORKR ', schema='t_name')
+    test_line('TEST', 'RARAMS')
+    color_stdout('RESULT\n', schema='test_pass')
+    separator('-')
 
     try:
         is_force = Options().args.is_force
         dispatcher.wait()
         dispatcher.wait_processes()
-        color_stdout('-' * 81, "\n", schema='separator')
+        separator('-')
         has_failed, has_flaked = dispatcher.statistics.print_statistics()
         has_undone = dispatcher.report_undone(
             verbose=bool(is_force or not has_failed))
@@ -136,12 +138,12 @@ def main_loop_parallel():
         if has_undone:
             return EXIT_NOTDONE_TEST
     except KeyboardInterrupt:
-        color_stdout('-' * 81, "\n", schema='separator')
+        separator('-')
         dispatcher.statistics.print_statistics()
         dispatcher.report_undone(verbose=False)
         raise
     except HangError:
-        color_stdout('-' * 81, "\n", schema='separator')
+        separator('-')
         dispatcher.statistics.print_statistics()
         dispatcher.report_undone(verbose=False)
         return EXIT_HANG
@@ -167,11 +169,11 @@ def main_loop_consistent(failed_test_ids):
 
     for name, task_group in task_groups:
         # print information about current test suite
-        color_stdout("\n", '=' * 80, "\n", schema='separator')
-        color_stdout("TEST".ljust(48),     schema='t_name')
-        color_stdout("PARAMS".ljust(16),   schema='test_var')
-        color_stdout("RESULT\n",           schema='test_pass')
-        color_stdout('-' * 75, "\n",       schema='separator')
+        color_stdout('\n')
+        separator('=')
+        test_line('TEST', 'RARAMS')
+        color_stdout("RESULT\n", schema='test_pass')
+        separator('-')
 
         task_ids = task_group['task_ids']
         show_reproduce_content = task_group['show_reproduce_content']
@@ -198,7 +200,7 @@ def main_loop_consistent(failed_test_ids):
                     worker.stop_server(cleanup=False)
                     return
 
-        color_stdout('-' * 75, "\n", schema='separator')
+        separator('-')
 
         worker.stop_server(silent=False)
         color_stdout()

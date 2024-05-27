@@ -63,6 +63,28 @@ def final_report(*args, **kwargs):
         f.write(data)
 
 
+def separator(sep):
+    # Import from the function to avoid recursive import.
+    from lib.utils import terminal_columns
+
+    columns = terminal_columns()
+    color_stdout(sep * columns, '\n', schema='separator')
+
+
+def test_line(name, conf=None):
+    # Import from the function to avoid recursive import.
+    from lib.utils import terminal_columns
+    from lib.utils import just_and_trim
+
+    columns = terminal_columns()
+
+    color_stdout(just_and_trim(name, 47) + ' ', schema='t_name')
+
+    if conf is None:
+        conf = ''
+    color_stdout(just_and_trim(conf, columns - 67) + ' ', schema='test_var')
+
+
 class CSchema(object):
     objects = {}
 
