@@ -3,6 +3,7 @@ import os
 import re
 import sys
 
+from subprocess import PIPE
 from subprocess import Popen
 from threading import Timer
 
@@ -14,6 +15,7 @@ from lib.server import Server
 from lib.tarantool_server import Test
 from lib.tarantool_server import TestExecutionError
 from lib.tarantool_server import TarantoolServer
+from lib.utils import bytes_to_str
 from lib.utils import find_tags
 
 
@@ -52,6 +54,10 @@ class LuatestTest(Test):
         if Options().args.pattern:
             for p in Options().args.pattern:
                 command.extend(['--pattern', p])
+
+        # Run a specific test case. See find_tests() for details.
+        if 'test_case' in self.run_params:
+            command.extend(['--run-test-case', self.run_params['test_case']])
 
         # We start luatest from the project source directory, it
         # is the usual way to use luatest.
@@ -138,6 +144,20 @@ class LuatestServer(Server):
             # those cases, which are childs of OSError anyway.
             raise TestRunInitError('Unable to find luatest executable', e)
 
+    @classmethod
+    def test_cases(cls, test_name):
+        p = Popen([cls.luatest, test_name, '--list-test-cases'], stdout=PIPE)
+        output = bytes_to_str(p.stdout.read()).rstrip()
+        p.wait()
+
+        # Exclude the first line if it is a tarantool version
+        # report.
+        res = output.split('\n')
+        if len(res) > 0 and res[0].startswith('Tarantool version is'):
+            return res[1:]
+
+        return res
+
     @staticmethod
     def find_tests(test_suite, suite_path):
         """Looking for *_test.lua, which are can be executed by luatest."""
@@ -168,16 +188,34 @@ class LuatestServer(Server):
             if any(p in test_name for p in exclude_patterns):
                 continue
 
+            tags = find_tags(test_name)
+
             # If --tags <...> CLI option is provided...
             if accepted_tags:
-                tags = find_tags(test_name)
                 # ...and the test has neither of the given tags,
                 # skip the test.
                 if not any(t in accepted_tags for t in tags):
                     continue
 
             # Add the test to the execution list otherwise.
-            tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini))
+            if 'parallel' in tags:
+                # If the test has the 'parallel' tag, split the
+                # test to test cases to run in separate tasks in
+                # parallel.
+                test_cases = LuatestServer.test_cases(test_name)
+
+                # Display shorter test case names on the screen:
+                # strip the common prefix.
+                prefix_len = len(os.path.commonprefix(test_cases))
+
+                for test_case in test_cases:
+                    tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini,
+                                             params={"test_case": test_case},
+                                             conf_name=test_case[prefix_len:]))
+            else:
+                # If the test has no 'parallel' tag, run all the
+                # test cases as one task.
+                tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini))
 
         tests.sort(key=lambda t: t.name)
 
