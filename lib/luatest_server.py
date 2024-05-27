@@ -14,6 +14,7 @@ from lib.server import Server
 from lib.tarantool_server import Test
 from lib.tarantool_server import TestExecutionError
 from lib.tarantool_server import TarantoolServer
+from lib.utils import find_tags
 
 
 def timeout_handler(process, test_timeout):
@@ -141,18 +142,46 @@ class LuatestServer(Server):
     def find_tests(test_suite, suite_path):
         """Looking for *_test.lua, which are can be executed by luatest."""
 
-        def patterned(test, patterns):
-            answer = []
-            for i in patterns:
-                if test.name.find(i) != -1:
-                    answer.append(test)
-            return answer
-
+        # TODO: Investigate why this old hack is needed and drop
+        # it if possible (move the assignment to test_suite.py).
+        #
+        # cdc70f94701f suggests that it is related to the out of
+        # source build.
         test_suite.ini['suite'] = suite_path
-        tests = glob.glob(os.path.join(suite_path, '*_test.lua'))
 
-        tests = Server.exclude_tests(tests, test_suite.args.exclude)
-        test_suite.tests = [LuatestTest(k, test_suite.args, test_suite.ini)
-                            for k in sorted(tests)]
-        test_suite.tests = sum([patterned(x, test_suite.args.tests)
-                                for x in test_suite.tests], [])
+        # A pattern here means just a substring to find in a test
+        # name.
+        include_patterns = Options().args.tests
+        exclude_patterns = Options().args.exclude
+
+        accepted_tags = Options().args.tags
+
+        tests = []
+        for test_name in glob.glob(os.path.join(suite_path, '*_test.lua')):
+            # If neither of the include patterns are substrings of
+            # the given test name, skip the test.
+            if not any(p in test_name for p in include_patterns):
+                continue
+
+            # If at least one of the exclude patterns is a
+            # substring of the given test name, skip the test.
+            if any(p in test_name for p in exclude_patterns):
+                continue
+
+            # If --tags <...> CLI option is provided...
+            if accepted_tags:
+                tags = find_tags(test_name)
+                # ...and the test has neither of the given tags,
+                # skip the test.
+                if not any(t in accepted_tags for t in tags):
+                    continue
+
+            # Add the test to the execution list otherwise.
+            tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini))
+
+        tests.sort(key=lambda t: t.name)
+
+        # TODO: Don't modify a test suite object's field from
+        # another object directly. It is much better to just
+        # return a list of tests from this method.
+        test_suite.tests = tests
