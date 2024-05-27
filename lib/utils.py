@@ -24,6 +24,12 @@ except ImportError:
     # Python 2.7.
     from pipes import quote as _shlex_quote
 
+try:
+    # Python 3.3+.
+    from shutil import get_terminal_size
+except ImportError:
+    # Python 2.7.
+    get_terminal_size = None
 
 UNIX_SOCKET_LEN_LIMIT = 107
 
@@ -372,3 +378,9 @@ def prepend_path(p):
 
 def shlex_quote(s):
     return _shlex_quote(s)
+
+
+def terminal_columns():
+    if get_terminal_size:
+        return get_terminal_size().columns
+    return 80
