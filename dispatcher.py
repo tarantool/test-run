@@ -8,30 +8,23 @@ import yaml
 
 import multiprocessing
 
-# SimpleQueue is available from multiprocessing.queues on
-# all Python versions known at the moment of writting the code
-# (up to 3.9).
-#
-# It was additionally exposed directly from the multiprocessing
-# module since Python 3.3 ([1]).
+# Queue is available from multiprocessing.queues on all Python
+# versions known at the moment of writting the code (up to 3.12).
 #
 # However the mandatory argument 'ctx'
 # (see multiprocessing.get_context()) was added to the constructor
-# of SimpleQueue from multiprocessing.queues since Python 3.4
-# ([2]).
+# of Queue from multiprocessing.queues since Python 3.4 ([1]).
 #
-# So we should import SimpleQueue from multiprocessing on
-# Python 3.3+ (and must to do so on Python 3.4+) to uniformly
-# instantiate it (without constructor arguments).
+# So we should import Queue from multiprocessing on Python 3.4+
+# to uniformly instantiate it (without constructor arguments).
 #
-# [1]: https://bugs.python.org/issue11836
-# [2]: https://bugs.python.org/issue18999
+# [1]: https://bugs.python.org/issue18999
 try:
-    # Python 3.3+
-    from multiprocessing import SimpleQueue
+    # Python 3.4+
+    from multiprocessing import Queue
 except ImportError:
     # Python 2
-    from multiprocessing.queues import SimpleQueue
+    from multiprocessing.queues import Queue
 
 from lib import Options
 from lib.sampler import sampler
@@ -363,8 +356,8 @@ class TaskQueueDispatcher:
                 random.shuffle(self.task_ids)
         else:
             self.randomize = False
-        self.result_queue = SimpleQueue()
-        self.task_queue = SimpleQueue()
+        self.result_queue = Queue()
+        self.task_queue = Queue()
 
         # Don't expose queues file descriptors over Popen to, say, tarantool
         # running tests.
