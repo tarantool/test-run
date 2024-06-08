@@ -58,6 +58,7 @@ from lib import saved_env
 from lib.colorer import color_stdout
 from lib.colorer import separator
 from lib.colorer import test_line
+from lib.utils import cpu_count
 from lib.utils import find_tags
 from lib.utils import shlex_quote
 from lib.error import TestRunInitError
@@ -86,7 +87,7 @@ def main_loop_parallel():
     jobs = args.jobs
     if jobs < 1:
         # faster result I got was with 2 * cpu_count
-        jobs = 2 * multiprocessing.cpu_count()
+        jobs = 2 * cpu_count()
 
     if jobs > 0:
         color_stdout("Running in parallel with %d workers\n\n" % jobs,

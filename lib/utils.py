@@ -8,6 +8,7 @@ import difflib
 import time
 import json
 import subprocess
+import multiprocessing
 from lib.colorer import color_stdout
 
 try:
@@ -30,6 +31,12 @@ try:
 except ImportError:
     # Python 2.7.
     get_terminal_size = None
+
+try:
+    # Python 3.3+
+    from os import sched_getaffinity
+except ImportError:
+    sched_getaffinity = None
 
 UNIX_SOCKET_LEN_LIMIT = 107
 
@@ -384,3 +391,22 @@ def terminal_columns():
     if get_terminal_size:
         return get_terminal_size().columns
     return 80
+
+
+def cpu_count():
+    """
+    Return available CPU count available for the current process.
+
+    The result is the same as one from the `nproc` command.
+
+    It may be smaller than all the online CPUs count. For example,
+    an LXD container may have limited available CPUs or it may be
+    reduced by `taskset` or `numactl` commands.
+
+    If it is impossible to determine the available CPUs count (for
+    example on Python < 3.3), fallback to the all online CPUs
+    count.
+    """
+    if sched_getaffinity:
+        return len(sched_getaffinity(0))
+    return multiprocessing.cpu_count()
