@@ -90,7 +90,7 @@ def print_tail_n(filename, num_lines=None):
     """ Print N last lines of a file. If num_lines is not set,
     prints the whole file.
     """
-    with open(filename, "r") as logfile:
+    with open(filename, "r", encoding="utf-8", errors="replace") as logfile:
         tail_n = collections.deque(logfile, num_lines)
         for line in tail_n:
             color_stdout(line, schema='tail')

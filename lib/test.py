@@ -350,7 +350,7 @@ class Test(object):
     def check_tap_output(self):
         """ Returns is_tap, is_ok, is_skip """
         try:
-            with open(self.tmp_result, 'r') as f:
+            with open(self.tmp_result, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
             tap = pytap13.TAP13()
             tap.parse(content)
