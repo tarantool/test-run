@@ -180,13 +180,26 @@ class LuatestServer(Server):
 
         tests = []
         for test_name in glob.glob(os.path.join(suite_path, '*_test.lua')):
-            # If neither of the include patterns are substrings of
-            # the given test name, skip the test.
-            if not any(p in test_name for p in include_patterns):
+            # Several include patterns may match the given
+            # test[^1].
+            #
+            # The primary usage of this behavior is to run a test
+            # many times in parallel to verify its stability or
+            # to debug an unstable behavior.
+            #
+            # Execute the test once for each of the matching
+            # patterns.
+            #
+            # [^1]: A pattern matches a test if the pattern is a
+            #       substring of the test name.
+            repeat = sum(1 for p in include_patterns if p in test_name)
+            # If neither of the include patterns matches the given
+            # test, skip the test.
+            if repeat == 0:
                 continue
 
-            # If at least one of the exclude patterns is a
-            # substring of the given test name, skip the test.
+            # If at least one of the exclude patterns matches the
+            # given test, skip the test.
             if any(p in test_name for p in exclude_patterns):
                 continue
 
@@ -211,13 +224,15 @@ class LuatestServer(Server):
                 prefix_len = len(os.path.commonprefix(test_cases))
 
                 for test_case in test_cases:
-                    tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini,
-                                             params={"test_case": test_case},
-                                             conf_name=test_case[prefix_len:]))
+                    test_obj = LuatestTest(test_name, test_suite.args, test_suite.ini,
+                                           params={"test_case": test_case},
+                                           conf_name=test_case[prefix_len:])
+                    tests.extend([test_obj] * repeat)
             else:
                 # If the test has no 'parallel' tag, run all the
                 # test cases as one task.
-                tests.append(LuatestTest(test_name, test_suite.args, test_suite.ini))
+                test_obj = LuatestTest(test_name, test_suite.args, test_suite.ini)
+                tests.extend([test_obj] * repeat)
 
         tests.sort(key=lambda t: t.name)
 
