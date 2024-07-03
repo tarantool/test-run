@@ -228,10 +228,13 @@ local function get_cluster_vclock(self, servers)
 end
 
 local function wait_cluster_vclock(self, servers, vclock)
+    -- Ignore local component since it's independent on each replica
+    local cluster_vclock = table.deepcopy(vclock)
+    cluster_vclock[0] = nil
     for _, name in pairs(servers) do
-        self:wait_vclock(name, vclock)
+        self:wait_vclock(name, cluster_vclock)
     end
-    return vclock
+    return cluster_vclock
 end
 
 local switch_cmd1 = "env = require('test_run')"
