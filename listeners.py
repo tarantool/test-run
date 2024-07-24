@@ -459,7 +459,7 @@ class HangWatcher(BaseWatcher):
             result_file = task.task_tmp_result
             result_file_summary = '(no result file {})'.format(result_file)
             if os.path.exists(result_file):
-                with open(result_file, 'r') as f:
+                with open(result_file, 'r', encoding='utf-8', errors='replace') as f:
                     lines = sum(1 for _ in f)
                     result_file_summary = 'at {}:{}'.format(result_file,
                                                             lines)
