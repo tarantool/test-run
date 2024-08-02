@@ -228,7 +228,8 @@ class Test(object):
             elif self.is_executed_ok:
                 if Options().args.is_verbose:
                     color_stdout('\n')
-                    with open(self.tmp_result, 'r') as f:
+                    with open(self.tmp_result, 'r', encoding='utf-8',
+                              errors='replace') as f:
                         color_stdout(f.read(), schema='log')
                 is_tap, is_ok, is_skip = self.check_tap_output()
                 self.is_equal_result = is_ok
