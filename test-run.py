@@ -120,7 +120,7 @@ def main_loop_parallel():
     color_stdout('\n')
     separator('=')
     color_stdout('WORKR ', schema='t_name')
-    test_line('TEST', 'RARAMS')
+    test_line('TEST', 'PARAMS')
     color_stdout('RESULT\n', schema='test_pass')
     separator('-')
 
@@ -172,7 +172,7 @@ def main_loop_consistent(failed_test_ids):
         # print information about current test suite
         color_stdout('\n')
         separator('=')
-        test_line('TEST', 'RARAMS')
+        test_line('TEST', 'PARAMS')
         color_stdout("RESULT\n", schema='test_pass')
         separator('-')
 
