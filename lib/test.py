@@ -218,6 +218,7 @@ class Test(object):
         sys.stdout.flush()
 
         is_tap = False
+        is_crashed = False
         if not self.skip:
             if not os.path.exists(self.tmp_result):
                 self.is_executed_ok = False
@@ -234,6 +235,9 @@ class Test(object):
                 is_tap, is_ok, is_skip = self.check_tap_output()
                 self.is_equal_result = is_ok
                 self.skip = is_skip
+
+            server.stop(silent=True)
+            is_crashed = server.current_test.is_crash_reported
         else:
             self.is_equal_result = 1
 
@@ -251,7 +255,8 @@ class Test(object):
                 os.remove(self.tmp_result)
         elif (self.is_executed_ok and
               self.is_equal_result and
-              self.is_valgrind_clean):
+              self.is_valgrind_clean and
+              not is_crashed):
             short_status = 'pass'
             color_stdout("[ pass ]\n", schema='test_pass')
             if os.path.exists(self.tmp_result):
