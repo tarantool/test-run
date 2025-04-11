@@ -125,7 +125,7 @@ class LuatestServer(Server):
         cls.binary = TarantoolServer.binary
         cls.debug = bool(re.findall(r'^Target:.*-Debug$', str(cls.version()),
                                     re.M))
-        cls.luatest = os.environ['TEST_RUN_DIR'] + '/lib/luatest/bin/luatest'
+        cls.luatest = os.path.join(Options().args.luatestdir, 'bin/luatest')
 
     @classmethod
     def verify_luatest_exe(cls):

@@ -229,6 +229,21 @@ class Options(object):
                     """))
 
         parser.add_argument(
+                "--luatestdir",
+                dest="luatestdir",
+                default="../third_party/luatest",
+                help=format_help(
+                    """
+                    Path to luatest directory.
+
+                    Beware: A relative path is resolved against the directory,
+                    where all tests reside. **NOT** a current directory of a
+                    parent shell.
+
+                    Default: ../third_party/luatest
+                    """))
+
+        parser.add_argument(
                 "--builddir",
                 dest="builddir",
                 default="..",
