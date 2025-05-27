@@ -70,18 +70,12 @@ def module_init():
     os.environ["BUILDDIR"] = BUILDDIR
     soext = sys.platform == 'darwin' and 'dylib' or 'so'
 
-    os.environ['LUA_PATH'] = (
-            SOURCEDIR + '/?.lua;' + SOURCEDIR + '/?/init.lua;'
-            + os.environ['TEST_RUN_DIR'] + '/lib/checks/?.lua;'
-            + os.environ['TEST_RUN_DIR'] + '/lib/luatest/?/init.lua;'
-            + os.environ['TEST_RUN_DIR'] + '/lib/luatest/?.lua;;'
-    )
-
+    os.environ["LUA_PATH"] = SOURCEDIR+"/?.lua;"+SOURCEDIR+"/?/init.lua;;"
     os.environ["LUA_CPATH"] = BUILDDIR+"/?."+soext+";;"
     os.environ["REPLICATION_SYNC_TIMEOUT"] = str(args.replication_sync_timeout)
     os.environ['MEMTX_ALLOCATOR'] = args.memtx_allocator
 
-    prepend_path(os.path.join(os.environ['TEST_RUN_DIR'], 'lib/luatest/bin'))
+    prepend_path(os.path.join(os.environ['TEST_RUN_DIR'], 'bin'))
 
     TarantoolServer.find_exe(args.builddir, executable=args.executable)
     UnittestServer.find_exe(args.builddir)

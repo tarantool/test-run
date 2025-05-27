@@ -1,0 +1,20 @@
+#!/usr/bin/env tarantool
+
+--
+-- Add the luatest module to LUA_PATH so that it can be used in processes
+-- spawned by tests.
+--
+local fio = require('fio')
+local path = package.search('luatest')
+if path == nil then
+    error('luatest not found')
+end
+path = fio.dirname(path) -- strip init.lua
+path = fio.dirname(path) -- strip luatest
+os.setenv('LUA_PATH',
+          path .. '/?.lua;' .. path .. '/?/init.lua;' ..
+          (os.getenv('LUA_PATH') or ';'))
+
+print(('Tarantool version is %s'):format(require('tarantool').version))
+
+require('luatest.cli_entrypoint')()
