@@ -1,3 +1,5 @@
+export PATH := .rocks/bin:$(PATH)
+
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_DIR := $(patsubst %/,%,$(dir $(MAKEFILE_PATH)))
 TEST_RUN_EXTRA_PARAMS?=

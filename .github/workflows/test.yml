@@ -31,11 +31,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: display python version
       run: python -c "import sys; print(sys.version)"
+    - name: setup tt
+      run: |
+        curl -L https://tarantool.io/release/2/installer.sh | sudo bash
+        sudo apt install -y tt
+        tt version
     - name: setup dependencies
       run: |
-       sudo apt update -y
-       sudo apt-get -y install lua5.1 luarocks
-       sudo luarocks install luacheck
+        tt rocks install luatest
+        tt rocks install luacheck
     - name: setup python dependencies
       run: |
        pip install -r requirements.txt
