@@ -320,6 +320,22 @@ class Options(object):
                     """))
 
         parser.add_argument(
+                "--repeat",
+                dest='repeat',
+                default=env_int('TEST_RUN_REPEAT', 1),
+                type=int,
+                help=format_help(
+                    """
+                    The number of times each test will be repeated.
+
+                    Combining both non-trivial --retries and --repeat options
+                    values require each test to pass at least once in
+                    --retries runs --repeat times in a row.
+
+                    Default: ${TEST_RUN_REPEAT} or 1.
+                    """))
+
+        parser.add_argument(
                 "-p", "--pattern",
                 dest='pattern',
                 nargs='+',
