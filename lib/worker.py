@@ -96,14 +96,15 @@ def get_task_groups():
     """
     suites = find_suites()
     res = collections.OrderedDict()
+    repeat = Options().args.repeat
     for suite in suites:
         key = os.path.basename(suite.suite_path)
         gen_worker = functools.partial(Worker, suite)  # get _id as an arg
         # Split stable and fragile tasks to two groups. Run stable
         # tasks in parallel with other ones. Run fragile tasks one
         # by one when all parallel tasks will be finished.
-        stable_task_ids = [task.id for task in suite.stable_tests()]
-        fragile_task_ids = [task.id for task in suite.fragile_tests()]
+        stable_task_ids = [task.id for task in suite.stable_tests()] * repeat
+        fragile_task_ids = [task.id for task in suite.fragile_tests()] * repeat
         if stable_task_ids:
             res[key] = {
                 'gen_worker': gen_worker,
