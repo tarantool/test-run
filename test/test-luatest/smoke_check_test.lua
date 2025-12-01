@@ -4,18 +4,18 @@ local server = require('test.luatest_helpers.server')
 
 local g = t.group()
 
-g.before_all = function()
+g.before_all(function()
     g.server = server:new({
         alias = 'my_server',
         env = {MY_ENV_VAR = 'test_value'},
         box_cfg = {memtx_memory = 100 * 1024 ^ 2},
     })
     g.server:start()
-end
+end)
 
-g.after_all = function()
+g.after_all(function()
     g.server:stop()
-end
+end)
 
 g.test_server_is_started_and_operable = function()
     local res = g.server:eval('return 42')
