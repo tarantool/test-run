@@ -1,5 +1,25 @@
 #!/usr/bin/env tarantool
 
+--
+-- If luatest is present in the parent directory, add it to the search path.
+-- This is useful for projects that are shipped with luatest as a submodule.
+-- Note that luatest installed from rocks still has a higher priority because
+-- Tarantool (in contrast to vanilla Lua and LuaJIT) loads rocks before modules
+-- located in LUA_PATH.
+--
+local fio = require('fio')
+local dir = fio.dirname(fio.abspath(arg[0]))
+dir = fio.dirname(dir) -- strip bin/
+dir = fio.dirname(dir) -- strip test-run/
+dir = fio.pathjoin(dir, 'luatest')
+if fio.path.is_dir(dir) then
+    local luatest_path = dir .. '/?.lua;' .. dir .. '/?/init.lua;'
+    package.path = luatest_path .. package.path
+    -- Add luatest to LUA_PATH as well so that it can be used in processes
+    -- spawned by tests.
+    os.setenv('LUA_PATH', luatest_path .. (os.getenv('LUA_PATH') or ';'))
+end
+
 print(('Tarantool version is %s'):format(require('tarantool').version))
 
 require('luatest.cli_entrypoint')()
