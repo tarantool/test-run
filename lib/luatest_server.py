@@ -131,14 +131,20 @@ class LuatestServer(Server):
     def verify_luatest_exe(cls):
         """Verify that luatest executable is available."""
         try:
-            # Just check that the command returns zero exit code.
+            # Check that the command returns zero exit code.
+            # Capture stderr to show the actual error if luatest
+            # fails to start.
             with open(os.devnull, 'w') as devnull:
-                returncode = Popen([cls.luatest, '--version'],
-                                   stdout=devnull,
-                                   stderr=devnull).wait()
+                proc = Popen([cls.luatest, '--version'],
+                             stdout=devnull,
+                             stderr=PIPE)
+                stderr = bytes_to_str(proc.stderr.read()).rstrip()
+                returncode = proc.wait()
             if returncode != 0:
-                raise TestRunInitError('Unable to run `luatest --version`',
-                                       {'returncode': returncode})
+                msg = 'Unable to run `luatest --version` (exit code %d)' % returncode
+                if stderr:
+                    msg += ':\n' + stderr
+                raise TestRunInitError(msg)
         except OSError as e:
             # Python 2 raises OSError if the executable is not
             # found or if it has no executable bit. Python 3
