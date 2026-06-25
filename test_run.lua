@@ -224,6 +224,7 @@ local function get_cluster_vclock(self, servers)
             end
         end
     end
+    vclock[0] = nil
     return setmetatable(vclock, { __serialize = 'map' })
 end
 
